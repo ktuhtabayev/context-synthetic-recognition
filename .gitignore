@@ -1,0 +1,64 @@
+# =========================
+# Held back until the article is published (ADR-014)
+# The files stay on disk unchanged; they are only kept out of the public repository.
+# =========================
+docs/handoff/article/
+docs/handoff/CHAT_TRANSCRIPT.md
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+
+# =========================
+# Testing / coverage / type checking
+# =========================
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+env/
+
+# =========================
+# Generated output
+# =========================
+runs/
+site/
+*.log
+
+# =========================
+# IDE / editor / OS
+# =========================
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+.claude/settings.local.json
+
+# =========================
+# Excel / Word lock files
+# =========================
+~$*.xlsx
+~$*.xls
+~$*.docx

@@ -1,0 +1,22 @@
+# Text files use LF in the repository and in the working tree on every platform,
+# so a checkout never rewrites line endings.
+* text=auto eol=lf
+
+# Windows scripts keep CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Protected source material (CLAUDE.md: never modify) is stored byte for byte
+docs/handoff/** -text
+resources/** -text
+
+# Experiment workbooks, documents and images are binary (no Git LFS: ADR-014)
+*.xlsx binary
+*.xls  binary
+*.docx binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.parquet binary
