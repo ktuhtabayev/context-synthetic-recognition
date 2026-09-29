@@ -1,0 +1,61 @@
+"""Typed experiment configuration, presets and the two template-vs-article switches."""
+
+from context_synthetic_recognition.config.io import (
+    ConfigFormat,
+    config_hash,
+    dumps,
+    load_config,
+    loads,
+    save_config,
+)
+from context_synthetic_recognition.config.models import (
+    CentreMode,
+    ContextConfig,
+    DatasetConfig,
+    EvaluationConfig,
+    ExperimentConfig,
+    HAGConfig,
+    MetaConfig,
+    OperatorConfig,
+    OutputConfig,
+    PluginSpec,
+    PreprocessingConfig,
+    SyntheticConfig,
+    plugin,
+)
+from context_synthetic_recognition.config.presets import (
+    DEVIATIONS,
+    Deviation,
+    PresetName,
+    active_deviations,
+    matching_preset,
+    preset,
+)
+
+__all__ = [
+    "DEVIATIONS",
+    "CentreMode",
+    "ConfigFormat",
+    "ContextConfig",
+    "DatasetConfig",
+    "Deviation",
+    "EvaluationConfig",
+    "ExperimentConfig",
+    "HAGConfig",
+    "MetaConfig",
+    "OperatorConfig",
+    "OutputConfig",
+    "PluginSpec",
+    "PreprocessingConfig",
+    "PresetName",
+    "SyntheticConfig",
+    "active_deviations",
+    "config_hash",
+    "dumps",
+    "load_config",
+    "loads",
+    "matching_preset",
+    "plugin",
+    "preset",
+    "save_config",
+]
