@@ -141,8 +141,9 @@ def test_validate_against_the_workbook() -> None:
     result = runner.invoke(app, ["validate", "--against", str(WORKBOOK)])
     assert result.exit_code == 0, result.output
     assert "[experiment]" in result.output
-    assert "10272 cells in 520 checks" in result.output
-    assert result.output.count("✓") == 19  # one per sheet, Steps 1–12
+    assert "11631 cells in 579 checks" in result.output
+    assert result.output.count("✓") == 29  # one per computed sheet
+    assert "not compared: Overview" in result.output
     assert "HAG settings of the workbook (Parameters sheet)" in result.output
     assert "validation passed" in result.output
     detailed = runner.invoke(app, ["validate", "-a", str(WORKBOOK), "--details"])

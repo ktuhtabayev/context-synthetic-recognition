@@ -1,4 +1,4 @@
-"""Golden tests: every Step 1–12 range of the Excel experiment against the package (tolerance 1e-9).
+"""Golden tests: every computed range of the Excel experiment against the package (tolerance 1e-9).
 
 The expected values are the workbook's cached cell values; the map is the one ``csr validate``
 uses (:func:`~context_synthetic_recognition.services.validation.workbook_checks`). The inputs —
@@ -52,10 +52,11 @@ def test_range_matches_the_workbook(
     assert result.passed, "\n".join(result.mismatches)
 
 
-def test_every_step_1_to_12_sheet_is_covered() -> None:
+def test_every_computed_sheet_is_covered() -> None:
     sheets = {check.sheet for check in CHECKS}
     assert sheets == {
         "Parameters",
+        "Template Deviations",
         "Normalized Dataset",
         "Zhuravlev Distances",
         "Sorted Neighbors (ρ)",
@@ -74,6 +75,15 @@ def test_every_step_1_to_12_sheet_is_covered() -> None:
         "Brace for Meta-algorithm",
         "Meta-algorithm",
         "Meta-algorithm (All Objects)",
+        "Margin Analysis",
+        "Accuracy",
+        "Confusion Matrix",
+        "Precision, Recall, F1 Score",
+        "ROC Curve & AUC",
+        "Leave-One-Out",
+        "Sensitivity (Switches)",
+        "Model Properties",
+        "Validation",
     }
 
 
@@ -89,9 +99,12 @@ def test_the_validation_report() -> None:
     report = validate_workbook(WORKBOOK)
     assert report.passed
     assert report.kind == "experiment"
-    assert report.cells == 10272
+    assert report.cells == 11631
     assert len(report.results) == len(CHECKS)
-    assert max(r.max_difference for r in report.results) < 1e-13
-    assert next(iter(report.sheets())) == "Parameters"
+    # the Leave-One-Out sheet holds the engine's scores rounded to 10 decimals
+    loo = [r for r in report.results if r.sheet == "Leave-One-Out"]
+    assert max(r.max_difference for r in loo) < 1e-10
+    assert max(r.max_difference for r in report.results if r.sheet != "Leave-One-Out") < 1e-13
+    assert list(report.sheets())[:3] == ["Parameters", "Template Deviations", "Normalized Dataset"]
     assert report.notes[0].startswith("HAG settings of the workbook (Parameters sheet): α = 0.3")
     assert any("ADR-002" in note for note in report.notes)

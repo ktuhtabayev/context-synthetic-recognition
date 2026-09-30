@@ -1,8 +1,7 @@
 """Check the plug-ins a configuration names against the registries.
 
-Only the kinds implemented so far are checked (normalizer, metrics, k strategy, encoder,
-weights, majorizer, decision rule); the evaluation protocols and the baselines are checked once
-milestone M4 adds their registries.
+The core's kinds are checked here (normalizer, metrics, k strategy, encoder, weights, majorizer,
+decision rule); ``services.configs.config_problems`` adds the evaluation protocols and baselines.
 """
 
 from __future__ import annotations

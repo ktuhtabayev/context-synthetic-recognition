@@ -9,16 +9,14 @@ HAG did not fill ("—"), so shorter groupings validate too.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 
 import numpy as np
 
 from context_synthetic_recognition.config.models import CentreMode
 from context_synthetic_recognition.core.arrays import FloatArray
-from context_synthetic_recognition.core.hag import HAGIteration, HAGResult
+from context_synthetic_recognition.core.hag import HAGIteration
 from context_synthetic_recognition.core.meta import K1_DECISION, K2_DECISION, MetaSteps
-from context_synthetic_recognition.core.model import Classification, CSModel, Representation
-from context_synthetic_recognition.core.trace import ContextTrace
+from context_synthetic_recognition.core.model import CSModel, Representation
 from context_synthetic_recognition.notation import DASH, object_name, subscript, synthetic_name
 from context_synthetic_recognition.services.validation.checks import (
     Cell,
@@ -36,6 +34,11 @@ from context_synthetic_recognition.services.validation.context_map import (
     WORKBOOK_SYNTHETIC,
     labels,
 )
+from context_synthetic_recognition.services.validation.subject import (
+    ExperimentCheck,
+    ExperimentSubject,
+    at,
+)
 
 HAG_SHEETS = 4
 """The workbook has four *Greedy upon Weight* sheets: at most p = 4 latent features."""
@@ -44,52 +47,7 @@ TUPLAM_SLOTS = HAG_SHEETS + 1
 EXCLUDED_RANK = 999
 """The rank the *Brace* sheet shows for the training object left out of the new object's context."""
 
-
-@dataclass(frozen=True)
-class NewObject:
-    """The workbook's new object (sheet *Brace for Meta-algorithm*) and its classification."""
-
-    values: FloatArray
-    """(n,) the typed feature values (row "x (input)")."""
-    exclude: int | None
-    """0-based training object left out of its context (leave-self-out), or ``None``."""
-    classification: Classification
-    """Its representation and the meta-algorithm's decision."""
-
-
-@dataclass(frozen=True)
-class ExperimentSubject:
-    """Everything the experiment workbook shows, computed by the package."""
-
-    model: CSModel
-    """The CS-model fitted on the *Dataset* sheet with the workbook's parameters."""
-    new_object: NewObject
-    """The *Brace* / *Meta-algorithm* demo."""
-    training: Classification
-    """Every training object classified with its own row (resubstitution)."""
-    score_decimals: int
-    """Rounding of score₁ − score₂ (sheet *Meta-algorithm (All Objects)*)."""
-
-    @property
-    def trace(self) -> ContextTrace:
-        """The Step 1–8 trace."""
-        return self.model.trace
-
-    @property
-    def hag(self) -> HAGResult:
-        """The HAG of the fit."""
-        return self.model.hag
-
-
-ExperimentCheck = Check[ExperimentSubject]
-
-
-def _at(
-    fn: Callable[[ExperimentSubject, int], Grid], index: int
-) -> Callable[[ExperimentSubject], Grid]:
-    """``fn`` with its second argument (a feature, step or object index) fixed."""
-    return lambda s: fn(s, index)
-
+_at = at
 
 # ---------------------------------------------------------------- shared helpers
 

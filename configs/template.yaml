@@ -48,6 +48,7 @@ synthetic:
   weights:
     name: omega
     params: {}
+  skip_constant: false
 hag:
   alpha: 0.3
   delta: 0.1

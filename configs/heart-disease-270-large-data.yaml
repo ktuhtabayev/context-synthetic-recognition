@@ -1,11 +1,15 @@
 # context-synthetic-recognition experiment configuration
-# preset: article
+# preset: custom
+# ⚠ template calculation (ADR-002): θ and γ are measured from running partial class means instead of the final class means M₁ and M₂
+# ⚠ template calculation (ADR-003): in STEP 4 the majorizer is applied twice instead of once
 
 schema_version: 1
-name: cs-model-article
-description: ''
+name: heart-disease-270-large-data
+description: 'Heart-Disease (270, 13, 2) with the large-data corrections of ADR-030:
+  constant synthetic features skipped and the k range capped at 21 (literal k_max
+  = 237 would give near-global neighbourhoods with an inflated ω).'
 dataset:
-  path: null
+  path: builtin:heart-disease-270
   format: auto
   sheet: null
   class_column: null
@@ -38,7 +42,8 @@ context:
   skip_empty_operators: true
 k:
   name: formula
-  params: {}
+  params:
+    k_max_cap: 21
 synthetic:
   encoder:
     name: formula-5
@@ -46,7 +51,7 @@ synthetic:
   weights:
     name: omega
     params: {}
-  skip_constant: false
+  skip_constant: true
 hag:
   alpha: 0.3
   delta: 0.1
@@ -55,8 +60,8 @@ hag:
   majorizer:
     name: sigmoid
     params: {}
-  centres: final
-  step4_passes: 1
+  centres: running
+  step4_passes: 2
 meta:
   decision_rule:
     name: article-step-4

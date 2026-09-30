@@ -124,6 +124,18 @@ class SyntheticFeature:
         return self.k - self.chi1
 
 
+@dataclass(frozen=True)
+class SkippedFeature:
+    """A synthetic feature left out because it is constant on the training sample (ADR-030)."""
+
+    operator_label: str
+    k: int
+    value: int
+    """The one value every training object has."""
+    omega: float
+    """Its informativeness ω — often 1 at large k, although it carries no information."""
+
+
 @dataclass(frozen=True, eq=False)
 class BitMaskRepresentation:
     """Task 2 for one operator: bits by the majority rule and their membership and stability."""
@@ -173,6 +185,8 @@ class ContextTrace:
     """Ψ(r): operators in configuration order, k increasing within an operator."""
     bit_masks: tuple[BitMaskRepresentation, ...]
     """Task 2 per operator; empty when there are more than 62 permitted k."""
+    skipped_features: tuple[SkippedFeature, ...] = ()
+    """Constant synthetic features left out (``synthetic.skip_constant``, ADR-030)."""
 
     def __post_init__(self) -> None:
         """Freeze the arrays."""

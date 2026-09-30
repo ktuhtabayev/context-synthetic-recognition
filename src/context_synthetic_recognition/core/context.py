@@ -59,6 +59,7 @@ from context_synthetic_recognition.core.trace import (
     ContextTrace,
     ObjectContext,
     OperatorContext,
+    SkippedFeature,
     SyntheticFeature,
 )
 from context_synthetic_recognition.data.schema import Dataset
@@ -209,6 +210,7 @@ def fit_context(dataset: Dataset, config: ExperimentConfig | None = None) -> Con
     weight_fn = WEIGHTS.get(weight_spec.name)
     weight_params = WEIGHTS.make_params(weight_spec.name, weight_spec.params)
     features: list[SyntheticFeature] = []
+    skipped_features: list[SkippedFeature] = []
     masks: list[BitMaskRepresentation] = []
     for o, context in enumerate(contexts):
         mu = same_class_counts(context.order, y, y, ks)
@@ -224,6 +226,9 @@ def fit_context(dataset: Dataset, config: ExperimentConfig | None = None) -> Con
             weight = float(weight_fn(WeightInputs(omega, g, bound.G), weight_params))
             alpha = gradation_counts(values, y)
             eta = contributions(alpha, sizes, weight)
+            if cfg.synthetic.skip_constant and np.all(values == values[0]):
+                skipped_features.append(SkippedFeature(context.label, k, int(values[0]), omega))
+                continue
             features.append(
                 SyntheticFeature(
                     index=len(features),
@@ -254,6 +259,19 @@ def fit_context(dataset: Dataset, config: ExperimentConfig | None = None) -> Con
                 )
             )
 
+    if skipped_features:
+        logger.warning(
+            "constant synthetic features skipped (ADR-030)",
+            extra={
+                "dataset": dataset.name,
+                "skipped": [f"{s.operator_label}·{s.k}" for s in skipped_features],
+            },
+        )
+    if not features:
+        raise ModelUndefinedError(
+            f"{dataset.name}: every synthetic feature is constant on the training sample "
+            "(synthetic.skip_constant, ADR-030)"
+        )
     trace = ContextTrace(
         object_ids=dataset.object_ids,
         feature_names=dataset.feature_names,
@@ -267,6 +285,7 @@ def fit_context(dataset: Dataset, config: ExperimentConfig | None = None) -> Con
         permitted_k=ks_result,
         features=tuple(features),
         bit_masks=tuple(masks),
+        skipped_features=tuple(skipped_features),
     )
     logger.info(
         "context fitted (Steps 1–8)",

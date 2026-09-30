@@ -38,6 +38,9 @@ from context_synthetic_recognition.core.registry import Registry
 from context_synthetic_recognition.data.schema import Dataset, FeatureType, Label, as_labels
 from context_synthetic_recognition.errors import DatasetError
 
+BUILTIN_PREFIX = "builtin:"
+"""``dataset.path: builtin:heart-disease-270`` names a built-in dataset."""
+
 if TYPE_CHECKING:
     from context_synthetic_recognition.config.models import DatasetConfig
 
@@ -141,10 +144,18 @@ def load_dataset(
 def load_from_config(config: DatasetConfig, base_dir: Path | None = None) -> Dataset:
     """Load the dataset described by the ``dataset`` section of a configuration.
 
-    Relative paths are resolved against ``base_dir`` (the configuration file's folder, ADR-016).
+    Relative paths are resolved against ``base_dir`` (the configuration file's folder, ADR-016);
+    ``builtin:<name>`` names a built-in dataset (``csr data list``), with the configured
+    ``feature_types`` applied.
     """
     if config.path is None:
         raise DatasetError("the configuration names no dataset (dataset.path is empty)")
+    if config.path.startswith(BUILTIN_PREFIX):
+        # data.builtin imports this module, so the registry is looked up here
+        from context_synthetic_recognition.data.builtin import load_builtin
+
+        dataset = load_builtin(config.path.removeprefix(BUILTIN_PREFIX).strip())
+        return dataset.with_feature_types(config.feature_types or {})
     path = Path(config.path)
     if not path.is_absolute() and base_dir is not None:
         path = base_dir / path
