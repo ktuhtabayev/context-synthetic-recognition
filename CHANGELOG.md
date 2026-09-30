@@ -5,6 +5,39 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-09-30 — M4 evaluation
+
+### Added
+
+- Evaluation layer (`evaluation`): protocols `resubstitution`, `leave-one-out` (the whole pipeline
+  re-fitted per fold), `stratified-k-fold`, `repeated-k-fold`, `hold-out`; undefined folds refuse
+  and are flagged; progress and cancel callbacks (ADR-032).
+- Baselines on the same folds: the k-NN vote per operator and k, and scikit-learn classifiers
+  (logistic regression, random forest, SVM, decision tree, naive Bayes; optional extra
+  `[sklearn]`) (ADR-032).
+- Metrics with the workbook's conventions: confusion counts with refusals separate, accuracy,
+  coverage, precision/recall/F1 per class and macro, Mann–Whitney AUC on rounded scores, ROC table;
+  margins of the latent features with and without the majorizer (ADR-031).
+- Model properties (`core.properties`): Definitions 1, 4 and 6, Property 1, boundary ties and the
+  Theorem check (ADR-031).
+- Experiment runner and run folders (`services.runner`: manifest, `results.json`,
+  `predictions.csv`, `folds.csv`), switch sensitivity (`services.sensitivity`), `csr run`
+  (`--sensitivity`, `--no-save`, `--runs-dir`) and `builtin:<name>` dataset paths (ADR-033).
+- Switch `synthetic.skip_constant` (default off) and the large-data example configuration
+  `configs/heart-disease-270-large-data.yaml` (constant features skipped, k ≤ 21), after the
+  study of ADR-030: on Heart-Disease (270, 13, 2) the literal k range gives 7 % leave-one-out,
+  the large-data setting 81.5 %.
+- `csr validate` covers every computed sheet of the experiment: 11,631 cells in 29 sheets, in
+  workbook order (ADR-034); a golden test checks the template-data tables of *Template Deviations*
+  against the template copy.
+- Documentation: the Evaluation page; ADR-030 – ADR-034.
+
+### Changed
+
+- The preset configurations contain `synthetic.skip_constant: false`; their hashes change.
+- `csr config check` also checks the evaluation protocols and baselines
+  (`services.configs.config_problems`).
+
 ## [0.3.0] — 2026-09-30 — M3 HAG, meta-algorithm, template replication
 
 ### Added

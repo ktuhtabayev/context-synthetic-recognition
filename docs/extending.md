@@ -13,6 +13,8 @@ a function with the signature of its kind; it may declare a parameter type, whic
 | weights | `core.contributions.WEIGHTS` | `(WeightInputs, params) → float` | `omega` |
 | majorizer | `core.majorizers.MAJORIZERS` | `(x, params) → ϕ(x)` element-wise | `sigmoid` |
 | decision rule | `core.meta.DECISION_RULES` | `(b1, b2, class_sizes, params) → 1, 2 or 0` | `article-step-4` |
+| protocol | `evaluation.protocols.PROTOCOLS` | `(class_index, seed, params) → [Split]` | `resubstitution`, `leave-one-out` |
+| baseline | `evaluation.baselines.BASELINES` | `(BaselineInput, params) → [BaselineOutput]` | `knn-vote` |
 | dataset format | `data.loaders.LOADERS` | `(path, LoadOptions) → Dataset` | detected |
 
 ## Example: a metric with a parameter
@@ -68,6 +70,10 @@ context:
   α·ϕ(−b) stays in (0, α) (ADR-026).
 - **Decision rules** receive the final sizes |B1(a_p)|, |B2(a_p)| and the class sizes and return
   1 (K1), 2 (K2) or 0 (refusal) for every object (ADR-027).
+- **Protocols** return the folds; the runner re-fits the whole pipeline on every training part
+  and never shows it the held-out objects' classes (ADR-032).
+- **Baselines** get the fold's training part only and return decisions 1, 2, 0 with a score that
+  is larger for K1.
 - Everything is deterministic; the configuration hash covers the plug-in names and parameters.
 
 ## Plug-ins from other packages

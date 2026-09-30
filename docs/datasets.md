@@ -58,6 +58,14 @@ experiment = load_dataset(
 )
 ```
 
+A configuration names a built-in dataset with the prefix `builtin:` (the configured
+`feature_types` still apply):
+
+```yaml
+dataset:
+  path: builtin:heart-disease-270
+```
+
 ## Inspecting a dataset
 
 `csr data info` shows what the pipeline will make of a dataset under a configuration:
