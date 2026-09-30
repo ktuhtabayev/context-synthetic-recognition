@@ -1,0 +1,54 @@
+# Algorithm reference
+
+Every element of the article, the workbook sheet that specifies it and the module that implements
+it. Modules marked *planned* arrive with the milestone shown.
+
+!!! warning "Two template calculations differ from the article"
+    - θ and γ are measured from running partial class means instead of the final class means M₁
+      and M₂ — switch `hag.centres` (ADR-002).
+    - In STEP 4 the majorizer is applied twice instead of once — switch `hag.step4_passes`
+      (ADR-003).
+
+## Pipeline
+
+(S, E) → Ψ_ρ,k(S, E) → D(S, E) → Y(S, E) → R(Y(S, E))
+
+| # | Article element | Formula / step | Workbook sheet | Module | Milestone |
+|---|---|---|---|---|---|
+| 0 | Parameters | — | Parameters | `config.models` | M1 ✓ |
+| 1 | Data E₀, types I/J, classes K1, K2 | problem statement | Dataset, Quantitative, Nominal | `data` (planned) | M2 |
+| 2 | Scale unification (fractional-linear) | Zhuravlev metric definition | Normalized Dataset | `core.normalizers` (planned) | M2 |
+| 3 | Base operators ρ, ρ_I, ρ_J | variants of Ψ | Zhuravlev Distances | `core.metrics`, `core.operators` (planned) | M2 |
+| 4 | Nested neighbourhoods | local context Ψ_ρ,k | Sorted Neighbors (ρ, ρ_I, ρ_J) | `core.neighbours` (planned) | M2 |
+| 5 | Permitted k | k_max = 2·min\|Kᵢ\| − 3 | Parameters, Synthetic Features (k-NN) | `core.k_strategies` (planned) | M2 |
+| 6 | Same-class count μ | section 1.3 | Synthetic Features (k-NN) | `core.encoders` (planned) | M2 |
+| 7 | Synthetic features Ψ(r) | formula (5) | Ψ(r) Binary Features | `core.encoders` (planned) | M2 |
+| 8 | Membership, stability, meta-object, bit masks | formulas (1), (2); section 1.4 | Membership & Stability | `core.membership` (planned) | M2 |
+| 9 | Boundary, informativeness | formulas (3), (4) | Informativeness ω | `core.membership` (planned) | M2 |
+| 10 | Contributions | formula (6) | Ψ(r) Contribution & Weight | `core.contributions` (planned) | M2 |
+| 11 | Hierarchical agglomerative grouping | Steps 1–5 | Greedy upon Weight (1–4-Latent) | `core.hag` (planned) | M3 |
+| 12 | Meta-description Y = (y, r) | Y(2p − 1) | Dataset for Meta-algorithm | `core.model` (planned) | M3 |
+| 13 | New object without its class | Theorem, Corollary | Brace for Meta-algorithm | `core.model` (planned) | M3 |
+| 14 | Meta-algorithm | Steps 1–5 | Meta-algorithm (+ All Objects) | `core.meta` (planned) | M3 |
+| 15 | Margins with / without majorizer | — | Margin Analysis | `evaluation.margins` (planned) | M4 |
+| 16 | Training correctness | Definition 2 | Accuracy, Confusion Matrix, Precision/Recall/F1, ROC & AUC | `evaluation` (planned) | M4 |
+| 17 | Generalization correctness | Definition 3 | Leave-One-Out | `evaluation.protocols` (planned) | M4 |
+| 18 | Template-vs-article switches | — | Sensitivity (Switches) | `config.presets` ✓, `services` (planned) | M1 / M4 |
+| 19 | Determinacy, sufficiency, contextual equivalence | Definitions 1, 4, 6; Property 1 | Model Properties | `core.properties` (planned) | M4 |
+| 20 | Acceptance tests | — | Validation | `services.validation`, `csr validate` (planned) | M4 |
+
+## Notes for the article text
+
+Found while building the experiment; for the author to decide.
+
+- **Permitted k.** The text r = |{k odd, k ≤ min(|K1|, |K2|)}| should become k = 3, 5, …,
+  2·min|Kᵢ| − 3 (with k = 1 when min|Kᵢ| = 2), see ADR-005.
+- **ϰ.** The text says ϰ ≤ n − 1; the bound that matters is ϰ ≤ r − 1 (number of synthetic
+  features).
+- **β in (2).** "β = 2k − 1" is the number of gradations of a bit mask minus one, 2^(number of bits)
+  − 1; for the counts μ, β = k.
+- **Dimension of Y.** Y = (v₀, …, v_p, z₁, …, z_p) has 2p + 1 components, not 2p − 1.
+- **Meta-algorithm Step 4** is empty in the draft; the rule used is K1 if |B1|/|K1| > |B2|/|K2|,
+  K2 if <, 0 (refusal) if equal.
+- **HAG STEP 3** in the article uses the final means M₁, M₂ and one majorizer pass in STEP 4; the
+  template cells do not (see the warning above).

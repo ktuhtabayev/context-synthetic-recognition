@@ -1,0 +1,78 @@
+# context-synthetic-recognition experiment configuration
+# preset: template
+# ⚠ template calculation (ADR-002): θ and γ are measured from running partial class means instead of the final class means M₁ and M₂
+# ⚠ template calculation (ADR-003): in STEP 4 the majorizer is applied twice instead of once
+
+schema_version: 1
+name: cs-model
+description: ''
+dataset:
+  path: null
+  format: auto
+  sheet: null
+  class_column: null
+  id_column: null
+  feature_types: null
+  missing_values: error
+preprocessing:
+  normalizer:
+    name: minmax
+    params: {}
+context:
+  operators:
+  - label: ρ
+    metric:
+      name: zhuravlev
+      params: {}
+    features: all
+  - label: ρ_I
+    metric:
+      name: zhuravlev
+      params: {}
+    features: quantitative
+  - label: ρ_J
+    metric:
+      name: zhuravlev
+      params: {}
+    features: nominal
+  distance_decimals: 10
+  tie_break: smaller-index
+  skip_empty_operators: true
+k:
+  name: formula
+  params: {}
+synthetic:
+  encoder:
+    name: formula-5
+    params: {}
+  weights:
+    name: omega
+    params: {}
+hag:
+  alpha: 0.3
+  delta: 0.1
+  kappa: 5
+  cr1: 10.0
+  majorizer:
+    name: sigmoid
+    params: {}
+  centres: running
+  step4_passes: 2
+meta:
+  decision_rule:
+    name: article-step-4
+    params: {}
+evaluation:
+  protocols:
+  - name: resubstitution
+    params: {}
+  - name: leave-one-out
+    params: {}
+  baselines:
+  - name: knn-vote
+    params: {}
+  positive_class: 1
+  score_decimals: 10
+seed: 42
+output:
+  runs_dir: runs
