@@ -4,8 +4,9 @@ The GUI tables, the exporters and the golden tests read the same trace, so the w
 software and the article's tables cannot drift apart. Indices are 0-based; the display names
 (S₁, x₁, a₁) come from :mod:`context_synthetic_recognition.notation`.
 
-This module covers Steps 1–8 (up to Ψ(r), formulas (1)–(6)); the HAG and the meta-algorithm add
-their traces in milestone M3.
+This module covers Steps 1–8 (up to Ψ(r), formulas (1)–(6)). The HAG's trace (``HAGResult``,
+``HAGIteration``, ``CandidateScan``) is in :mod:`.hag`, the meta-algorithm's (``MetaResult``,
+``MetaSteps``) in :mod:`.meta`; :mod:`.model` puts them together.
 """
 
 from __future__ import annotations

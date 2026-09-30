@@ -11,6 +11,8 @@ a function with the signature of its kind; it may declare a parameter type, whic
 | k strategy | `core.k_strategies.K_STRATEGIES` | `(class_sizes, params) → PermittedK` | `formula` |
 | encoder | `core.encoders.ENCODERS` | `(chi1, k, params) → values in {1, 2}` | `formula-5` |
 | weights | `core.contributions.WEIGHTS` | `(WeightInputs, params) → float` | `omega` |
+| majorizer | `core.majorizers.MAJORIZERS` | `(x, params) → ϕ(x)` element-wise | `sigmoid` |
+| decision rule | `core.meta.DECISION_RULES` | `(b1, b2, class_sizes, params) → 1, 2 or 0` | `article-step-4` |
 | dataset format | `data.loaders.LOADERS` | `(path, LoadOptions) → Dataset` | detected |
 
 ## Example: a metric with a parameter
@@ -62,6 +64,10 @@ context:
 - **k strategies** return odd k only; the pipeline also checks k ≤ m − 1.
 - **Encoders** use only χ₁, the classes of the neighbours — never the class of the object itself,
   which a new object does not have (Theorem, ADR-009, ADR-021).
+- **Majorizers** should map ℝ onto (0, 1) and increase, like the built-in ones, so that every step
+  α·ϕ(−b) stays in (0, α) (ADR-026).
+- **Decision rules** receive the final sizes |B1(a_p)|, |B2(a_p)| and the class sizes and return
+  1 (K1), 2 (K2) or 0 (refusal) for every object (ADR-027).
 - Everything is deterministic; the configuration hash covers the plug-in names and parameters.
 
 ## Plug-ins from other packages

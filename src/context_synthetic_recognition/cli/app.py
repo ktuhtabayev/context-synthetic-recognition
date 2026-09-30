@@ -1,11 +1,13 @@
 """The ``csr`` command.
 
-Commands: ``config`` (show, init, check), ``data`` (list, info) and ``validate`` (the package
-against the Excel experiment, Steps 1–8 so far); ``run``, ``classify`` and ``export`` follow with
-the milestones that implement them.
+Commands: ``config`` (show, init, check), ``data`` (list, info), ``fit`` (the CS-model: Ψ(r), the
+HAG and the meta-dataset), ``classify`` (an object through the meta-algorithm, step by step) and
+``validate`` (the package against the Excel experiment and the template workbooks); ``run`` and
+``export`` follow with the milestones that implement them.
 """
 
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Annotated
 
@@ -24,7 +26,10 @@ from context_synthetic_recognition.config import (
     preset,
     save_config,
 )
+from context_synthetic_recognition.core.arrays import IntArray
 from context_synthetic_recognition.core.k_strategies import PermittedK
+from context_synthetic_recognition.core.meta import REFUSAL
+from context_synthetic_recognition.core.model import Classification, CSModel, fit_model
 from context_synthetic_recognition.core.plugins import plugin_problems
 from context_synthetic_recognition.data import (
     DATASETS,
@@ -34,10 +39,10 @@ from context_synthetic_recognition.data import (
     load_builtin,
     load_dataset,
 )
-from context_synthetic_recognition.errors import CSRError
+from context_synthetic_recognition.errors import CSRError, DatasetError
 from context_synthetic_recognition.log import configure_logging
-from context_synthetic_recognition.notation import class_name
-from context_synthetic_recognition.services.datasets import summarize
+from context_synthetic_recognition.notation import class_name, subscript, synthetic_name
+from context_synthetic_recognition.services.datasets import parse_object, summarize
 from context_synthetic_recognition.services.validation import DEFAULT_TOLERANCE, validate_workbook
 
 EXIT_FAILED = 1
@@ -233,13 +238,173 @@ def data_info(
         typer.echo(f"  ⚠ {problem}")
 
 
+# ---------------------------------------------------------------- csr fit / csr classify
+
+
+SourceArgument = Annotated[
+    str, typer.Argument(help="Dataset file, or a built-in name (csr data list).")
+]
+FormatOption = Annotated[
+    str, typer.Option("--format", "-f", help="File format (auto: from extension and content).")
+]
+SheetOption = Annotated[str | None, typer.Option(help="Excel sheet.")]
+ClassOption = Annotated[str | None, typer.Option(help="Class column of a table.")]
+IdOption = Annotated[str | None, typer.Option(help="Object-id column of a table.")]
+ConfigOption = Annotated[
+    Path | None, typer.Option("--config", "-c", help="Configuration; the template preset.")
+]
+
+
+def _fitted(
+    source: str,
+    fmt: str,
+    sheet: str | None,
+    class_column: str | None,
+    id_column: str | None,
+    config_path: Path | None,
+) -> tuple[Dataset, ExperimentConfig, CSModel]:
+    config = _config_or_default(config_path)
+    dataset, _ = _load_source(source, fmt, sheet, class_column, id_column)
+    return dataset, config, fit_model(dataset, config)
+
+
+def _names(dataset: Dataset, indices: Sequence[int] | IntArray) -> str:
+    chosen = [dataset.object_ids[int(i)] for i in indices]
+    return "{" + ", ".join(chosen) + "}" if chosen else "∅"
+
+
+@app.command("fit")
+def fit(
+    source: SourceArgument,
+    fmt: FormatOption = "auto",
+    sheet: SheetOption = None,
+    class_column: ClassOption = None,
+    id_column: IdOption = None,
+    config_path: ConfigOption = None,
+) -> None:
+    """Fit the CS-model: permitted k, Ψ(r), the HAG (TUPLAM, crit, latent features)."""
+    try:
+        dataset, config, model = _fitted(source, fmt, sheet, class_column, id_column, config_path)
+    except CSRError as error:
+        raise _fail(error) from error
+    trace, grouping = model.trace, model.hag
+    settings = grouping.settings
+    typer.echo(dataset.name)
+    typer.echo(
+        f"  objects m = {dataset.m}; |K1| = {trace.class_sizes[0]}, |K2| = {trace.class_sizes[1]}"
+    )
+    typer.echo(f"  k ({config.k.name}): {_k_text(trace.permitted_k)}")
+    typer.echo(f"  r = |Ψ(r)| = {trace.r} synthetic features")
+    typer.echo(
+        f"  HAG: α = {settings.alpha:g}, δ = {settings.delta:g}, ϰ = {settings.kappa}, "
+        f"cr1₀ = {settings.cr1:g}, ϕ = {settings.majorizer}, centres = {settings.centres.value}, "
+        f"STEP 4 passes = {settings.step4_passes}"
+    )
+    for deviation in active_deviations(config):
+        typer.echo(f"    ⚠ template calculation ({deviation.adr}): {deviation.statement}")
+    first = grouping.first
+    typer.echo(f"    STEP 2: u = {synthetic_name(first)} (weight {grouping.weights[first]:.6g})")
+    for it in grouping.iterations:
+        if it.q is None:
+            typer.echo(f"    iteration {it.number}: no θ/γ < cr1₀ among {it.candidates.size}")
+        else:
+            typer.echo(
+                f"    iteration {it.number}: q = {synthetic_name(it.q)}, "
+                f"crit = θ/γ = {it.crit:.12g} (of {it.candidates.size} candidates)"
+            )
+    typer.echo(f"    stop: {grouping.stop.text}")
+    typer.echo(f"  TUPLAM = {grouping.label}; p = {grouping.p} latent features")
+    training = model.classify_training()
+    truth = dataset.y.tolist()
+    correct = sum(label == true for label, true in zip(training.labels, truth, strict=True))
+    typer.echo(
+        f"  training objects (Definition 2): {correct} of {dataset.m} classified correctly, "
+        f"{training.refusals} refusals"
+    )
+
+
+def _explain(dataset: Dataset, model: CSModel, result: Classification) -> None:
+    steps = result.meta.steps(0)
+    description = result.meta.queries[0]
+    typer.echo(f"  TUPLAM = {model.hag.label} → positions a₀ … a{subscript(model.p)}")
+    typer.echo(f"  description (a₀, …, a_p) = ({', '.join(str(int(v)) for v in description)})")
+    for j in range(model.p + 1):
+        step = "Step 1" if j == 0 else "Step 2"
+        typer.echo(
+            f"  {step}  j = {j}: B1(a{subscript(j)}) = {_names(dataset, steps.b1(j))}   "
+            f"B2(a{subscript(j)}) = {_names(dataset, steps.b2(j))}"
+        )
+    meta = result.meta
+    k1, k2 = model.description.class_sizes
+    b1, b2 = int(meta.b1_sizes[0, -1]), int(meta.b2_sizes[0, -1])
+    decision = int(meta.decisions[0])
+    if decision == REFUSAL:
+        verdict = "0 — refusal (equal scores)"
+    else:
+        verdict = f"K{decision} (class {result.labels[0]})"
+    typer.echo(
+        f"  Step 4: |B1|/|K1| = {b1}/{k1} = {b1 / k1:.6g}, |B2|/|K2| = {b2}/{k2} = {b2 / k2:.6g}"
+        f"  →  {verdict}"
+    )
+
+
+@app.command("classify")
+def classify(
+    source: SourceArgument,
+    values: Annotated[
+        str | None,
+        typer.Option("--values", help="A new object: n values separated by commas or spaces."),
+    ] = None,
+    obj: Annotated[
+        int | None,
+        typer.Option(
+            "--object",
+            help="Training object № (1-based), left out of its own context (leave-self-out).",
+        ),
+    ] = None,
+    fmt: FormatOption = "auto",
+    sheet: SheetOption = None,
+    class_column: ClassOption = None,
+    id_column: IdOption = None,
+    config_path: ConfigOption = None,
+) -> None:
+    """Classify one object without its class: Ψ(r), TUPLAM description, B1/B2 per step, class."""
+    if (values is None) == (obj is None):
+        typer.echo("error: give exactly one of --values and --object", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    try:
+        dataset, _, model = _fitted(source, fmt, sheet, class_column, id_column, config_path)
+        if obj is not None:
+            if not 1 <= obj <= dataset.m:
+                raise DatasetError(f"there is no training object № {obj} (m = {dataset.m})")
+            x, exclude = dataset.X[obj - 1], [obj - 1]
+            what = f"{dataset.object_ids[obj - 1]} (left out of its own context)"
+        else:
+            x, exclude = parse_object(dataset, values or ""), None
+            what = "new object"
+        result = model.classify(x, exclude=exclude)
+    except CSRError as error:
+        raise _fail(error) from error
+    typer.echo(f"{dataset.name}: {what}")
+    if result.representation is not None:
+        values_row = result.representation.context.values[0]
+        features = ", ".join(
+            f"{f.name} = {int(v)}" for f, v in zip(model.trace.features, values_row, strict=True)
+        )
+        typer.echo(f"  Ψ(r) by formula (5): {features}")
+    _explain(dataset, model, result)
+
+
 # ---------------------------------------------------------------- csr validate
 
 
 @app.command("validate")
 def validate(
     against: Annotated[
-        Path, typer.Option("--against", "-a", help="The Excel experiment workbook.")
+        Path,
+        typer.Option(
+            "--against", "-a", help="The Excel experiment workbook or a template workbook."
+        ),
     ],
     tolerance: Annotated[
         float, typer.Option(help="Largest accepted absolute difference of numbers.")
@@ -251,24 +416,27 @@ def validate(
         bool, typer.Option("--details", help="List every check, not only failed ones.")
     ] = False,
 ) -> None:
-    """Compare the package with the cached cell values of the Excel experiment (Steps 1–8)."""
+    """Compare the package with the cached cells of the experiment or a template workbook."""
     try:
         report = validate_workbook(against, _config_or_default(config_path), tolerance=tolerance)
     except CSRError as error:
         raise _fail(error) from error
-    typer.echo(against.name)
+    typer.echo(f"{against.name}  [{report.kind}]")
+    for note in report.notes:
+        typer.echo(f"  {note}")
     typer.echo(f"  tolerance {tolerance:g}: {report.cells} cells in {len(report.results)} checks")
     for sheet, results in report.sheets().items():
         failed = [result for result in results if not result.passed]
         cells = sum(result.cells for result in results)
         largest = max(result.max_difference for result in results)
         mark = "✓" if not failed else f"✗ {len(failed)} of {len(results)} checks failed"
-        typer.echo(f"  {sheet:28s} {cells:5d} cells  max |Δ| {largest:.1e}  {mark}")
+        typer.echo(f"  {sheet:31s} {cells:5d} cells  max |Δ| {largest:.1e}  {mark}")
         for result in results if details else failed:
             typer.echo(f"      {'✓' if result.passed else '✗'} {result.ref:9s} {result.what}")
             for mismatch in result.mismatches[:5]:
                 typer.echo(f"          {mismatch}")
-    typer.echo("  (Steps 9–12 and the evaluation sheets follow with milestones M3 and M4.)")
+    if report.kind == "experiment":
+        typer.echo("  (the evaluation sheets, Margin Analysis … Model Properties, follow with M4)")
     if not report.passed:
         typer.echo("validation FAILED", err=True)
         raise typer.Exit(EXIT_FAILED)

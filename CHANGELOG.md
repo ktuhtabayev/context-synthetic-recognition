@@ -5,6 +5,35 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-30 — M3 HAG, meta-algorithm, template replication
+
+### Added
+
+- HAG, Steps 1–5 (`core.hag`), with both template/article switches, the stopping rules and a full
+  trace: every iteration's θ, γ, θ/γ, cr1, q, crit and latent feature; the per-object columns of
+  any candidate block on demand, bit-identical to the grouping (ADR-024). θ/γ = +∞ when γ = 0
+  (ADR-025).
+- Majorizing functions (`core.majorizers`): logistic sigmoid (default), tanh, arctan and softsign,
+  scaled to (0, 1) (ADR-026).
+- Meta-algorithm, Steps 1–5 (`core.meta`): B1/B2 at every step for any gradations, the decision
+  rule registry (`article-step-4`, exact comparison, refusal = 0) (ADR-027).
+- The CS-model end to end (`core.model.fit_model`, `CSModel`): the meta-dataset Y = (y, r), the
+  training description, `represent` / `classify` / `predict` without a label (Theorem) and
+  `classify_training` (resubstitution) (ADR-028).
+- `csr fit` and `csr classify` (`--values`, `--object`) with the B1/B2 explanation.
+- `csr validate` covers Steps 9–12 of the experiment (10,272 cells in 19 sheets, all within
+  3.0e-14) with its inputs read from the workbook, and recognises the HAG template (SET
+  {x₃, x₆, x₁₃, x₄, x₉}, 6,131 cells) and the meta-algorithm template (Class 2) (ADR-029).
+- Copies of the two template workbooks in `tests/data/templates` for CI; golden tests for the
+  switch variants, the ten leave-one-out folds and the template replication; cross-checks with
+  the reference engine on the experiment, Heart-Disease (270, 13, 2) and random datasets.
+
+### Changed
+
+- `services.validation` is a package (`checks`, `context_map`, `model_map`, `experiment`,
+  `templates`); `Check` is generic over the computed subject and may be conditional.
+- `csr config check` also checks the majorizer and the decision rule.
+
 ## [0.2.0] — 2026-09-30 — M2 core pipeline to Ψ(r)
 
 ### Added

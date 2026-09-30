@@ -26,16 +26,16 @@ it. Modules marked *planned* arrive with the milestone shown.
 | 8 | Membership, stability, meta-object, bit masks | formulas (1), (2); section 1.4 | Membership & Stability | `core.membership.membership_table`, `stability`, `bit_masks` | M2 ✓ |
 | 9 | Boundary, informativeness | formulas (3), (4) | Informativeness ω | `core.membership.boundary`, `informativeness` | M2 ✓ |
 | 10 | Contributions | formula (6) | Ψ(r) Contribution & Weight | `core.contributions.contributions`; Steps 1–8 together: `core.context.fit_context` | M2 ✓ |
-| 11 | Hierarchical agglomerative grouping | Steps 1–5 | Greedy upon Weight (1–4-Latent) | `core.hag` (planned) | M3 |
-| 12 | Meta-description Y = (y, r) | Y(2p − 1) | Dataset for Meta-algorithm | `core.model` (planned) | M3 |
-| 13 | New object without its class | Theorem, Corollary | Brace for Meta-algorithm | `core.context.ContextModel.represent` ✓ (Ψ(r)); `core.model` (planned) | M2 / M3 |
-| 14 | Meta-algorithm | Steps 1–5 | Meta-algorithm (+ All Objects) | `core.meta` (planned) | M3 |
+| 11 | Hierarchical agglomerative grouping | Steps 1–5 | Greedy upon Weight (1–4-Latent) | `core.hag.hag` (trace: `HAGResult`, `scan`), `core.majorizers` | M3 ✓ |
+| 12 | Meta-description Y = (y, r) | Y(2p − 1) | Dataset for Meta-algorithm | `core.model.MetaDataset`, `fit_model` | M3 ✓ |
+| 13 | New object without its class | Theorem, Corollary | Brace for Meta-algorithm | `core.model.CSModel.represent` / `classify` / `predict` (no label argument) | M2 / M3 ✓ |
+| 14 | Meta-algorithm | Steps 1–5 | Meta-algorithm (+ All Objects) | `core.meta.meta_classify`, `DECISION_RULES`; `CSModel.classify_training` | M3 ✓ |
 | 15 | Margins with / without majorizer | — | Margin Analysis | `evaluation.margins` (planned) | M4 |
 | 16 | Training correctness | Definition 2 | Accuracy, Confusion Matrix, Precision/Recall/F1, ROC & AUC | `evaluation` (planned) | M4 |
 | 17 | Generalization correctness | Definition 3 | Leave-One-Out | `evaluation.protocols` (planned) | M4 |
-| 18 | Template-vs-article switches | — | Sensitivity (Switches) | `config.presets` ✓, `services` (planned) | M1 / M4 |
+| 18 | Template-vs-article switches | — | Template Deviations, Sensitivity (Switches) | `config.presets` ✓, `core.hag` ✓; sensitivity table (planned) | M1 / M3 / M4 |
 | 19 | Determinacy, sufficiency, contextual equivalence | Definitions 1, 4, 6; Property 1 | Model Properties | `core.properties` (planned) | M4 |
-| 20 | Acceptance tests | — | Validation (Steps 1–8 so far) | `services.validation.validate_workbook`, `csr validate` ✓ | M2 → M4 |
+| 20 | Acceptance tests | — | Validation (Steps 1–12 so far; the HAG and meta-algorithm templates) | `services.validation.validate_workbook`, `csr validate` ✓ | M2 → M4 |
 
 ## Notes for the article text
 
@@ -52,3 +52,8 @@ Found while building the experiment; for the author to decide.
   K2 if <, 0 (refusal) if equal.
 - **HAG STEP 3** in the article uses the final means M₁, M₂ and one majorizer pass in STEP 4; the
   template cells do not (see the warning above).
+- **HAG STEP 3, γ = 0.** θ/γ is undefined when γ = 0; the implementation treats it as +∞ (the
+  candidate is never chosen, ADR-025). The text could state this.
+- **HAG STEP 3, no θ/γ < cr1.** If no candidate improves on the initial cr1 the grouping stops
+  without adding a feature (ADR-008); the article's steps do not mention this case.
+- **Meta-algorithm with p = 0.** When TUPLAM has a single feature only Step 1 applies.

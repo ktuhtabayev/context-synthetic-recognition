@@ -304,3 +304,106 @@ its registry name is `zhuravlyov`. The earlier spellings `zhuravlev` and `juravl
 so older configuration files still load. The protected material keeps its own spelling: the
 workbook's sheet *Zhuravlev Distances* (the validation map must name it exactly) and the files in
 `docs/handoff/`. The preset configurations' hashes changed with the name.
+
+## ADR-024 — HAG: implementation and trace
+
+*Accepted, 2026-09-30 (M3).*
+
+- `core.hag.hag` follows Steps 1–5 as specified in ADR-008: candidates in feature order, u = the
+  first maximal weight, q = the first minimal θ/γ among those below cr1₀, no feature added if
+  none is below (the grouping then stops). STEP 3 evaluates the candidates of an iteration in
+  blocks of at most 2²² (object, candidate) values.
+- Sums over the objects run in their original order (running sums, as the workbook's cells);
+  the final means are the last running sums divided by |Kᵢ|. The majorizer step is
+  b + (s·α)·ϕ(−b) with σ(−b) = 1/(1 + e^b), the reference engine's operation order (the
+  workbook's `EXP(−b)/(1 + EXP(−b))` is the same number up to the last bit).
+- Every iteration records R entering, the candidates, θ, γ, θ/γ, cr1, q, crit, R + η_q with one
+  pass, the new R (= r_j), whether it continues and why it stops (`|TUPLAM| = ϰ`, `crit ≤ δ`,
+  `P = ∅`, `no θ/γ < cr1₀`). The per-object columns of a candidate block (b, majorized b, running
+  sums, the centres used, |b − M|) are recomputed on demand by `HAGResult.scan` / `scan_from`
+  with the same code, so they are bit-identical to the grouping while the trace stays
+  O(m·r) instead of O(ϰ·m·r·columns).
+- With one STEP 4 pass the new R is the STEP 3 value of q; with two passes the majorizer is
+  applied to it once more (ADR-003). r = 1 needs no iteration (p = 0).
+- Against the reference engine: identical in the running mode (experiment and Heart-Disease
+  (270, 13, 2)); in the final mode crit differs in the last bits, because the reference's
+  `sum()` is compensated on Python ≥ 3.12. The tests compare the decisions (TUPLAM, B1/B2,
+  classes) exactly and θ/γ, crit and the latent features to 1e-12, which also covers CPUs whose
+  vectorised `exp` differs from the C library's in the last bit.
+
+## ADR-025 — θ/γ = +∞ when γ = 0 (author)
+
+*Accepted, 2026-09-30 (M3).*
+
+HAG STEP 3 is undefined when γ = 0 (the workbook would show `#DIV/0!`, the reference engine
+stops with an error). The candidate's θ/γ is set to +∞: it can never become q, as in the template
+project. If no candidate is left below cr1₀ the grouping stops as usual (`no θ/γ < cr1₀`). This
+does not occur on Heart-Disease; no earlier number changes.
+
+## ADR-026 — Majorizing functions scaled to (0, 1) (author)
+
+*Accepted, 2026-09-30 (M3).*
+
+Registry `MAJORIZERS`: `sigmoid` (default, σ(x) = 1/(1 + e^(−x)), alias `logistic`), `tanh`
+((1 + tanh x)/2 = σ(2x)), `arctan` (1/2 + arctan(x)/π) and `softsign` ((1 + x/(1 + |x|))/2).
+Every built-in ϕ maps ℝ onto (0, 1), increases and has ϕ(x) + ϕ(−x) = 1, so each step α·ϕ(−b)
+lies in (0, α): it pushes K1 up and K2 down, harder the further b lies on the wrong side of 0.
+The raw tanh, arctan and softsign (range (−1, 1)) were rejected: their step changes sign and
+would pull correctly placed objects back towards 0 — a different regularisation. Custom
+majorizers register through the registry.
+
+## ADR-027 — Meta-algorithm: gradations, decisions, refusal
+
+*Accepted, 2026-09-30 (M3).*
+
+- Gradations are compared for equality only, so any values work: {1, 2} of formula (5), or the
+  nominal codes of the template's meta-algorithm. The latent-sign condition is strict: an object
+  with dᵢⱼ = 0 falls out of both sets.
+- Step 4 is a plug-in (registry `DECISION_RULES`, default `article-step-4`). It compares the
+  scores exactly, as the integers |B1|·|K2| and |B2|·|K1|; for realistic sizes this equals the
+  workbook's comparison of the two floating-point scores.
+- Decisions use the article's codes 1 = K1, 2 = K2, 0 = refusal; the class labels (numbers or
+  text) are attached separately and a refusal has no label.
+- p = 0 (one TUPLAM feature) uses Step 1 only.
+- The core keeps score₁ − score₂ unrounded; rounding to `evaluation.score_decimals` belongs to
+  the evaluation (ADR-008).
+- Queries are filtered in blocks; the sets B1(aⱼ), B2(aⱼ) of one object at every step are
+  recomputed on demand (`MetaResult.steps`).
+
+## ADR-028 — Model API: fit, represent, classify
+
+*Accepted, 2026-09-30 (M3).*
+
+- `core.model.fit_model(dataset, config)` fits Steps 1–11 and returns a `CSModel`: the Step 1–8
+  context model, the HAG result, the meta-dataset Y = (y₀ … y_p, r₁ … r_p) and the training
+  description (aᵢ, dᵢ). The HAG majorizer and the decision rule are resolved first, so a wrong
+  plug-in name fails before the costly Steps 1–8.
+- `represent`, `classify` and `predict` take no label (Theorem, ADR-009); `exclude` leaves a
+  training object out of its own context.
+- `classify_training` classifies every training object with its training row: its context
+  excludes itself while it stays in the meta-algorithm's training description (sheet
+  *Meta-algorithm (All Objects)*, Definition 2). It equals `classify(X, exclude=all)`.
+- CLI: `csr fit` (permitted k, r, the HAG iteration by iteration, TUPLAM, training correctness)
+  and `csr classify` (`--values` for a new object, `--object N` for a training object left out of
+  its context) with B1/B2 at every step.
+
+## ADR-029 — Validation of Steps 9–12 and of the template workbooks (author: copies)
+
+*Accepted, 2026-09-30 (M3).*
+
+- `services.validation` recognises three layouts from their sheet names: the experiment and the
+  two templates. For the experiment the inputs come from the workbook itself — the *Dataset*
+  sheet, α, δ, ϰ, cr1 and **both switches** from *Parameters* B19–B25, and the new object with the
+  excluded training object from *Brace for Meta-algorithm* B31:N31 and B35 — so the cached values
+  are always compared with the setting they were calculated with. A `--config` is used as given;
+  the report notes when its HAG settings differ from the workbook's.
+- The Step 9–12 map covers every computed cell of the four *Greedy upon Weight* sheets (also the
+  blocks of features already in TUPLAM and the states of an iteration that was not executed),
+  *Dataset for Meta-algorithm*, *Brace for Meta-algorithm*, *Meta-algorithm* and *Meta-algorithm
+  (All Objects)*. Result: 10,272 cells in 19 sheets, all within 3.0e-14.
+- HAG template: every candidate block, θ/γ, cr1, q, the STEP 4 blocks, r₁ … r₄ and Y — 6,131
+  cells within 3.6e-15; SET {x₃, x₆, x₁₃, x₄, x₉}. Meta-algorithm template: the new object
+  (4, 0, 7, 2, 0) is Class 2 with B1(a₄) = ∅, B2(a₄) = {S₉, S₁₀}.
+- The two `- Opus 5.5` template workbooks (same cells as the originals) are copied byte for byte
+  to `tests/data/templates/`, so CI replicates the templates (**author**); a test compares their
+  SHA-256 with the originals whenever the template project is present.

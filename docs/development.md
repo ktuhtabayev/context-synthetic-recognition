@@ -34,6 +34,10 @@ The virtual environment stores absolute paths; if the project folder moves, crea
   numerical results is agreed with the author first.
 - **Protected material:** `resources/experiments/` and `docs/handoff/` are never modified;
   linters and hooks exclude them and Git stores them byte for byte.
+- **Template workbooks:** `tests/data/templates/` holds byte-for-byte copies of the HAG and
+  meta-algorithm templates of `../hag-regularized-stacking-boosting-meta` (read-only), so CI can
+  replicate them; a test compares the copies with the originals when that project is present
+  (ADR-029).
 - **Docstrings:** Google style; every public function names the article formula or step it
   implements.
 
