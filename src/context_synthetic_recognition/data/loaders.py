@@ -6,10 +6,10 @@ Formats (registry :data:`LOADERS`, names as in ``dataset.format`` of the configu
     The *Dataset* sheet of the author's Excel experiment: a header row with ``Class`` above the
     class column, one row per object (features in the columns left of ``Class``), then the
     feature-type row (1 = quantitative, 0 = nominal).
-``template-extended``
-    The layout of the template project (``.csv`` comma-separated or ``.dat`` whitespace-separated,
-    decimal commas accepted): a first row ``m, n, c``; m rows of n features and the class label;
-    a last row of n type flags.
+``extended`` (alias ``template-extended``)
+    The author's dataset layout, as in the template project (``.csv`` comma-separated or ``.dat``
+    whitespace-separated, decimal commas accepted): a first row ``m, n, c``; m rows of n features
+    and the class label; a last row of n type flags (1 = quantitative, 0 = nominal).
 ``csv``, ``xlsx``, ``parquet``
     A table with a header row: one column per feature, a class column (``class_column``, the last
     column by default) and optionally an id column. Feature types come from ``feature_types``;
@@ -145,11 +145,20 @@ def load_from_config(config: DatasetConfig, base_dir: Path | None = None) -> Dat
     """Load the dataset described by the ``dataset`` section of a configuration.
 
     Relative paths are resolved against ``base_dir`` (the configuration file's folder, ADR-016);
-    ``builtin:<name>`` names a built-in dataset (``csr data list``), with the configured
-    ``feature_types`` applied.
+    ``builtin:<name>`` names a built-in dataset (``csr data list``); a path that is not a file and
+    has no extension is a dataset of the project's ``datasets`` folder (id or name), and no path at
+    all means the default dataset (ADR-035). The configured ``feature_types`` apply in every case.
     """
-    if config.path is None:
-        raise DatasetError("the configuration names no dataset (dataset.path is empty)")
+    if config.path is None or (
+        not config.path.startswith(BUILTIN_PREFIX)
+        and not Path(config.path).suffix
+        and not (base_dir or Path()).joinpath(config.path).is_file()
+    ):
+        # data.catalog imports this module, so it is looked up here
+        from context_synthetic_recognition.data.catalog import resolve_dataset
+
+        dataset = resolve_dataset(config.path, start=base_dir)
+        return dataset.with_feature_types(config.feature_types or {})
     if config.path.startswith(BUILTIN_PREFIX):
         # data.builtin imports this module, so the registry is looked up here
         from context_synthetic_recognition.data.builtin import load_builtin
@@ -571,7 +580,8 @@ LOADERS.add("cs-workbook", load_cs_workbook, summary="Dataset sheet of the Excel
 LOADERS.add(
     "template-extended",
     load_template_extended,
-    summary="template layout: m, n, c / objects / type flags (.csv, .dat)",
+    aliases=("extended",),
+    summary="extended layout: m n c / objects + class / type flags 1 = I, 0 = J (.dat, .csv)",
 )
 LOADERS.add("csv", load_csv, summary="CSV table with a header row")
 LOADERS.add("xlsx", load_xlsx, summary="Excel table with a header row")

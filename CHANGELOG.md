@@ -5,6 +5,15 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+### Added
+
+- The dataset folder (ADR-035): `datasets/default.dat|.csv` (Heart-Disease (10, 13, 2), the default
+  dataset) and `datasets/raw/Heart-Disease/Heart-Disease (270, 13, 2).dat|.csv`, byte for byte;
+  `data.catalog` (discovery, ids, `.dat`/`.csv` identity checks, name resolution with the
+  built-ins as fallback); `csr data check`; `csr data list` shows the folder; `data info`, `fit`,
+  `classify` and `run` use the default dataset without an argument; `dataset.path` may be empty
+  or an id; format alias `extended`.
+
 ## [0.4.0] — 2026-09-30 — M4 evaluation
 
 ### Added

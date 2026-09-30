@@ -10,6 +10,9 @@
 # Protected source material (CLAUDE.md: never modify) is stored byte for byte
 docs/handoff/** -text
 resources/** -text
+# The author's datasets are stored byte for byte: their checksums must not depend on the platform
+datasets/** -text
+tests/data/** -text
 
 # Experiment workbooks, documents and images are binary (no Git LFS: ADR-014)
 *.xlsx binary

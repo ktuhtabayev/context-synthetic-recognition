@@ -310,10 +310,11 @@ def test_load_from_config_resolves_relative_paths(tmp_path: Path) -> None:
     write_extended(tmp_path / "d.csv", "2,1,2\n1,1\n2,2\n1\n")
     d = load_from_config(DatasetConfig(path="d.csv"), base_dir=tmp_path)
     assert d.m == 2
-    with pytest.raises(DatasetError, match="names no dataset"):
-        load_from_config(DatasetConfig())
+    default = load_from_config(DatasetConfig())  # no path: the default dataset (ADR-035)
+    assert (default.name, default.m) == ("default", 10)
 
 
 def test_loader_registry_names_match_the_configuration() -> None:
     formats = set(DatasetConfig.model_fields["format"].annotation.__args__)  # type: ignore[union-attr]
-    assert formats - {"auto"} == set(LOADERS.names())
+    names = {name for info in LOADERS for name in (info.name, *info.aliases)}
+    assert formats - {"auto"} == names

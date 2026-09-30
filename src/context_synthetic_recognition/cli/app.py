@@ -36,10 +36,10 @@ from context_synthetic_recognition.data import (
     LOADERS,
     Dataset,
     detect_format,
-    load_builtin,
     load_dataset,
     load_from_config,
 )
+from context_synthetic_recognition.data.catalog import project_catalog, resolve_dataset
 from context_synthetic_recognition.errors import CSRError, DatasetError
 from context_synthetic_recognition.log import configure_logging
 from context_synthetic_recognition.notation import class_name, subscript, synthetic_name
@@ -169,11 +169,18 @@ def _k_text(ks: PermittedK) -> str:
 
 
 def _load_source(
-    source: str, fmt: str, sheet: str | None, class_column: str | None, id_column: str | None
+    source: str | None,
+    fmt: str,
+    sheet: str | None,
+    class_column: str | None,
+    id_column: str | None,
 ) -> tuple[Dataset, str]:
-    path = Path(source)
-    if not path.is_file() and source in DATASETS:
-        return load_builtin(source), f"built-in dataset '{DATASETS.info(source).name}'"
+    """Load ``source``: a file, a dataset of the ``datasets`` folder, a built-in, or the default."""
+    path = Path(source) if source is not None else None
+    if path is None or (not path.is_file() and not path.suffix and fmt == "auto"):
+        dataset = resolve_dataset(source)
+        where = dataset.source or f"built-in dataset '{source or 'heart-disease-10'}'"
+        return dataset, f"{where}" + ("" if source else " (the default dataset)")
     chosen = detect_format(path, sheet) if fmt == "auto" and path.is_file() else fmt
     dataset = load_dataset(
         path, chosen, sheet=sheet, class_column=class_column, id_column=id_column
@@ -183,7 +190,20 @@ def _load_source(
 
 @data_app.command("list")
 def data_list() -> None:
-    """List the built-in datasets and the supported file formats."""
+    """List the project's datasets, the built-in datasets and the supported file formats."""
+    try:
+        catalog = project_catalog()
+    except CSRError as error:
+        raise _fail(error) from error
+    if catalog is None:
+        typer.echo("datasets folder: none found (the built-in datasets are used)")
+    else:
+        typer.echo(f"datasets folder: {catalog.root}")
+        for entry in catalog:
+            shape = f"({', '.join(map(str, entry.shape))})" if entry.shape else ""
+            formats = ", ".join(ext.lstrip(".") for ext in entry.formats)
+            where = entry.path.parent.relative_to(catalog.root).as_posix()
+            typer.echo(f"  {entry.id:20s} {entry.name:28s} {shape:14s} {formats:9s} {where or '.'}")
     typer.echo("built-in datasets:")
     for info in DATASETS:
         typer.echo(f"  {info.name:20s} {info.obj.description}")
@@ -192,11 +212,42 @@ def data_list() -> None:
         typer.echo(f"  {loader.name:20s} {loader.summary}")
 
 
+@data_app.command("check")
+def data_check() -> None:
+    """Check the datasets folder: every file readable, (m, n, c) as named, .dat = .csv."""
+    try:
+        catalog = project_catalog()
+    except CSRError as error:
+        raise _fail(error) from error
+    if catalog is None:
+        typer.echo("error: no datasets folder found", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    typer.echo(f"datasets folder: {catalog.root}")
+    failed = 0
+    for result in catalog.check():
+        shape = f"({', '.join(map(str, result.shape))})" if result.shape else "—"
+        mark = "✓" if result.passed else "✗"
+        data = (result.content_hash or "—")[:12]
+        typer.echo(f"  {mark} {result.entry.id:20s} {shape:14s} data {data}")
+        for ext, digest in result.sha256.items():
+            typer.echo(f"      {ext:5s} sha256 {digest}")
+        for problem in result.problems:
+            typer.echo(f"      ✗ {problem}")
+        failed += not result.passed
+    if failed:
+        typer.echo(f"{failed} dataset(s) with problems", err=True)
+        raise typer.Exit(EXIT_FAILED)
+    typer.echo("all datasets consistent")
+
+
 @data_app.command("info")
 def data_info(
     source: Annotated[
-        str, typer.Argument(help="Dataset file, or a built-in name (csr data list).")
-    ],
+        str | None,
+        typer.Argument(
+            help="Dataset file, dataset id or name (csr data list); default: the default dataset."
+        ),
+    ] = None,
     fmt: Annotated[
         str, typer.Option("--format", "-f", help="File format (auto: from extension and content).")
     ] = "auto",
@@ -247,7 +298,10 @@ def data_info(
 
 
 SourceArgument = Annotated[
-    str, typer.Argument(help="Dataset file, or a built-in name (csr data list).")
+    str | None,
+    typer.Argument(
+        help="Dataset file, dataset id or name (csr data list); default: the default dataset."
+    ),
 ]
 FormatOption = Annotated[
     str, typer.Option("--format", "-f", help="File format (auto: from extension and content).")
@@ -261,7 +315,7 @@ ConfigOption = Annotated[
 
 
 def _fitted(
-    source: str,
+    source: str | None,
     fmt: str,
     sheet: str | None,
     class_column: str | None,
@@ -280,7 +334,7 @@ def _names(dataset: Dataset, indices: Sequence[int] | IntArray) -> str:
 
 @app.command("fit")
 def fit(
-    source: SourceArgument,
+    source: SourceArgument = None,
     fmt: FormatOption = "auto",
     sheet: SheetOption = None,
     class_column: ClassOption = None,
@@ -355,7 +409,7 @@ def _explain(dataset: Dataset, model: CSModel, result: Classification) -> None:
 
 @app.command("classify")
 def classify(
-    source: SourceArgument,
+    source: SourceArgument = None,
     values: Annotated[
         str | None,
         typer.Option("--values", help="A new object: n values separated by commas or spaces."),

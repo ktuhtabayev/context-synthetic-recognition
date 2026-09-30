@@ -9,7 +9,7 @@ description: 'Heart-Disease (270, 13, 2) with the large-data corrections of ADR-
   constant synthetic features skipped and the k range capped at 21 (literal k_max
   = 237 would give near-global neighbourhoods with an inflated ω).'
 dataset:
-  path: builtin:heart-disease-270
+  path: heart-disease-270
   format: auto
   sheet: null
   class_column: null
