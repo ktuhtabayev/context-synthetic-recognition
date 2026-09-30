@@ -90,8 +90,8 @@ class OperatorConfig(ConfigModel):
 
     label: str = Field(min_length=1)
     """Display name, e.g. ``ρ``, ``ρ_I``, ``ρ_J``; used in synthetic-feature names."""
-    metric: PluginSpec = Field(default_factory=lambda: plugin("zhuravlev"))
-    """Distance on the selected features (Zhuravlev metric by default)."""
+    metric: PluginSpec = Field(default_factory=lambda: plugin("zhuravlyov"))
+    """Distance on the selected features (Zhuravlyov metric by default)."""
     features: Literal["all", "quantitative", "nominal"] | tuple[str, ...] = "all"
     """``all`` (I ∪ J), ``quantitative`` (I), ``nominal`` (J) or explicit feature names."""
 

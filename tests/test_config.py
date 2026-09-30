@@ -47,12 +47,12 @@ def test_template_parameters_of_the_experiment() -> None:
     assert hag.majorizer == plugin("sigmoid")
 
 
-def test_default_operators_are_zhuravlev_on_all_i_and_j() -> None:
+def test_default_operators_are_zhuravlyov_on_all_i_and_j() -> None:
     operators = ExperimentConfig().context.operators
     assert [(o.label, o.metric.name, o.features) for o in operators] == [
-        ("ρ", "zhuravlev", "all"),
-        ("ρ_I", "zhuravlev", "quantitative"),
-        ("ρ_J", "zhuravlev", "nominal"),
+        ("ρ", "zhuravlyov", "all"),
+        ("ρ_I", "zhuravlyov", "quantitative"),
+        ("ρ_J", "zhuravlyov", "nominal"),
     ]
 
 

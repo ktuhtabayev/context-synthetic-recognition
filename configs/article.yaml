@@ -20,17 +20,17 @@ context:
   operators:
   - label: ρ
     metric:
-      name: zhuravlev
+      name: zhuravlyov
       params: {}
     features: all
   - label: ρ_I
     metric:
-      name: zhuravlev
+      name: zhuravlyov
       params: {}
     features: quantitative
   - label: ρ_J
     metric:
-      name: zhuravlev
+      name: zhuravlyov
       params: {}
     features: nominal
   distance_decimals: 10
