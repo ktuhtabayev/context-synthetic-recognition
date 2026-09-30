@@ -23,6 +23,7 @@ without its class.
 - [Architecture](architecture.md) — layers, pipeline, trace objects, extension points
 - [Algorithm reference](algorithm-reference.md) — article element → workbook sheet → module
 - [Datasets](datasets.md) — formats, feature types, classes, built-in datasets, `csr data info`
-- [Extending](extending.md) — plug-ins: metrics, normalizers, k strategies, encoders, weights
+- [Extending](extending.md) — plug-ins: metrics, normalizers, k strategies, encoders, weights,
+  majorizers, decision rules
 - [Decisions](DECISIONS.md) — the ADR log
 - [Development](development.md) — setup, commands, conventions, CI

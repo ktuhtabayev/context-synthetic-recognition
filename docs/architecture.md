@@ -33,13 +33,13 @@ flowchart TB
 
 | Package | Role | Status |
 |---|---|---|
-| `core` | Numerical pipeline, plug-in registries, trace objects | registry ✓ (M1), Steps 1–8 + trace ✓ (M2), HAG and meta-algorithm M3 |
+| `core` | Numerical pipeline, plug-in registries, trace objects | registry ✓ (M1), Steps 1–8 + trace ✓ (M2), HAG, meta-algorithm, model ✓ (M3) |
 | `config` | Typed configuration, presets, the two switches, YAML/TOML/JSON, hash | ✓ M1 |
 | `data` | Dataset schema, loaders (workbook, template CSV/DAT, CSV/XLSX/Parquet), built-in datasets, hashing | ✓ M2 |
 | `evaluation` | Protocols, metrics, AUC/ROC, margins, baselines | M4 |
-| `services` | Runs and manifests ✓, validation against the workbook ✓ (Steps 1–8), dataset summaries ✓, runner, comparison | M1 → M4 |
+| `services` | Runs and manifests ✓, validation against the workbook (Steps 1–12) and the templates ✓, dataset summaries ✓, runner, comparison | M1 → M4 |
 | `export` | Excel mirror, CSV/JSON, LaTeX/Markdown, figures, report | M5 |
-| `cli` | `csr` command | `config` ✓ (M1), `data`, `validate` ✓ (M2) |
+| `cli` | `csr` command | `config` ✓ (M1), `data`, `validate` ✓ (M2), `fit`, `classify` ✓ (M3) |
 | `gui` | Desktop application | M6 |
 
 ## Pipeline and information flow
@@ -81,8 +81,8 @@ workbook, the software and the article's tables cannot drift apart.
 | k strategies | formula (ADR-005/006) | article rule, explicit list, range ✓ (ADR-022) |
 | encoders | formula (5) | — (μ and bit masks are training-side gradations, ADR-021) |
 | weights | ω by (4) | Criterion-1, λ·β (template) |
-| majorizers | logistic sigmoid | tanh, arctan, softsign, custom |
-| decision rules | article Step 4 (refusal = 0) | — |
+| majorizers | logistic sigmoid | tanh, arctan, softsign ✓ (scaled to (0, 1), ADR-026), custom |
+| decision rules | article Step 4 (refusal = 0) ✓ | — |
 | protocols | resubstitution, leave-one-out | stratified k-fold, repeated, nested CV, hold-out |
 | baselines | k-NN vote | scikit-learn classifiers |
 
