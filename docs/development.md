@@ -15,6 +15,8 @@ The virtual environment stores absolute paths; if the project folder moves, crea
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest --cov              # tests + coverage (≥ 90 %)
+.\.venv\Scripts\python.exe -m pytest -m golden          # acceptance tests against the workbook
+.\.venv\Scripts\python.exe -m pytest -m "not slow"      # skip the long tests
 .\.venv\Scripts\ruff.exe check .                         # lint
 .\.venv\Scripts\ruff.exe format .                        # format
 .\.venv\Scripts\mypy.exe                                 # strict type check of src/

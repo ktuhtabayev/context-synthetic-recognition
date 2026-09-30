@@ -16,26 +16,26 @@ it. Modules marked *planned* arrive with the milestone shown.
 | # | Article element | Formula / step | Workbook sheet | Module | Milestone |
 |---|---|---|---|---|---|
 | 0 | Parameters | — | Parameters | `config.models` | M1 ✓ |
-| 1 | Data E₀, types I/J, classes K1, K2 | problem statement | Dataset, Quantitative, Nominal | `data` (planned) | M2 |
-| 2 | Scale unification (fractional-linear) | Zhuravlev metric definition | Normalized Dataset | `core.normalizers` (planned) | M2 |
-| 3 | Base operators ρ, ρ_I, ρ_J | variants of Ψ | Zhuravlev Distances | `core.metrics`, `core.operators` (planned) | M2 |
-| 4 | Nested neighbourhoods | local context Ψ_ρ,k | Sorted Neighbors (ρ, ρ_I, ρ_J) | `core.neighbours` (planned) | M2 |
-| 5 | Permitted k | k_max = 2·min\|Kᵢ\| − 3 | Parameters, Synthetic Features (k-NN) | `core.k_strategies` (planned) | M2 |
-| 6 | Same-class count μ | section 1.3 | Synthetic Features (k-NN) | `core.encoders` (planned) | M2 |
-| 7 | Synthetic features Ψ(r) | formula (5) | Ψ(r) Binary Features | `core.encoders` (planned) | M2 |
-| 8 | Membership, stability, meta-object, bit masks | formulas (1), (2); section 1.4 | Membership & Stability | `core.membership` (planned) | M2 |
-| 9 | Boundary, informativeness | formulas (3), (4) | Informativeness ω | `core.membership` (planned) | M2 |
-| 10 | Contributions | formula (6) | Ψ(r) Contribution & Weight | `core.contributions` (planned) | M2 |
+| 1 | Data E₀, types I/J, classes K1, K2 | problem statement | Dataset, Quantitative, Nominal | `data.schema.Dataset`, `data.loaders.load_dataset` | M2 ✓ |
+| 2 | Scale unification (fractional-linear) | Zhuravlyov metric definition | Normalized Dataset | `core.normalizers.minmax` | M2 ✓ |
+| 3 | Base operators ρ, ρ_I, ρ_J | variants of Ψ | Zhuravlev Distances | `core.metrics.zhuravlyov`, `core.operators.resolve_operators` | M2 ✓ |
+| 4 | Nested neighbourhoods | local context Ψ_ρ,k | Sorted Neighbors (ρ, ρ_I, ρ_J) | `core.neighbours.neighbour_order`, `rank_matrix` | M2 ✓ |
+| 5 | Permitted k | k_max = 2·min\|Kᵢ\| − 3 | Parameters, Synthetic Features (k-NN) | `core.k_strategies.formula` (ADR-022) | M2 ✓ |
+| 6 | Same-class count μ | section 1.3 | Synthetic Features (k-NN) | `core.encoders.same_class_counts` | M2 ✓ |
+| 7 | Synthetic features Ψ(r) | formula (5) | Ψ(r) Binary Features | `core.encoders.k1_counts`, `formula_5` | M2 ✓ |
+| 8 | Membership, stability, meta-object, bit masks | formulas (1), (2); section 1.4 | Membership & Stability | `core.membership.membership_table`, `stability`, `bit_masks` | M2 ✓ |
+| 9 | Boundary, informativeness | formulas (3), (4) | Informativeness ω | `core.membership.boundary`, `informativeness` | M2 ✓ |
+| 10 | Contributions | formula (6) | Ψ(r) Contribution & Weight | `core.contributions.contributions`; Steps 1–8 together: `core.context.fit_context` | M2 ✓ |
 | 11 | Hierarchical agglomerative grouping | Steps 1–5 | Greedy upon Weight (1–4-Latent) | `core.hag` (planned) | M3 |
 | 12 | Meta-description Y = (y, r) | Y(2p − 1) | Dataset for Meta-algorithm | `core.model` (planned) | M3 |
-| 13 | New object without its class | Theorem, Corollary | Brace for Meta-algorithm | `core.model` (planned) | M3 |
+| 13 | New object without its class | Theorem, Corollary | Brace for Meta-algorithm | `core.context.ContextModel.represent` ✓ (Ψ(r)); `core.model` (planned) | M2 / M3 |
 | 14 | Meta-algorithm | Steps 1–5 | Meta-algorithm (+ All Objects) | `core.meta` (planned) | M3 |
 | 15 | Margins with / without majorizer | — | Margin Analysis | `evaluation.margins` (planned) | M4 |
 | 16 | Training correctness | Definition 2 | Accuracy, Confusion Matrix, Precision/Recall/F1, ROC & AUC | `evaluation` (planned) | M4 |
 | 17 | Generalization correctness | Definition 3 | Leave-One-Out | `evaluation.protocols` (planned) | M4 |
 | 18 | Template-vs-article switches | — | Sensitivity (Switches) | `config.presets` ✓, `services` (planned) | M1 / M4 |
 | 19 | Determinacy, sufficiency, contextual equivalence | Definitions 1, 4, 6; Property 1 | Model Properties | `core.properties` (planned) | M4 |
-| 20 | Acceptance tests | — | Validation | `services.validation`, `csr validate` (planned) | M4 |
+| 20 | Acceptance tests | — | Validation (Steps 1–8 so far) | `services.validation.validate_workbook`, `csr validate` ✓ | M2 → M4 |
 
 ## Notes for the article text
 

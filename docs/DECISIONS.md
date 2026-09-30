@@ -139,7 +139,7 @@ classes raise a clear error until a K-class formulation is specified.
 
 *Accepted, 2026-09-30.*
 
-The Zhuravlev operators ρ, ρ_I, ρ_J remain the default. The first additional metrics are the
+The Zhuravlyov operators ρ, ρ_I, ρ_J remain the default. The first additional metrics are the
 heterogeneous metrics HEOM, HVDM and Gower (milestone M7); further metrics follow through the
 metric registry.
 
@@ -186,6 +186,9 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
   theme system Material depends on.
 - Missing values: rejected with a clear error by default.
 - License: MIT, as declared by the template project.
+- *Amended in M2:* mypy runs with `python_version = "3.12"` because numpy ≥ 2.5 ships its stubs with
+  PEP 695 `type` statements; ruff's `py311` target and the Python 3.11 test jobs keep the code
+  itself 3.11-compatible.
 
 ## ADR-016 — Configuration: typed, strict, hashable
 
@@ -208,3 +211,96 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
 - Objects, features and synthetic features are shown 1-based (S₁, x₁, a₁) as in the workbook and
   the article; code is 0-based internally.
 - matplotlib is the single figure path for the GUI and for the article exports (PNG/SVG).
+
+## ADR-018 — Data layer: schema, formats, class order, built-in datasets
+
+*Accepted, 2026-09-30 (M2).*
+
+- `Dataset` is immutable and I/O-free: values X (nominal columns hold category codes), labels,
+  feature types I/J, feature names (`x₁ …` by default), object ids (`S₁ …`), categories.
+- **Class order:** labels are sorted (numbers numerically, text alphabetically); the first class is
+  K1, the second K2. For the author's labels 1 and 2 this is the article's numbering.
+- Formats (registry `LOADERS`, the names of `dataset.format`): `cs-workbook` (the experiment's
+  *Dataset* sheet), `template-extended` (the template's `m, n, c` / objects / flags layout, `.csv`
+  or whitespace `.dat` with decimal commas; a placeholder flag under the class column is
+  accepted), `csv` (delimiter detected), `xlsx`, `parquet` (optional extra
+  `context-synthetic-recognition[parquet]`, pyarrow). `auto` detects the format from the extension
+  and the content. Row counts are checked strictly (header m, n, c must match the data).
+- Tables with a header row: types from `dataset.feature_types`; features not listed there are
+  inferred (numeric → quantitative, otherwise nominal) **with a warning**; nominal text becomes codes
+  in alphabetical order of the categories.
+- Content hash (run manifests): SHA-256 of names, types, object ids, labels, categories and the
+  float64 values; the dataset name and the file path are not part of it (the workbook's Dataset
+  sheet and the built-in CSV of the same data have the same hash).
+- Built-in datasets (registry `DATASETS`, package data): `heart-disease-10` and `heart-disease-270`,
+  copied from the template project's `datasets/raw` (line endings normalized to LF). Heart-Disease
+  is the UCI Statlog (Heart) dataset (CC BY 4.0).
+
+## ADR-019 — Layering and plug-in parameters
+
+*Accepted, 2026-09-30 (M2).*
+
+- The core imports only pure modules besides numpy: `config.models` (typed settings) and
+  `data.schema` (the `Dataset` type); it performs no I/O. Loaders, validation against the workbook
+  and dataset summaries live in `data.loaders` and `services`.
+- Each kind of plug-in has its registry next to its implementation (`METRICS`, `NORMALIZERS`,
+  `K_STRATEGIES`, `ENCODERS`, `WEIGHTS`, `LOADERS`, `DATASETS`). Parameter types are frozen pydantic
+  dataclasses with `extra="forbid"` (`PARAMS_CONFIG`); `Registry.make_params` validates a spec's
+  `params` and raises `ConfigError` with every problem. `csr config check` checks the plug-ins of
+  the kinds implemented so far.
+- `csr validate --against <workbook>` exists from M2 on and covers Steps 1–8; M3 and M4 extend its
+  map (`services.validation.workbook_checks`), which the golden tests share.
+
+## ADR-020 — Numerical implementation reproduces the workbook bit for bit
+
+*Accepted, 2026-09-30 (M2).*
+
+- Zhuravlyov distances add the per-feature terms in feature order (the order of the workbook's
+  SUMPRODUCT and of the reference engine); the quantitative part is rounded, then the sum.
+- Rounding is `numpy.round` (round half to even of x·10^d). It could differ from Excel's
+  half-away-from-zero only for a value exactly halfway at the 11th decimal; the workbook's data do
+  not reach that case.
+- Neighbour order: stable `argsort` of every row, i.e. by (distance, original index); the target
+  itself is removed from the order.
+- μ and χ₁ come from cumulative sums over the ordered neighbour classes (all k in one pass).
+- f, g, G, ω and η use the workbook's operation order; the terms of stability (2) are added in
+  gradation order (numpy's pairwise `sum` would differ in the last bits).
+- Result: Steps 1–8 are **identical** to the reference engine (not merely within 1e-9) on the
+  experiment, on Heart-Disease (270, 13, 2) and on random tie-heavy datasets (property tests), and
+  all 4,022 workbook cells of Steps 1–8 agree to ≤ 4.4e-15 (Excel keeps 15 significant digits).
+- Distances are computed in blocks of at most 2²² pairs; the full matrices are kept in the trace.
+
+## ADR-021 — Encoders and training-side gradations
+
+*Accepted, 2026-09-30 (M2).*
+
+- Formula (5) is the only synthetic-feature encoder (registry `ENCODERS`, `formula-5`). The same-class
+  count μ and the bit masks read the object's own class, so they could not describe a new object
+  (Theorem); they are computed as training-side gradations for formulas (1)–(4) and Task 2, not
+  offered as encoders.
+- Bit masks (first permitted k = most significant bit, β = 2^(number of k) − 1) are formed when at
+  most 62 k are permitted (int64); with more (Heart-Disease 270: 118) the trace has none.
+- Membership tables list every gradation 0 … β up to 4,096 of them, otherwise only the gradations
+  that occur.
+- The weight of a synthetic feature is a plug-in (`WEIGHTS`, default `omega` = ω by (4)); it
+  receives ω, g and G, leaving room for the template's Criterion-1 and λ·β weights.
+
+## ADR-022 — k strategies
+
+*Accepted, 2026-09-30 (M2).*
+
+`formula` (default; ADR-005/006: optional `k_max_cap` ≥ 3 and even `step`), `article` (the draft's
+text, odd k = 1, 3, … ≤ min(|K1|, |K2|), for comparison only), `explicit` (a list of odd k) and
+`range` (odd start, even step, inclusive stop). Every k must be odd (formula (5) then always has a
+majority) and at most the number of neighbours of a training object (m − 1); otherwise the fit
+raises `ModelUndefinedError`.
+
+## ADR-023 — Spelling of the metric: Zhuravlyov (author)
+
+*Accepted, 2026-09-30 (M2).*
+
+The metric is written **Zhuravlyov** (Журавлёв, ё → yo) in code, configuration and documentation;
+its registry name is `zhuravlyov`. The earlier spellings `zhuravlev` and `juravlev` remain aliases,
+so older configuration files still load. The protected material keeps its own spelling: the
+workbook's sheet *Zhuravlev Distances* (the validation map must name it exactly) and the files in
+`docs/handoff/`. The preset configurations' hashes changed with the name.

@@ -33,13 +33,13 @@ flowchart TB
 
 | Package | Role | Status |
 |---|---|---|
-| `core` | Numerical pipeline, plug-in registries, trace objects | registry ✓ (M1), pipeline M2–M4 |
+| `core` | Numerical pipeline, plug-in registries, trace objects | registry ✓ (M1), Steps 1–8 + trace ✓ (M2), HAG and meta-algorithm M3 |
 | `config` | Typed configuration, presets, the two switches, YAML/TOML/JSON, hash | ✓ M1 |
-| `data` | Dataset schema, loaders (workbook, template CSV/DAT, CSV/XLSX/Parquet), hashing | M2 |
+| `data` | Dataset schema, loaders (workbook, template CSV/DAT, CSV/XLSX/Parquet), built-in datasets, hashing | ✓ M2 |
 | `evaluation` | Protocols, metrics, AUC/ROC, margins, baselines | M4 |
-| `services` | Runs and manifests ✓, runner, validation against the workbook, comparison | M1 → M4 |
+| `services` | Runs and manifests ✓, validation against the workbook ✓ (Steps 1–8), dataset summaries ✓, runner, comparison | M1 → M4 |
 | `export` | Excel mirror, CSV/JSON, LaTeX/Markdown, figures, report | M5 |
-| `cli` | `csr` command | config ✓ (M1) |
+| `cli` | `csr` command | `config` ✓ (M1), `data`, `validate` ✓ (M2) |
 | `gui` | Desktop application | M6 |
 
 ## Pipeline and information flow
@@ -76,10 +76,10 @@ workbook, the software and the article's tables cannot drift apart.
 
 | Kind | Default | Planned alternatives |
 |---|---|---|
-| metrics | Zhuravlev on all / I / J | HEOM, HVDM, Gower (ADR-011), then Euclidean, Manhattan, Chebyshev, Minkowski, Canberra, cosine, Mahalanobis, Hamming, weighted Zhuravlev |
-| normalizers | min–max (training data) | z-score, robust, max-abs, decimal scaling, rank, unit length, none |
-| k strategies | formula (ADR-005/006) | article rule, explicit list, range |
-| encoders | formula (5) | same-class count μ, bit masks |
+| metrics | Zhuravlyov on all / I / J | HEOM, HVDM, Gower (ADR-011), then Euclidean, Manhattan, Chebyshev, Minkowski, Canberra, cosine, Mahalanobis, Hamming, weighted Zhuravlyov |
+| normalizers | min–max (training data) | none ✓; z-score, robust, max-abs, decimal scaling, rank, unit length (M7) |
+| k strategies | formula (ADR-005/006) | article rule, explicit list, range ✓ (ADR-022) |
+| encoders | formula (5) | — (μ and bit masks are training-side gradations, ADR-021) |
 | weights | ω by (4) | Criterion-1, λ·β (template) |
 | majorizers | logistic sigmoid | tanh, arctan, softsign, custom |
 | decision rules | article Step 4 (refusal = 0) | — |

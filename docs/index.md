@@ -2,7 +2,7 @@
 
 Python implementation of the **context-synthetic model of recognition algorithms (CS-model)** from
 the article *«Контекстно-синтетическая модель алгоритмов распознавания на основе локальных
-метрических отношений»* (Ensembles of algorithms and Zhuravlev's algebra – 6): a library, the `csr`
+метрических отношений»* (Ensembles of algorithms and Zhuravlyov's algebra – 6): a library, the `csr`
 command line and a desktop GUI.
 
 Local k-nearest-neighbour contexts of several base operators (metric × feature subset) become
@@ -22,5 +22,7 @@ without its class.
 
 - [Architecture](architecture.md) — layers, pipeline, trace objects, extension points
 - [Algorithm reference](algorithm-reference.md) — article element → workbook sheet → module
+- [Datasets](datasets.md) — formats, feature types, classes, built-in datasets, `csr data info`
+- [Extending](extending.md) — plug-ins: metrics, normalizers, k strategies, encoders, weights
 - [Decisions](DECISIONS.md) — the ADR log
 - [Development](development.md) — setup, commands, conventions, CI

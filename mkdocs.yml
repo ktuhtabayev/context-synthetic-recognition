@@ -33,6 +33,8 @@ nav:
   - Home: index.md
   - Architecture: architecture.md
   - Algorithm reference: algorithm-reference.md
+  - Datasets: datasets.md
+  - Extending: extending.md
   - Decisions: DECISIONS.md
   - Development: development.md
 
