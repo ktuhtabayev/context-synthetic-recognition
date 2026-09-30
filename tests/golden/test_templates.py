@@ -146,3 +146,60 @@ def test_the_hag_template_feeds_the_meta_template(hag_book: Any, meta_book: Any)
     result = hag(C, w, y)
     assert np.abs(result.latent - description.latent).max() <= 1e-12
     assert np.array_equal(result.class_index, description.class_index)
+
+
+# ---------------------------------------------------------------- Template Deviations (experiment)
+
+
+@pytest.fixture(scope="module")
+def experiment_book() -> Iterator[Any]:
+    from ..conftest import WORKBOOK
+
+    book = _open(WORKBOOK)
+    yield book
+    book.close()
+
+
+def test_the_template_deviations_tables(hag_book: Any, experiment_book: Any) -> None:
+    """Rows 11–22, 32–41 and 47–50: the template data under both calculations."""
+    sheet = experiment_book["Template Deviations"]
+    C, w, y, labels = read_hag_template(hag_book)
+    running = hag(C, w, y)
+    final = hag(C, w, y, HAGConfig(centres=CentreMode.FINAL))
+    first_running, first_final = running.iterations[0], final.iterations[0]
+    assert np.array_equal(first_running.candidates, first_final.candidates)
+    for row, u in enumerate(first_running.candidates, start=11):
+        scan = final.scan(0, int(u))
+        expected = [
+            first_running.theta[row - 11],
+            first_running.gamma[row - 11],
+            first_running.ratio[row - 11],
+            first_final.theta[row - 11],
+            first_final.gamma[row - 11],
+            first_final.ratio[row - 11],
+            scan.centre1[0],
+            scan.centre2[0],
+        ]
+        assert sheet.cell(row, 1).value == feature_name(int(u))
+        cells = [sheet.cell(row, c).value for c in range(2, 10)]
+        assert np.abs(np.array(cells) - np.array(expected)).max() <= 1e-12
+    # r₁ on the template data (q = x₆): R + η_q, one pass (article), two passes (template)
+    assert first_running.q == 5
+    once = running.scan(0, 5)
+    for t in range(10):
+        cells = [sheet.cell(32 + t, c).value for c in range(2, 7)]
+        expected = [once.b[t], once.majorized[t], first_running.latent[t], first_running.latent[t]]
+        assert np.abs(np.array(cells[:4]) - np.array(expected)).max() <= 1e-12
+        assert cells[4] == labels[t]
+    # the SET of every switch setting
+    for row, (centres, passes) in enumerate(
+        [
+            (CentreMode.RUNNING, 2),
+            (CentreMode.RUNNING, 1),
+            (CentreMode.FINAL, 2),
+            (CentreMode.FINAL, 1),
+        ],
+        start=47,
+    ):
+        result = hag(C, w, y, HAGConfig(centres=centres, step4_passes=passes))
+        assert sheet.cell(row, 4).value == _set(result.tuplam)

@@ -1,9 +1,10 @@
 """The ``csr`` command.
 
 Commands: ``config`` (show, init, check), ``data`` (list, info), ``fit`` (the CS-model: Ψ(r), the
-HAG and the meta-dataset), ``classify`` (an object through the meta-algorithm, step by step) and
-``validate`` (the package against the Excel experiment and the template workbooks); ``run`` and
-``export`` follow with the milestones that implement them.
+HAG and the meta-dataset), ``classify`` (an object through the meta-algorithm, step by step),
+``run`` (fit and evaluate under every configured protocol, write a run folder) and ``validate``
+(the package against the Excel experiment and the template workbooks); ``export`` follows with
+milestone M5.
 """
 
 import sys
@@ -30,7 +31,6 @@ from context_synthetic_recognition.core.arrays import IntArray
 from context_synthetic_recognition.core.k_strategies import PermittedK
 from context_synthetic_recognition.core.meta import REFUSAL
 from context_synthetic_recognition.core.model import Classification, CSModel, fit_model
-from context_synthetic_recognition.core.plugins import plugin_problems
 from context_synthetic_recognition.data import (
     DATASETS,
     LOADERS,
@@ -38,11 +38,15 @@ from context_synthetic_recognition.data import (
     detect_format,
     load_builtin,
     load_dataset,
+    load_from_config,
 )
 from context_synthetic_recognition.errors import CSRError, DatasetError
 from context_synthetic_recognition.log import configure_logging
 from context_synthetic_recognition.notation import class_name, subscript, synthetic_name
+from context_synthetic_recognition.services.configs import config_problems
 from context_synthetic_recognition.services.datasets import parse_object, summarize
+from context_synthetic_recognition.services.runner import run_experiment, save_run
+from context_synthetic_recognition.services.sensitivity import switch_sensitivity
 from context_synthetic_recognition.services.validation import DEFAULT_TOLERANCE, validate_workbook
 
 EXIT_FAILED = 1
@@ -140,7 +144,7 @@ def config_check(
     typer.echo(f"  preset: {matched.value if matched else 'custom'}")
     for deviation in active_deviations(config):
         typer.echo(f"  ⚠ template calculation ({deviation.adr}): {deviation.statement}")
-    problems = plugin_problems(config)
+    problems = config_problems(config)
     for problem in problems:
         typer.echo(f"  error: {problem}", err=True)
     if problems:
@@ -233,7 +237,8 @@ def data_info(
     for skipped in summary.skipped_operators:
         typer.echo(f"    skipped {skipped.label}: {skipped.reason} (ADR-007)")
     if summary.r is not None:
-        typer.echo(f"  r = |Ψ(r)| = {summary.r} synthetic features")
+        at_most = " at most (constant ones are skipped)" if config.synthetic.skip_constant else ""
+        typer.echo(f"  r = |Ψ(r)| = {summary.r} synthetic features{at_most}")
     for problem in summary.problems:
         typer.echo(f"  ⚠ {problem}")
 
@@ -395,6 +400,103 @@ def classify(
     _explain(dataset, model, result)
 
 
+# ---------------------------------------------------------------- csr run
+
+
+def _percent(value: float | None) -> str:
+    return "—" if value is None or value != value else f"{100 * value:5.1f} %"
+
+
+def _dataset_for_run(
+    source: str | None, config_path: Path | None, config: ExperimentConfig
+) -> Dataset:
+    if source is not None:
+        return _load_source(source, "auto", None, None, None)[0]
+    base = config_path.parent if config_path is not None else None
+    return load_from_config(config.dataset, base)
+
+
+@app.command("run")
+def run(
+    source: Annotated[
+        str | None,
+        typer.Argument(help="Dataset file or built-in name; default: dataset.path of the config."),
+    ] = None,
+    config_path: ConfigOption = None,
+    save: Annotated[
+        bool, typer.Option("--save/--no-save", help="Write the run folder (manifest, results).")
+    ] = True,
+    runs_dir: Annotated[
+        Path | None, typer.Option(help="Folder for run folders; default: output.runs_dir.")
+    ] = None,
+    sensitivity: Annotated[
+        bool, typer.Option("--sensitivity", help="Also evaluate all four switch settings.")
+    ] = False,
+) -> None:
+    """Fit and evaluate the CS-model: every configured protocol, baselines, margins, properties."""
+    try:
+        config = _config_or_default(config_path)
+        dataset = _dataset_for_run(source, config_path, config)
+        typer.echo(f"{dataset.name}: m = {dataset.m}, n = {dataset.n}", err=True)
+        result = run_experiment(
+            dataset,
+            config,
+            progress=lambda stage, done, total: (
+                typer.echo(f"  {stage}: {done}/{total}", err=True) if done == total else None
+            ),
+        )
+        variants = switch_sensitivity(dataset, config) if sensitivity else ()
+    except CSRError as error:
+        raise _fail(error) from error
+    model = result.model
+    typer.echo(dataset.name)
+    typer.echo(f"  k ({config.k.name}): {_k_text(model.trace.permitted_k)}; r = {model.trace.r}")
+    typer.echo(f"  TUPLAM = {model.hag.label}; p = {model.p}; stop: {model.hag.stop.text}")
+    for deviation in active_deviations(config):
+        typer.echo(f"  ⚠ template calculation ({deviation.adr}): {deviation.statement}")
+    positive = model.classes[result.positive - 1]
+    typer.echo(f"  positive class: {positive}")
+    for protocol in result.protocols:
+        undefined = len(protocol.undefined_folds)
+        note = f"; {undefined} undefined fold(s) refused" if undefined else ""
+        count = len(protocol.folds)
+        typer.echo(f"  {protocol.protocol} ({count} fold{'s' if count != 1 else ''}{note}):")
+        typer.echo(
+            f"    {'method':34s} {'accuracy':>9s} {'coverage':>9s} {'refusals':>8s}"
+            f" {'macro F1':>9s} {'AUC':>6s}"
+        )
+        for method in protocol.methods:
+            metrics = result.metrics(method)
+            auc = result.auc(method)
+            typer.echo(
+                f"    {method.method:34s} {_percent(metrics.accuracy):>9s}"
+                f" {_percent(metrics.coverage):>9s} {metrics.refusals:8d}"
+                f" {_percent(metrics.macro_f1):>9s} {'—' if auc != auc else f'{auc:.3f}':>6s}"
+            )
+    if result.margins.with_majorizer:
+        widths = ", ".join(
+            f"r{j + 1} {a.width:.4f} ({b.width:.4f})"
+            for j, (a, b) in enumerate(
+                zip(result.margins.with_majorizer, result.margins.without_majorizer, strict=True)
+            )
+        )
+        typer.echo(f"  margin widths with majorizer (without): {widths}")
+    properties = result.properties
+    typer.echo(
+        f"  Definition 1: {'defined' if properties.determinacy.defined else 'NOT defined'};"
+        f" Definition 4: {properties.tuplam_conflicts} conflicting pair(s) on (a₀ … a_p)"
+    )
+    for variant in variants:
+        typer.echo(
+            f"  switches {variant.label:26s} {variant.tuplam}: resubstitution"
+            f" {_percent(variant.resubstitution)}, LOO {_percent(variant.leave_one_out)},"
+            f" AUC {variant.auc_resubstitution:.3f} / {variant.auc_leave_one_out:.3f}"
+        )
+    if save:
+        folder = save_run(result, runs_dir)
+        typer.echo(f"  run folder: {folder}")
+
+
 # ---------------------------------------------------------------- csr validate
 
 
@@ -436,7 +538,10 @@ def validate(
             for mismatch in result.mismatches[:5]:
                 typer.echo(f"          {mismatch}")
     if report.kind == "experiment":
-        typer.echo("  (the evaluation sheets, Margin Analysis … Model Properties, follow with M4)")
+        typer.echo(
+            "  (not compared: Overview, the input sheets Dataset, Quantitative, Nominal, and the "
+            "template-data tables — validate the template workbooks for those)"
+        )
     if not report.passed:
         typer.echo("validation FAILED", err=True)
         raise typer.Exit(EXIT_FAILED)

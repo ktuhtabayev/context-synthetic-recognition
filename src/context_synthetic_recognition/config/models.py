@@ -143,6 +143,9 @@ class SyntheticConfig(ConfigModel):
     """Class-free majority feature aᵤ ∈ {1, 2} by formula (5)."""
     weights: PluginSpec = Field(default_factory=lambda: plugin("omega"))
     """Informativeness ω by formula (4), used by the contributions (6) and by HAG STEP 2."""
+    skip_constant: bool = False
+    """Drop synthetic features that take one value on every training object (η = 0, no
+    information, yet ω can be 1 at large k). Off by default: the workbook keeps them (ADR-030)."""
 
 
 class HAGConfig(ConfigModel):

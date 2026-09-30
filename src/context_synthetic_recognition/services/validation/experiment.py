@@ -13,11 +13,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from context_synthetic_recognition.config.models import CentreMode, ExperimentConfig, HAGConfig
+from context_synthetic_recognition.config.models import (
+    CentreMode,
+    ExperimentConfig,
+    HAGConfig,
+    plugin,
+)
 from context_synthetic_recognition.config.presets import active_deviations
 from context_synthetic_recognition.core.model import CSModel, fit_model
+from context_synthetic_recognition.core.properties import model_properties
 from context_synthetic_recognition.core.trace import ContextTrace
 from context_synthetic_recognition.data.loaders import load_dataset
+from context_synthetic_recognition.evaluation.margins import margin_analysis
+from context_synthetic_recognition.evaluation.protocols import run_protocol
+from context_synthetic_recognition.services.sensitivity import switch_sensitivity
 from context_synthetic_recognition.services.validation.checks import (
     Check,
     ValidationError,
@@ -31,11 +40,15 @@ from context_synthetic_recognition.services.validation.context_map import (
     WORKBOOK_OPERATORS,
     context_checks,
 )
+from context_synthetic_recognition.services.validation.evaluation_map import evaluation_checks
 from context_synthetic_recognition.services.validation.model_map import (
-    ExperimentSubject,
-    NewObject,
     model_checks,
     model_layout_problems,
+)
+from context_synthetic_recognition.services.validation.subject import (
+    ExperimentEvaluation,
+    ExperimentSubject,
+    NewObject,
 )
 
 PARAMETERS = "Parameters"
@@ -64,8 +77,12 @@ def _trace(subject: ExperimentSubject) -> ContextTrace:
 
 
 def workbook_checks() -> list[Check[ExperimentSubject]]:
-    """The map of the experiment workbook, Steps 1–12, in sheet order."""
-    return [*(check.on(_trace) for check in context_checks()), *model_checks()]
+    """The map of the experiment workbook — Steps 1–12 and the evaluation — in sheet order."""
+    return [
+        *(check.on(_trace) for check in context_checks()),
+        *model_checks(),
+        *evaluation_checks(),
+    ]
 
 
 def read_hag_parameters(workbook: Any) -> dict[str, Any]:
@@ -122,6 +139,11 @@ def experiment_config(
                 f"{_hag_text(config.hag)}"
             )
     notes += [f"⚠ template calculation ({d.adr}): {d.statement}" for d in active_deviations(chosen)]
+    if chosen.synthetic.skip_constant:
+        notes.append(
+            "⚠ synthetic.skip_constant is on: the workbook keeps constant synthetic features "
+            "(ADR-030), so leave-one-out folds can differ"
+        )
     return chosen, notes
 
 
@@ -189,8 +211,20 @@ def experiment_subject(
         exclude,
         model.classify(values, exclude=None if exclude is None else [exclude]),
     )
+    evaluation = ExperimentEvaluation(
+        leave_one_out=run_protocol(
+            dataset, chosen, "leave-one-out", baselines=[plugin("knn-vote", ks=[3, 5])]
+        ),
+        margins=margin_analysis(model),
+        properties=model_properties(model),
+        sensitivity=switch_sensitivity(dataset, chosen),
+    )
     subject = ExperimentSubject(
-        model, new_object, model.classify_training(), chosen.evaluation.score_decimals
+        model,
+        new_object,
+        model.classify_training(),
+        chosen.evaluation.score_decimals,
+        evaluation,
     )
     return subject, notes
 

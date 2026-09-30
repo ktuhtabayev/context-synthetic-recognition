@@ -33,7 +33,7 @@ from context_synthetic_recognition.services.validation.experiment import (
     validate_experiment,
     workbook_checks,
 )
-from context_synthetic_recognition.services.validation.model_map import ExperimentSubject
+from context_synthetic_recognition.services.validation.subject import ExperimentSubject
 from context_synthetic_recognition.services.validation.templates import (
     hag_template_checks,
     meta_template_checks,

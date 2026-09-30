@@ -33,13 +33,13 @@ flowchart TB
 
 | Package | Role | Status |
 |---|---|---|
-| `core` | Numerical pipeline, plug-in registries, trace objects | registry ✓ (M1), Steps 1–8 + trace ✓ (M2), HAG, meta-algorithm, model ✓ (M3) |
+| `core` | Numerical pipeline, plug-in registries, trace objects, model properties | registry ✓ (M1), Steps 1–8 + trace ✓ (M2), HAG, meta-algorithm, model ✓ (M3), properties ✓ (M4) |
 | `config` | Typed configuration, presets, the two switches, YAML/TOML/JSON, hash | ✓ M1 |
 | `data` | Dataset schema, loaders (workbook, template CSV/DAT, CSV/XLSX/Parquet), built-in datasets, hashing | ✓ M2 |
-| `evaluation` | Protocols, metrics, AUC/ROC, margins, baselines | M4 |
-| `services` | Runs and manifests ✓, validation against the workbook (Steps 1–12) and the templates ✓, dataset summaries ✓, runner, comparison | M1 → M4 |
+| `evaluation` | Protocols, metrics, AUC/ROC, margins, baselines | ✓ M4 |
+| `services` | Runs and manifests, validation against the workbook and the templates, dataset summaries, experiment runner, switch sensitivity, configuration checks | ✓ M1 → M4 |
 | `export` | Excel mirror, CSV/JSON, LaTeX/Markdown, figures, report | M5 |
-| `cli` | `csr` command | `config` ✓ (M1), `data`, `validate` ✓ (M2), `fit`, `classify` ✓ (M3) |
+| `cli` | `csr` command | `config` ✓ (M1), `data`, `validate` ✓ (M2), `fit`, `classify` ✓ (M3), `run` ✓ (M4) |
 | `gui` | Desktop application | M6 |
 
 ## Pipeline and information flow
@@ -83,8 +83,8 @@ workbook, the software and the article's tables cannot drift apart.
 | weights | ω by (4) | Criterion-1, λ·β (template) |
 | majorizers | logistic sigmoid | tanh, arctan, softsign ✓ (scaled to (0, 1), ADR-026), custom |
 | decision rules | article Step 4 (refusal = 0) ✓ | — |
-| protocols | resubstitution, leave-one-out | stratified k-fold, repeated, nested CV, hold-out |
-| baselines | k-NN vote | scikit-learn classifiers |
+| protocols | resubstitution, leave-one-out | stratified k-fold, repeated k-fold, hold-out ✓ (M4); nested CV |
+| baselines | k-NN vote | scikit-learn classifiers ✓ (M4, extra `[sklearn]`) |
 
 Plug-ins register by name in a `Registry`; external packages add them through the entry-point
 group `context_synthetic_recognition.<kind>`.

@@ -407,3 +407,114 @@ majorizers register through the registry.
 - The two `- Opus 5.5` template workbooks (same cells as the originals) are copied byte for byte
   to `tests/data/templates/`, so CI replicates the templates (**author**); a test compares their
   SHA-256 with the originals whenever the template project is present.
+
+## ADR-030 — Constant synthetic features and the k range on large data (author)
+
+*Accepted, 2026-09-30 (M4).*
+
+**Finding.** On Heart-Disease (270, 13, 2) the literal k range (k = 3 … 237, ADR-005/006) gives
+synthetic features at k ≥ 233 that are constant on the training sample (aᵤ ≡ 1, so η = 0) but have
+ω = 1: μ counts neighbours of the object's *own* class, and when k approaches m it separates the
+classes trivially, while the class-free formula (5) collapses to the majority class. HAG STEP 2
+starts from such features. Leave-one-out accuracy (whole pipeline re-fitted per fold):
+
+| Heart-Disease 270 | template | article |
+|---|---|---|
+| literal k = 3 … 237 | 7.0 % | 6.7 % |
+| literal, constant features skipped | 68.1 % | 62.6 % |
+| `k_max_cap` 119 / 51 / 21 / 5 | 80.0 / 79.3 / 81.5 / 79.6 % | 80.7 / 80.0 / 80.7 / 80.0 % |
+| the draft's rule k = 1 … 119 | 78.5 % | 81.5 % |
+| k-NN vote baselines (ρ, ρ_I, ρ_J; k = 3, 5) | 76 – 81 % | |
+
+**Decisions (author).**
+
+- New switch `synthetic.skip_constant` (default **off**): a synthetic feature that takes one value
+  on every training object is dropped with a warning and the remaining ones are renumbered
+  a₁ … a_r; if every feature is constant the model is undefined (a fold then refuses). Off by
+  default because the workbook keeps them — skipping would change its leave-one-out folds 3, 5
+  and 6 (template 20 % → 30 %); the full fit and resubstitution are unaffected. `csr validate`
+  notes when a configuration turns it on.
+- The literal k range stays the default. For large data the recommended setting is
+  `configs/heart-disease-270-large-data.yaml`: `skip_constant: true` and `k_max_cap: 21`
+  (Heart-Disease 270: LOO 81.5 %, AUC 0.862).
+- For the article: ω by formula (4) is computed from the training-side μ and is inflated at large
+  k; the k range or the weight needs a statement in the text.
+
+## ADR-031 — Evaluation conventions (the workbook's evaluation sheets)
+
+*Accepted, 2026-09-30 (M4).*
+
+- **Metrics** (`evaluation.metrics`): positive class P (class 1 by default,
+  `evaluation.positive_class`), negative N. TP = predicted P and true P, TN = predicted N and true
+  N, FP = predicted P and true N, FN = predicted N and true P; a refusal is none of them, is
+  reported separately and is an error in the accuracy (TP + TN)/n. Coverage = answered/n; accuracy
+  on the answered objects. Per class: precision = correct/predicted (0 if nothing was predicted),
+  recall = correct/actual, F1 = 2PR/(P + R) (0 if P + R = 0); macro = mean of the two classes.
+- **AUC and ROC** (`evaluation.roc`): Mann–Whitney on score₁ − score₂ rounded to
+  `score_decimals` (ties ½); the ROC table lists every score in decreasing order after (+∞, 0, 0)
+  with TPR and FPR at score ≥ threshold. With K2 positive the score is negated (the AUC is the
+  same). Computed by sorting, O(n log n).
+- **Margins** (`evaluation.margins`): b = (min K1 + max K2)/2, width = min K1 − max K2,
+  mᵢ = yᵢ(dᵢ − b) with y = +1 for K1 (the HAG's sign, independent of the positive class),
+  ŷ = K1 if d > b; the objects named at max K2 and min K1 are the first with that value (the
+  workbook's MATCH). *Without majorizer* = y₀ + … + yⱼ, summed left to right.
+- **Properties** (`core.properties`): Definition 1/Property 1 checks, Definition 4 as conflicting
+  pairs (TUPLAM description and full Ψ(r)), Definition 6 as objects with equal k-neighbour sets
+  per operator pair and k, identical synthetic features, ties at the k boundary (k-th and
+  (k + 1)-th neighbour equally far), and the Theorem check for a training object left out of its
+  own context.
+
+## ADR-032 — Protocols and baselines
+
+*Accepted, 2026-09-30 (M4).*
+
+- Registry `PROTOCOLS`: `resubstitution` (the full fit classifies the training rows),
+  `leave-one-out` (the whole pipeline re-fitted without each object), `stratified-k-fold`
+  (`folds` = 10; every class shuffled with the seed and dealt round robin over the folds),
+  `repeated-k-fold` (`folds`, `repeats`; seeds seed, seed + 1, …), `hold-out` (`test_size` = 0.3
+  of every class, at least one object on each side). Nested cross-validation is left out: the
+  method has no tuned hyper-parameters yet.
+- A fold whose model is undefined refuses its objects (decision 0, score 0) and is flagged
+  (ADR-005). A training part with one class also refuses the baselines (the class numbers of a
+  one-class sample would not match). Folds report |K1|, |K2|, the permitted k, r and TUPLAM as
+  operator·k (the fold's feature numbers differ from the full fit's).
+- Registry `BASELINES`, evaluated on the same folds: `knn-vote` (every operator × k, k = 3 and 5
+  by default as in the workbook, the fold's scaling, rounding and tie rule; a k larger than the
+  available neighbours refuses; score (χ₁ − χ₂)/k) and the scikit-learn classifiers
+  `logistic-regression`, `random-forest`, `svm`, `decision-tree`, `naive-bayes` (optional extra
+  `[sklearn]`, also in `[dev]`): quantitative features scaled by the fold's normalizer, nominal
+  ones one-hot encoded with the training part's categories, `options` passed to the estimator,
+  `random_state` = the experiment seed, score P(K1) − P(K2) or the negated decision function.
+- `run_protocol` takes `progress` and `cancelled` callbacks (for the GUI);
+  cancelling raises `EvaluationCancelledError`.
+
+## ADR-033 — Experiment runner and run folders
+
+*Accepted, 2026-09-30 (M4).*
+
+- `services.runner.run_experiment` fits the model on every object and runs every protocol of
+  `evaluation.protocols` with the `evaluation.baselines`, then the margins and the properties;
+  `save_run` writes `runs/<YYYYMMDD_HHMMSS>_<hash>/` with `manifest.yaml`, `results.json` (model
+  summary, metrics per protocol and method, margins, properties, timings), `predictions.csv` (one
+  row per protocol, method, repetition and object) and `folds.csv`.
+- `services.sensitivity.switch_sensitivity` evaluates the four switch settings (sheet
+  *Sensitivity (Switches)*).
+- `csr run [SOURCE] [-c CONFIG] [--sensitivity] [--no-save] [--runs-dir]`; without SOURCE the
+  configuration's `dataset.path` is used, which may name a built-in dataset as
+  `builtin:heart-disease-270`.
+- `services.configs.config_problems` checks the plug-ins of every layer (`csr config check`); the
+  core's `plugin_problems` keeps to the core's kinds.
+
+## ADR-034 — Validation of the evaluation sheets
+
+*Accepted, 2026-09-30 (M4).*
+
+- The experiment's map now covers every computed sheet — 29 of 33, 11,631 cells, reported in
+  workbook order — adding *Margin Analysis*, *Accuracy*, *Confusion Matrix*, *Precision, Recall,
+  F1 Score*, *ROC Curve & AUC*, *Leave-One-Out* (all ten folds and the six k-NN baselines),
+  *Sensitivity (Switches)* (the four settings), *Model Properties*, *Validation* and the
+  experiment rows of *Template Deviations*. All agree within 3.3e-11 (the Leave-One-Out sheet
+  stores the engine's scores rounded to 10 decimals; everything else within 3.0e-14).
+- Not compared: *Overview*, the input sheets *Dataset*, *Quantitative*, *Nominal*, and the
+  template-data tables of *Template Deviations* and *Sensitivity (Switches)* — the golden tests
+  check the latter against the template workbook copies (ADR-029).

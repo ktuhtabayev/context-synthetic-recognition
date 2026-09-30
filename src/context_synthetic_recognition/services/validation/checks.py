@@ -231,7 +231,8 @@ def run_checks(
         if check.sheet not in workbook.sheetnames:
             raise ValidationError(f"{name}: sheet '{check.sheet}' is missing")
         results.append(run_check(check, workbook[check.sheet], subject, tolerance))
-    return tuple(results)
+    order = {sheet: i for i, sheet in enumerate(workbook.sheetnames)}
+    return tuple(sorted(results, key=lambda result: order[result.sheet]))  # workbook order
 
 
 def read_range(worksheet: Any, ref: str) -> list[list[Any]]:

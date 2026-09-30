@@ -30,12 +30,12 @@ it. Modules marked *planned* arrive with the milestone shown.
 | 12 | Meta-description Y = (y, r) | Y(2p − 1) | Dataset for Meta-algorithm | `core.model.MetaDataset`, `fit_model` | M3 ✓ |
 | 13 | New object without its class | Theorem, Corollary | Brace for Meta-algorithm | `core.model.CSModel.represent` / `classify` / `predict` (no label argument) | M2 / M3 ✓ |
 | 14 | Meta-algorithm | Steps 1–5 | Meta-algorithm (+ All Objects) | `core.meta.meta_classify`, `DECISION_RULES`; `CSModel.classify_training` | M3 ✓ |
-| 15 | Margins with / without majorizer | — | Margin Analysis | `evaluation.margins` (planned) | M4 |
-| 16 | Training correctness | Definition 2 | Accuracy, Confusion Matrix, Precision/Recall/F1, ROC & AUC | `evaluation` (planned) | M4 |
-| 17 | Generalization correctness | Definition 3 | Leave-One-Out | `evaluation.protocols` (planned) | M4 |
-| 18 | Template-vs-article switches | — | Template Deviations, Sensitivity (Switches) | `config.presets` ✓, `core.hag` ✓; sensitivity table (planned) | M1 / M3 / M4 |
-| 19 | Determinacy, sufficiency, contextual equivalence | Definitions 1, 4, 6; Property 1 | Model Properties | `core.properties` (planned) | M4 |
-| 20 | Acceptance tests | — | Validation (Steps 1–12 so far; the HAG and meta-algorithm templates) | `services.validation.validate_workbook`, `csr validate` ✓ | M2 → M4 |
+| 15 | Margins with / without majorizer | — | Margin Analysis | `evaluation.margins.margin_analysis` | M4 ✓ |
+| 16 | Training correctness | Definition 2 | Accuracy, Confusion Matrix, Precision/Recall/F1, ROC & AUC | `evaluation.protocols` (`resubstitution`), `evaluation.metrics`, `evaluation.roc` | M4 ✓ |
+| 17 | Generalization correctness | Definition 3 | Leave-One-Out | `evaluation.protocols.run_protocol` (`leave-one-out`, k-fold, hold-out), `evaluation.baselines` | M4 ✓ |
+| 18 | Template-vs-article switches | — | Template Deviations, Sensitivity (Switches) | `config.presets`, `core.hag`, `services.sensitivity.switch_sensitivity` | M1 / M3 / M4 ✓ |
+| 19 | Determinacy, sufficiency, contextual equivalence | Definitions 1, 4, 6; Property 1; Theorem | Model Properties | `core.properties.model_properties`, `theorem_check` | M4 ✓ |
+| 20 | Acceptance tests | — | Validation — every computed sheet; the HAG and meta-algorithm templates | `services.validation.validate_workbook`, `csr validate` | M2 → M4 ✓ |
 
 ## Notes for the article text
 
@@ -57,3 +57,8 @@ Found while building the experiment; for the author to decide.
 - **HAG STEP 3, no θ/γ < cr1.** If no candidate improves on the initial cr1 the grouping stops
   without adding a feature (ADR-008); the article's steps do not mention this case.
 - **Meta-algorithm with p = 0.** When TUPLAM has a single feature only Step 1 applies.
+- **ω at large k.** ω (formula (4)) is computed from μ, the neighbours of the object's *own*
+  class. When k approaches m, μ separates the classes trivially and ω → 1, while the class-free
+  feature (5) becomes constant. With the literal k range this dominates the HAG on large data
+  (Heart-Disease 270: leave-one-out 7 %; 81.5 % with constant features skipped and k ≤ 21,
+  ADR-030). The text should bound k or say how ω treats such features.
