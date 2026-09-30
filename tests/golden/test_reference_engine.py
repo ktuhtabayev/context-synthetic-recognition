@@ -1,7 +1,9 @@
-"""Cross-check Steps 1–8 against the reference engine (docs/handoff/reference-engine), bit for bit.
+"""Cross-check against the reference engine (docs/handoff/reference-engine) and golden_values.json.
 
 The reference engine is the dependency-free Python that reproduces the workbook; it is used here
 as an oracle on the experiment, on Heart-Disease (270, 13, 2) and on random tie-heavy datasets.
+Steps 1–8 agree bit for bit; the HAG and the meta-algorithm agree exactly in their decisions
+(TUPLAM, B1/B2, classes) and to 1e-12 in θ/γ and the latent features.
 """
 
 import json
@@ -12,10 +14,12 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from context_synthetic_recognition.config import CentreMode, ExperimentConfig, HAGConfig
 from context_synthetic_recognition.core.context import ContextModel, fit_context
+from context_synthetic_recognition.core.model import CSModel, fit_model
 from context_synthetic_recognition.data import Dataset, FeatureType
 
-from ..conftest import GOLDEN_VALUES, reference_engine
+from ..conftest import GOLDEN_VALUES, reference_engine, reference_pipeline
 
 pytestmark = pytest.mark.golden
 
@@ -133,3 +137,98 @@ def tie_heavy_datasets(draw: st.DrawFn) -> Dataset:
 @given(dataset=tie_heavy_datasets())
 def test_random_tie_heavy_datasets_are_identical(dataset: Dataset) -> None:
     assert_identical(fit_context(dataset), reference_steps(dataset))
+
+
+# ---------------------------------------------------------------- Steps 9–12 (HAG, meta-algorithm)
+
+
+def _reference_fit(dataset: Dataset, **params: Any) -> dict[str, Any]:
+    model: dict[str, Any] = reference_pipeline().fit(
+        dataset.X.tolist(), dataset.y.tolist(), list(dataset.type_flags), **params
+    )
+    return model
+
+
+def assert_same_model(model: CSModel, reference: dict[str, Any], dataset: Dataset) -> None:
+    """TUPLAM and the decisions equal; crit and the latent features within 1e-12.
+
+    Floats are compared to a tolerance: numpy's exp may differ from the C library's in the last
+    bit on some CPUs, and Python ≥ 3.12 sums with compensation in the reference's final means.
+    """
+    iterations = reference["hag"]["trace"]["iterations"]
+    assert model.tuplam == tuple(reference["tuplam"])
+    assert model.hag.crit == pytest.approx([it["crit"] for it in iterations], abs=1e-12)
+    latent = np.array(reference["D"], dtype=float).reshape(dataset.m, -1)
+    assert np.abs(model.hag.latent - latent).max(initial=0.0) <= 1e-12
+    assert model.description.gradations.tolist() == reference["A"]
+    predict = reference_pipeline().predict
+    training = model.classify_training()
+    for i in range(min(dataset.m, 40)):
+        expected = predict(reference, dataset.X[i].tolist(), exclude=i)
+        assert training.decisions[i] == expected["cls"]
+        assert training.meta.scores1[i] == expected["s1"]
+        assert training.meta.scores2[i] == expected["s2"]
+
+
+def test_golden_values_of_the_model(experiment_cs_model: CSModel) -> None:
+    with GOLDEN_VALUES.open(encoding="utf-8") as handle:
+        golden = json.load(handle)["ref"]
+    model = experiment_cs_model
+    assert model.hag.label == golden["tuplam"]
+    assert list(model.hag.crit) == golden["crit"]
+    assert np.abs(model.hag.latent.T - np.array(golden["latent"])).max() <= 1e-15
+    training = model.classify_training()
+    assert training.meta.scores1.tolist() == golden["s1"]
+    assert training.meta.scores2.tolist() == golden["s2"]
+    assert training.decisions.tolist() == golden["pred_list"]
+
+
+@pytest.mark.parametrize("variant", range(4))
+def test_the_switch_variants(experiment: Dataset, variant: int) -> None:
+    with GOLDEN_VALUES.open(encoding="utf-8") as handle:
+        golden = json.load(handle)["variants"][variant]
+    hag = HAGConfig(centres=CentreMode(golden["cent"]), step4_passes=golden["pas"])
+    model = fit_model(experiment, ExperimentConfig(hag=hag))
+    assert model.hag.label == golden["T"], golden["label"]
+    assert list(model.hag.crit) == pytest.approx(golden["crit"], abs=1e-15)
+    decisions = model.classify_training().decisions
+    assert np.mean(decisions == experiment.y) == golden["resub"]
+
+
+@pytest.mark.parametrize("held_out", range(10))
+def test_the_leave_one_out_folds(experiment: Dataset, held_out: int) -> None:
+    # the whole pipeline re-fitted on the other nine objects; the held-out one classified blind
+    with GOLDEN_VALUES.open(encoding="utf-8") as handle:
+        golden = json.load(handle)["loo"][held_out]
+    training = experiment.subset([i for i in range(experiment.m) if i != held_out])
+    model = fit_model(training)
+    assert model.trace.class_sizes == (golden["K1"], golden["K2"])
+    assert list(model.trace.permitted_k.ks) == golden["ks"]
+    assert model.trace.r == golden["r"]
+    assert [u + 1 for u in model.tuplam] == golden["T"]
+    result = model.classify(experiment.X[held_out])
+    assert result.representation is not None
+    assert result.representation.description[0].tolist() == golden["a"]
+    assert result.meta.scores1[0] == golden["s1"]
+    assert result.meta.scores2[0] == golden["s2"]
+    assert result.decisions[0] == golden["cls"]
+
+
+@pytest.mark.parametrize(("centres", "passes"), [("running", 2), ("final", 1)])
+def test_the_model_is_the_reference_engines(experiment: Dataset, centres: str, passes: int) -> None:
+    hag = HAGConfig(centres=CentreMode(centres), step4_passes=passes)  # type: ignore[arg-type]
+    model = fit_model(experiment, ExperimentConfig(hag=hag))
+    assert_same_model(
+        model, _reference_fit(experiment, centres=centres, step4_passes=passes), experiment
+    )
+
+
+@pytest.mark.slow
+def test_heart_disease_270_model_is_the_reference_engines(heart270: Dataset) -> None:
+    assert_same_model(fit_model(heart270), _reference_fit(heart270), heart270)
+
+
+@settings(max_examples=40, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@given(dataset=tie_heavy_datasets())
+def test_random_datasets_give_the_reference_engines_model(dataset: Dataset) -> None:
+    assert_same_model(fit_model(dataset), _reference_fit(dataset), dataset)

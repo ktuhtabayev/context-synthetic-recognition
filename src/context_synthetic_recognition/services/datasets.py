@@ -1,18 +1,22 @@
-"""Dataset summaries for the CLI and the GUI: sizes, types, classes, permitted k, operators.
+"""Dataset summaries for the CLI and the GUI, and objects typed as text.
 
-The summary is what the GUI shows live while a dataset is being set up: |Kᵢ|, the permitted k of
-the configured strategy and the synthetic features r it implies.
+The summary is what the GUI shows live while a dataset is being set up: sizes, types, |Kᵢ|, the
+permitted k of the configured strategy, the operators and the synthetic features r they imply.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+
+import numpy as np
+import numpy.typing as npt
 
 from context_synthetic_recognition.config.models import ExperimentConfig
 from context_synthetic_recognition.core.k_strategies import PermittedK, permitted_k
 from context_synthetic_recognition.core.operators import SkippedOperator, resolve_operators
 from context_synthetic_recognition.data.schema import Dataset
-from context_synthetic_recognition.errors import CSRError
+from context_synthetic_recognition.errors import CSRError, DatasetError
 
 
 @dataclass(frozen=True)
@@ -72,3 +76,30 @@ def summarize(dataset: Dataset, config: ExperimentConfig | None = None) -> Datas
     except CSRError as error:
         problems.append(str(error))
     return DatasetSummary(dataset, ks, operators, skipped, tuple(problems))
+
+
+def parse_object(dataset: Dataset, text: str) -> npt.NDArray[np.float64]:
+    """An object typed as text — n values separated by commas, semicolons or spaces.
+
+    Numbers are taken as they are (quantitative values in original units, nominal codes); a nominal
+    feature read from text also accepts its category names.
+
+    Raises:
+        DatasetError: Wrong number of values, or a value that is neither a number nor a category.
+    """
+    tokens = [token for token in re.split(r"[,;\s]+", text.strip()) if token]
+    if len(tokens) != dataset.n:
+        raise DatasetError(f"expected {dataset.n} values (one per feature), got {len(tokens)}")
+    values = np.empty(dataset.n, dtype=np.float64)
+    for j, (token, name) in enumerate(zip(tokens, dataset.feature_names, strict=True)):
+        try:
+            values[j] = float(token)
+            continue
+        except ValueError:
+            pass
+        categories = dataset.categories.get(name, ())
+        if token not in categories:
+            known = f" (categories: {', '.join(categories)})" if categories else ""
+            raise DatasetError(f"{name}: {token!r} is not a number{known}") from None
+        values[j] = categories.index(token)
+    return values

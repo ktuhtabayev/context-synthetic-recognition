@@ -7,6 +7,7 @@ from types import ModuleType
 import pytest
 
 from context_synthetic_recognition.core.context import ContextModel, fit_context
+from context_synthetic_recognition.core.model import CSModel, fit_model
 from context_synthetic_recognition.data import Dataset, load_builtin, load_dataset
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,15 @@ KNN_WORKBOOK = (
 )
 REFERENCE_ENGINE = ROOT / "docs" / "handoff" / "reference-engine"
 GOLDEN_VALUES = REFERENCE_ENGINE / "golden_values.json"
+TEMPLATES = ROOT / "tests" / "data" / "templates"
+HAG_TEMPLATE = (
+    TEMPLATES / "RegularizedStackingEnsembleWithHAG [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+)
+"""Copy of the HAG template workbook (ADR-029): SET {x₃, x₆, x₁₃, x₄, x₉}, r₁ … r₄."""
+META_TEMPLATE = TEMPLATES / "Meta-algorithm [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+"""Copy of the meta-algorithm template workbook (ADR-029): the new object is Class 2."""
+TEMPLATE_PROJECT = ROOT.parent / "hag-regularized-stacking-boosting-meta"
+"""The author's earlier project (read-only): present on the author's machine, absent in CI."""
 
 
 @pytest.fixture
@@ -42,6 +52,12 @@ def experiment_model(experiment: Dataset) -> ContextModel:
 
 
 @pytest.fixture(scope="session")
+def experiment_cs_model(experiment: Dataset) -> CSModel:
+    """The whole CS-model fitted on the experiment with the default (template) configuration."""
+    return fit_model(experiment)
+
+
+@pytest.fixture(scope="session")
 def heart270() -> Dataset:
     return load_builtin("heart-disease-270")
 
@@ -53,3 +69,11 @@ def reference_engine() -> ModuleType:
     from csmodel import core
 
     return core
+
+
+def reference_pipeline() -> ModuleType:
+    """The reference engine's ``csmodel.pipeline``: fit (Steps 1–11), represent, predict."""
+    reference_engine()
+    from csmodel import pipeline
+
+    return pipeline
