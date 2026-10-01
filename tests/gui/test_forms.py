@@ -9,6 +9,8 @@ from pytestqt.qtbot import QtBot
 from context_synthetic_recognition.config import PluginSpec, plugin
 from context_synthetic_recognition.core.k_strategies import K_STRATEGIES
 from context_synthetic_recognition.core.majorizers import MAJORIZERS
+from context_synthetic_recognition.core.metrics import METRICS
+from context_synthetic_recognition.core.normalizers import NORMALIZERS
 from context_synthetic_recognition.evaluation.baselines import BASELINES
 from context_synthetic_recognition.evaluation.protocols import PROTOCOLS
 from context_synthetic_recognition.gui.forms import (
@@ -204,3 +206,37 @@ def test_the_checklist_reports_invalid_parameters(qtbot: QtBot) -> None:
     ks.editingFinished.emit()
     assert checklist.problem.text() == ""
     assert checklist.specs() == (plugin("knn-vote", ks=[3]),)
+
+
+def test_the_forms_of_the_metrics_and_normalizers(qtbot: QtBot) -> None:
+    weighted = ParamForm(params_type(METRICS, "weighted-zhuravlyov"))
+    minkowski = ParamForm(params_type(METRICS, "minkowski"))
+    zscore = ParamForm(params_type(NORMALIZERS, "z-score"))
+    for form in (weighted, minkowski, zscore):
+        qtbot.addWidget(form)
+    assert weighted.fields() == ["quantitative_weight", "nominal_weight", "feature_weights"]
+    nominal, weights = weighted.widget("nominal_weight"), weighted.widget("feature_weights")
+    assert isinstance(nominal, QDoubleSpinBox)
+    assert isinstance(weights, QLineEdit)
+    assert (nominal.minimum(), nominal.value(), weights.text()) == (0.0, 1.0, "")
+    assert weighted.values() == {}
+    nominal.setValue(0.5)
+    weights.setText("1, 0.5; 2")
+    assert weighted.values() == {"nominal_weight": 0.5, "feature_weights": [1.0, 0.5, 2.0]}
+    order = minkowski.widget("p")
+    assert isinstance(order, QDoubleSpinBox)
+    assert (order.minimum(), order.value()) == (1.0, 3.0)
+    order.setValue(4)
+    assert minkowski.values() == {"p": 4.0}
+    ddof = zscore.widget("ddof")
+    assert isinstance(ddof, QSpinBox)
+    assert (ddof.minimum(), ddof.maximum(), ddof.value()) == (0, 1, 1)
+    # the editors list every plug-in of the registries
+    metrics, normalizers = PluginEditor(METRICS), PluginEditor(NORMALIZERS)
+    qtbot.addWidget(metrics)
+    qtbot.addWidget(normalizers)
+    assert [metrics.combo.itemText(i) for i in range(metrics.combo.count())] == METRICS.names()
+    assert normalizers.combo.count() == len(NORMALIZERS) == 8
+    metrics.set_spec(plugin("minkowski", p=1.5))
+    assert metrics.spec() == plugin("minkowski", p=1.5)
+    assert metrics.validate() == ""

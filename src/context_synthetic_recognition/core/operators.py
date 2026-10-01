@@ -9,14 +9,14 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import numpy as np
 
 from context_synthetic_recognition.config.models import ContextConfig, OperatorConfig
 from context_synthetic_recognition.core.arrays import BoolArray, FloatArray, IntArray, readonly
-from context_synthetic_recognition.core.metrics import METRICS, Metric
+from context_synthetic_recognition.core.metrics import METRICS, Metric, MetricFit, traits_of
 from context_synthetic_recognition.errors import ConfigError, ModelUndefinedError
 
 logger = logging.getLogger(__name__)
@@ -41,27 +41,55 @@ class BaseOperator:
     """0-based indices of the features the operator uses."""
     quantitative: BoolArray
     """Which of these features belong to set I."""
+    fit_step: MetricFit | None = None
+    """The metric's fit step (``None``: it needs no training statistics, ADR-050)."""
+    state: Any = None
+    """What the fit step returned on the training sample; the metric gets it as its parameters."""
+    fitted: bool = False
+    """Whether :meth:`fit` has been called (always needed when there is a fit step)."""
 
     def __post_init__(self) -> None:
         """Freeze the index arrays."""
         readonly(self.features)
         readonly(self.quantitative)
 
+    def fit(self, Z: FloatArray) -> BaseOperator:
+        """The operator with its metric's training statistics (ADR-050).
+
+        Args:
+            Z: Unified values of the training objects (all features). No class labels are
+                passed: the statistics of a metric never depend on a class.
+
+        Returns:
+            The operator itself if its metric has no fit step, else a fitted copy.
+        """
+        if self.fit_step is None:
+            return self
+        state = self.fit_step(Z[:, self.features], self.quantitative, self.params)
+        return replace(self, state=state, fitted=True)
+
     def distances(self, A: FloatArray, B: FloatArray, *, decimals: int) -> FloatArray:
         """Distances between the rows of ``A`` and ``B`` (unified values of all features).
 
         Returns:
             Matrix of shape (len(A), len(B)), rounded to ``decimals``.
+
+        Raises:
+            RuntimeError: The metric has a fit step and :meth:`fit` was not called.
         """
+        if self.fit_step is not None and not self.fitted:
+            raise RuntimeError(
+                f"operator {self.label}: the metric '{self.metric_name}' needs its training "
+                "statistics — call fit() with the unified training values first"
+            )
+        params = self.params if self.fit_step is None else self.state
         a = A[:, self.features]
         b = B[:, self.features]
         out = np.empty((a.shape[0], b.shape[0]))
         rows = max(1, BLOCK_ELEMENTS // max(1, b.shape[0]))
         for start in range(0, a.shape[0], rows):
             stop = min(start + rows, a.shape[0])
-            out[start:stop] = self.metric(
-                a[start:stop], b, self.quantitative, decimals, self.params
-            )
+            out[start:stop] = self.metric(a[start:stop], b, self.quantitative, decimals, params)
         return out
 
 
@@ -91,6 +119,29 @@ def _subset(
     return np.array([feature_names.index(name) for name in operator.features], dtype=np.int64)
 
 
+def _check_domain(
+    label: str,
+    metric_name: str,
+    metric: Metric,
+    features: IntArray,
+    feature_names: Sequence[str],
+    quantitative: BoolArray,
+) -> None:
+    """A metric defined on set I (or J) must not get features of the other set (ADR-050)."""
+    domain = traits_of(metric).domain
+    if domain == "any":
+        return
+    outside = features[quantitative[features] != (domain == "quantitative")]
+    if outside.size:
+        other = "nominal" if domain == "quantitative" else "quantitative"
+        names = ", ".join(feature_names[int(j)] for j in outside)
+        raise ConfigError(
+            f"operator {label}: the metric '{metric_name}' is defined on {domain} features, but "
+            f"the operator uses the {other} feature(s) {names} — set its features to "
+            f"'{domain}' or to a list of {domain} features"
+        )
+
+
 def resolve_operators(
     config: ContextConfig, feature_names: Sequence[str], quantitative: BoolArray
 ) -> tuple[tuple[BaseOperator, ...], tuple[SkippedOperator, ...]]:
@@ -103,10 +154,13 @@ def resolve_operators(
 
     Returns:
         The operators in configuration order and the operators skipped because their feature
-        subset is empty (only if ``skip_empty_operators``, ADR-007).
+        subset is empty (only if ``skip_empty_operators``, ADR-007). An operator whose metric
+        has a fit step still has to be fitted on the training sample (:meth:`BaseOperator.fit`).
 
     Raises:
-        ConfigError: Unknown metric, invalid metric parameters or unknown feature names.
+        ConfigError: Unknown metric, invalid metric parameters, unknown feature names, a
+            metric given features of a type it is not defined on, or parameters that do not fit
+            the operator's features.
         ModelUndefinedError: No operator is left.
     """
     mask = np.asarray(quantitative, dtype=bool)
@@ -122,14 +176,24 @@ def resolve_operators(
                 extra={"operator": spec.label, "features": spec.features},
             )
             continue
+        info = METRICS.info(spec.metric.name)
+        declared = traits_of(info.obj)
+        params = METRICS.make_params(spec.metric.name, spec.metric.params)
+        _check_domain(spec.label, info.name, info.obj, features, feature_names, mask)
+        if declared.check is not None:
+            try:
+                declared.check(mask[features], params)
+            except ConfigError as error:
+                raise ConfigError(f"operator {spec.label}: {error}") from error
         operators.append(
             BaseOperator(
                 label=spec.label,
-                metric_name=METRICS.info(spec.metric.name).name,
-                metric=METRICS.get(spec.metric.name),
-                params=METRICS.make_params(spec.metric.name, spec.metric.params),
+                metric_name=info.name,
+                metric=info.obj,
+                params=params,
                 features=features,
                 quantitative=mask[features],
+                fit_step=declared.fit,
             )
         )
     if not operators:

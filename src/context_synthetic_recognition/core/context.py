@@ -185,6 +185,7 @@ def fit_context(dataset: Dataset, config: ExperimentConfig | None = None) -> Con
     # Steps 2–3 — distances and neighbour order per base operator
     decimals = cfg.context.distance_decimals
     operators, skipped = resolve_operators(cfg.context, dataset.feature_names, quantitative)
+    operators = tuple(operator.fit(Z) for operator in operators)
     self_index = np.arange(m, dtype=np.int64)
     contexts = []
     for operator in operators:

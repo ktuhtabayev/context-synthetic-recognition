@@ -15,6 +15,7 @@ from context_synthetic_recognition.config.io import config_hash
 from context_synthetic_recognition.config.models import CentreMode, HAGConfig
 from context_synthetic_recognition.config.presets import matching_preset
 from context_synthetic_recognition.core.majorizers import MAJORIZERS
+from context_synthetic_recognition.core.normalizers import NORMALIZERS
 from context_synthetic_recognition.core.trace import OperatorContext
 from context_synthetic_recognition.export.excel.common import (
     DATASET,
@@ -27,7 +28,7 @@ from context_synthetic_recognition.export.excel.common import (
 )
 from context_synthetic_recognition.export.excel.writer import SheetWriter
 from context_synthetic_recognition.export.excel.writer import column_letter as _letter
-from context_synthetic_recognition.export.tables import plain
+from context_synthetic_recognition.export.tables import plain, statistic_keys
 from context_synthetic_recognition.export.view import RunView
 from context_synthetic_recognition.notation import DASH
 
@@ -559,7 +560,8 @@ def normalized(book: Book) -> None:
         sheet.put(5 + t, n + 2, labels[t], "class_")
     row = 5 + m
     sheet.row(row, 1, ["Type", *(int(q) for q in is_quantitative), "1 = I"], "flag")
-    for offset, key in enumerate(("min", "max"), start=1):
+    keys = statistic_keys(scaling)
+    for offset, key in enumerate(keys, start=1):
         statistic = scaling.statistics.get(key)
         values = [
             plain(statistic[j]) if statistic is not None and q else DASH
@@ -569,13 +571,14 @@ def normalized(book: Book) -> None:
         sheet.row(row + offset, 2, [*values, ""], "statistic")
     span = object_span(view)
     sheet.notes(
-        row + 4,
+        row + len(keys) + 2,
         [
             "Type 1 = quantitative feature (set I): rescaled to [0, 1] with the fractional-linear "
             f"(min–max) transform; min and max are taken over the training objects {span}."
             if minmax
             else "Type 1 = quantitative feature (set I): mapped by the scale unification "
-            f"“{scaling.normalizer}”, fitted on the training objects {span}.",
+            f"“{scaling.normalizer}” — {NORMALIZERS.info(scaling.normalizer).summary} — "
+            f"fitted on the training objects {span}.",
             (
                 "Type 0 = nominal feature (set J): the original code is kept, because the metric "
                 "only "
@@ -585,6 +588,11 @@ def normalized(book: Book) -> None:
                 "A new object (Brace for Meta-algorithm) is rescaled with the same training min "
                 "and "
                 "max, so its values may fall outside [0, 1]."
+            )
+            if minmax
+            else (
+                "A new object (Brace for Meta-algorithm) is mapped with the same training "
+                "constants as the training objects."
             ),
         ],
     )

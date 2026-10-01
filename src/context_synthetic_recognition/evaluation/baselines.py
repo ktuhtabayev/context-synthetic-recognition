@@ -128,6 +128,7 @@ def knn_vote(data: BaselineInput, params: KnnVoteParams | None = None, /) -> lis
         if unknown:
             raise ConfigError(f"knn-vote: unknown operators {', '.join(unknown)}")
         operators = tuple(o for o in operators if o.label in chosen.operators)
+    operators = tuple(o.fit(reference) for o in operators)
     y = train.class_index
     outputs = []
     for operator in operators:

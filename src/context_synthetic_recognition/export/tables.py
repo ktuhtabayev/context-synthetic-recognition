@@ -22,6 +22,7 @@ import numpy as np
 from context_synthetic_recognition.config.presets import active_deviations
 from context_synthetic_recognition.core.contributions import weight_ranks
 from context_synthetic_recognition.core.meta import REFUSAL
+from context_synthetic_recognition.core.normalizers import NORMALIZERS, Scaling
 from context_synthetic_recognition.core.trace import OperatorContext
 from context_synthetic_recognition.evaluation.protocols import MethodPredictions, ProtocolResult
 from context_synthetic_recognition.export.view import RunView
@@ -164,6 +165,16 @@ def plain(value: Any) -> Cell:
     return int(x) if x.is_integer() else x
 
 
+MINMAX_STATISTICS = ("min", "max")
+"""The training statistics the workbook shows under the normalized dataset."""
+
+
+def statistic_keys(scaling: Scaling) -> tuple[str, ...]:
+    """The training statistics to show: min and max, then the normalizer's own."""
+    own = (key for key in scaling.statistics if key not in MINMAX_STATISTICS)
+    return (*MINMAX_STATISTICS, *own)
+
+
 def _feature_headers(view: RunView) -> tuple[str, ...]:
     return tuple(f.name for f in view.trace.features)
 
@@ -210,38 +221,60 @@ def _dataset(view: RunView) -> Table:
 
 def _features(view: RunView) -> Table:
     d, scaling = view.dataset, view.trace.scaling
-    low = scaling.statistics.get("min")
-    high = scaling.statistics.get("max")
+    keys = statistic_keys(scaling)
     rows = tuple(
         (
             name,
             "quantitative (I)" if q else "nominal (J)",
             int(q),
-            plain(low[j]) if low is not None and q else None,
-            plain(high[j]) if high is not None and q else None,
+            *(
+                plain(scaling.statistics[key][j]) if key in scaling.statistics and q else None
+                for key in keys
+            ),
             int(np.unique(d.X[:, j]).size),
         )
         for j, (name, q) in enumerate(zip(d.feature_names, d.quantitative, strict=True))
     )
+    if keys == MINMAX_STATISTICS:
+        title = "Features: type, training minimum and maximum, distinct values"
+        note = "min and max are taken over the training objects (quantitative features only)."
+    else:
+        title = "Features: type, training statistics of the scale unification, distinct values"
+        note = (
+            f"{', '.join(keys)} are taken over the training objects (quantitative features "
+            f"only); scale unification “{scaling.normalizer}”."
+        )
     return Table(
         "features",
-        "Features: type, training minimum and maximum, distinct values",
-        ("Feature", "Type", "Flag (1 = I)", "min", "max", "Distinct values"),
+        title,
+        ("Feature", "Type", "Flag (1 = I)", *keys, "Distinct values"),
         rows,
         GROUP_INPUT,
-        "min and max are taken over the training objects (quantitative features only).",
+        note,
     )
 
 
 def _normalized(view: RunView) -> Table:
+    scaling = view.trace.scaling
+    if scaling.normalizer == "minmax":
+        title = (
+            "Normalized dataset: quantitative features mapped to [0, 1], nominal features unchanged"
+        )
+        note = "x′ = (x − min)/(max − min) for j ∈ I with the training min and max (Step 1)."
+    else:
+        title = (
+            f"Normalized dataset: scale unification “{scaling.normalizer}” of the quantitative "
+            "features, nominal features unchanged"
+        )
+        note = f"{NORMALIZERS.info(scaling.normalizer).summary} (Step 1)."
     return _object_table(
         view,
         "normalized",
-        "Normalized dataset: quantitative features mapped to [0, 1], nominal features unchanged",
+        title,
         GROUP_SCALE,
         view.trace.feature_names,
         view.trace.normalized,
-        "x′ = (x − min)/(max − min) for j ∈ I with the training min and max (Step 1).",
+        note,
         plain,
     )
 
@@ -1265,7 +1298,12 @@ def table_specs(view: RunView) -> list[TableSpec]:
 
     add("summary", GROUP_SUMMARY, 80, lambda: _summary(view))
     add("dataset", GROUP_INPUT, m * (n + 2), lambda: _dataset(view))
-    add("features", GROUP_INPUT, 6 * n, lambda: _features(view))
+    add(
+        "features",
+        GROUP_INPUT,
+        (4 + len(statistic_keys(trace.scaling))) * n,
+        lambda: _features(view),
+    )
     add("normalized", GROUP_SCALE, m * (n + 2), lambda: _normalized(view))
     for operator in trace.operators:
         add(
