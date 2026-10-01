@@ -122,7 +122,7 @@ from context_synthetic_recognition.data import load_builtin, load_dataset
 
 heart = load_builtin("heart-disease-270")
 experiment = load_dataset(
-    "resources/experiments/context-synthetic-model/Context-Synthetic Model – Full Experiment [My Experiment on Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+    "resources/experiments/context-synthetic-model/Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 )
 ```
 

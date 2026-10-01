@@ -59,7 +59,7 @@ Commands available now:
 .\.venv\Scripts\csr.exe fit heart-disease-10               # Ψ(r), the HAG step by step, TUPLAM
 .\.venv\Scripts\csr.exe classify heart-disease-10 --object 1                         # S₁ left out of its context
 .\.venv\Scripts\csr.exe classify heart-disease-10 --values "58 1 3 125 250 0 2 150 0 1 2 1 7"  # a new object
-.\.venv\Scripts\csr.exe validate --against "resources\experiments\context-synthetic-model\Context-Synthetic Model – Full Experiment [My Experiment on Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+.\.venv\Scripts\csr.exe validate --against "resources\experiments\context-synthetic-model\Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 .\.venv\Scripts\csr.exe validate --against "tests\data\templates\RegularizedStackingEnsembleWithHAG [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 .\.venv\Scripts\csr.exe run heart-disease-10 --sensitivity  # resubstitution, LOO, k-NN baselines, margins, switches
 .\.venv\Scripts\csr.exe run -c configs\heart-disease-270-large-data.yaml   # the large-data setting (ADR-030)

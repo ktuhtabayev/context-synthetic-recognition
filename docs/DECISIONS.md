@@ -21,9 +21,14 @@ Status values: *accepted*, *superseded by ADR-n*.
 *Accepted, 2026-09-30.*
 
 - The workbook
-  `resources/experiments/context-synthetic-model/Context-Synthetic Model – Full Experiment [My Experiment on Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx`
+  `resources/experiments/context-synthetic-model/Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx`
   specifies every computation; its cell formulas define each step and its Validation sheet values
   are acceptance tests (tolerance 1e-9).
+  *(The author renamed the workbook on 2026-10-01 and asked for one naming throughout: the file
+  name was updated everywhere in the project, the handoff documents included, and the text of
+  cell A3 of the sheet* Template Deviations *— which quotes the file name of the HAG template —
+  was changed inside the workbook to the template's current name. Only that text changed: every
+  other part of the file is identical and `csr validate` passes on all 11,631 cells.)*
 - `docs/handoff/CONTEXT_HANDOFF.md` records the agreed decisions; where it and the design chat
   differ, the handoff wins.
 - `docs/handoff/reference-engine` (with `golden_values.json`) is a test oracle, not the

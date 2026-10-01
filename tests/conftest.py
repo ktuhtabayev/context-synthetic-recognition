@@ -19,8 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIGS = ROOT / "configs"
 EXPERIMENTS = ROOT / "resources" / "experiments" / "context-synthetic-model"
 WORKBOOK = EXPERIMENTS / (
-    "Context-Synthetic Model – Full Experiment "
-    "[My Experiment on Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+    "Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 )
 """The full Excel experiment: the specification and its golden values."""
 KNN_WORKBOOK = (
