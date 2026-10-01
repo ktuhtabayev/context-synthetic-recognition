@@ -50,8 +50,13 @@ def switch_sensitivity(
     config: ExperimentConfig | None = None,
     *,
     progress: Callable[[str, int, int], None] | None = None,
+    cancelled: Callable[[], bool] | None = None,
 ) -> tuple[SwitchVariant, ...]:
-    """Evaluate all four switch combinations with otherwise the same configuration."""
+    """Evaluate all four switch combinations with otherwise the same configuration.
+
+    ``progress`` is called with (setting, done, total) during every leave-one-out; ``cancelled``
+    is polled before every fold and stops the evaluation with ``EvaluationCancelledError``.
+    """
     base = config or ExperimentConfig()
     decimals = base.evaluation.score_decimals
     positive = positive_code(dataset.classes, base.evaluation.positive_class)
@@ -67,7 +72,9 @@ def switch_sensitivity(
 
         model = fit_model(dataset, cfg)
         training = model.classify_training()
-        loo = run_protocol(dataset, cfg, "leave-one-out", progress=report).predictions
+        loo = run_protocol(
+            dataset, cfg, "leave-one-out", progress=report, cancelled=cancelled
+        ).predictions
         variants.append(
             SwitchVariant(
                 centres=centres,

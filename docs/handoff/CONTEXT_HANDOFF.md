@@ -11,7 +11,7 @@ Session of origin: https://claude.ai/code/session_01Drh9SjE6L3BXHRB9Hw8LdM (web 
 
 | Source | Where | Role |
 |---|---|---|
-| Full Excel experiment | `resources/experiments/context-synthetic-model/Context-Synthetic Model – Full Experiment [My Experiment on Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx` | **Executable specification.** 33 sheets (incl. “Template Deviations”), 10 615 live formulas, every intermediate table of the pipeline, a Validation sheet with golden values. |
+| Full Excel experiment | `resources/experiments/context-synthetic-model/Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx` | **Executable specification.** 33 sheets (incl. “Template Deviations”), 10 615 live formulas, every intermediate table of the pipeline, a Validation sheet with golden values. |
 | k-NN synthetic-features workbook | `resources/experiments/context-synthetic-model/Forming Synthetic Features based on k-NN (Heart-Disease 10,13,2) - Opus 5.5.xlsx` | First part of the experiment (Steps 1–4), the user's hand-checked version. |
 | Draft article (Russian) | `docs/handoff/article/article-draft-cs-model.docx` | «Контекстно-синтетическая модель алгоритмов распознавания на основе локальных метрических отношений» (Ensembles of algorithms and Zhuravlev's algebra – 6). Formulas (1)–(6), HAG Steps 1–5, meta-algorithm Steps 1–5, Definitions 1–6, Theorem. The “Вычислительный эксперимент” section is still empty — this project fills it. |
 | Hand-drawn algorithm sketches | `docs/handoff/images/algorithm-sketch-*.jpg` | Order of the pipeline: dataset → S₁ → S₂…S₁₀ distances → sorted neighbours with classes and nested k=3,5,7 → k-NN table (№, k=3, k=5, …, Class). |

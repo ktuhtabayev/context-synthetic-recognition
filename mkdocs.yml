@@ -36,6 +36,7 @@ nav:
   - Datasets: datasets.md
   - Evaluation: evaluation.md
   - Exporting: exporting.md
+  - Desktop application: gui.md
   - Extending: extending.md
   - Decisions: DECISIONS.md
   - Development: development.md

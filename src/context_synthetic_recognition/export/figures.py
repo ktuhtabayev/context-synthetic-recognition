@@ -26,7 +26,7 @@ from matplotlib.axes import Axes
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap, to_rgb
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
+from matplotlib.patches import Circle, Patch
 
 from context_synthetic_recognition.core.meta import REFUSAL
 from context_synthetic_recognition.evaluation.protocols import ProtocolResult
@@ -241,6 +241,134 @@ def draw_neighbourhoods(ax: Axes, view: RunView, operator: int, theme: Theme = L
         ax.set_yticks([])
     ax.set_xlabel("rank of the neighbour")
     ax.set_title(f"neighbours under {found.label}", pad=14)
+
+
+def draw_object_context(
+    ax: Axes,
+    view: RunView,
+    operator: int,
+    name: str,
+    distances: Any,
+    order: Any,
+    theme: Theme = LIGHT,
+    *,
+    own_class: int | None = None,
+) -> None:
+    """One object's local context Ψ_ρ,k: its neighbours with the nested k-neighbourhoods (Step 3).
+
+    The object is at the centre; every neighbour sits at its distance from it (the angle only
+    spreads the points), coloured by its class; a circle marks the k-th neighbour of every
+    permitted k, so the neighbourhoods are nested as in the article.
+
+    Args:
+        ax: The axes to draw on.
+        view: The run (operators, classes, permitted k, object names).
+        operator: Index of the base operator.
+        name: Name of the object at the centre (a training object or ``S``).
+        distances: (m,) its distances to the training objects under the operator.
+        order: Its neighbours by (distance, index) — training-object indices, itself excluded.
+        theme: Colours.
+        own_class: 0-based class of the object, if it is a training object (colours the centre).
+    """
+    trace = view.trace
+    found = trace.operators[operator]
+    ks = trace.permitted_k.ks
+    ranked = np.asarray(order, dtype=np.int64)
+    radii = np.asarray(distances, dtype=np.float64)[ranked]
+    depth = int(min(ranked.size, max(ks) + 3, MAX_TICK_LABELS))
+    _bare(ax, theme)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_aspect("equal")
+    angles = 2.0 * np.pi * _GOLDEN * np.arange(depth) + 0.5 * np.pi
+    x, y = radii[:depth] * np.cos(angles), radii[:depth] * np.sin(angles)
+    limit = float(radii[:depth].max()) if depth else 1.0
+    limit = limit if limit > 0 else 1.0
+    # the neighbourhoods among the neighbours shown — at most six circles
+    for k in tuple(k for k in ks if k <= depth)[:MAX_PANELS]:
+        radius = float(radii[k - 1])
+        ax.add_patch(
+            Circle(
+                (0.0, 0.0),
+                radius,
+                fill=False,
+                linestyle=(0, (4, 3)),
+                linewidth=0.9,
+                edgecolor=theme.ink_muted,
+            )
+        )
+        ax.text(
+            0.0,
+            -radius,
+            f"k = {k}",
+            ha="center",
+            va="top",
+            fontsize=7.5,
+            color=theme.ink_secondary,
+        )
+        limit = max(limit, radius)
+    classes = trace.class_index[ranked[:depth]]
+    colours = [theme.k1 if c == 0 else theme.k2 for c in classes]
+    ax.scatter(x, y, s=MARKER**2, c=colours, edgecolors=theme.surface, linewidths=RING, zorder=3)
+    if depth <= 25:
+        for t in range(depth):
+            ax.annotate(
+                trace.object_ids[int(ranked[t])],
+                (float(x[t]), float(y[t])),
+                textcoords="offset points",
+                xytext=(6, 5),
+                fontsize=7.5,
+                color=theme.ink_secondary,
+            )
+    centre = theme.ink if own_class is None else (theme.k1 if own_class == 0 else theme.k2)
+    ax.scatter(
+        [0.0],
+        [0.0],
+        s=(MARKER * 1.5) ** 2,
+        c=[centre],
+        marker="D",
+        edgecolors=theme.surface,
+        linewidths=RING,
+        zorder=4,
+    )
+    ax.annotate(
+        name,
+        (0.0, 0.0),
+        textcoords="offset points",
+        xytext=(8, 7),
+        fontsize=8.5,
+        fontweight="bold",
+        color=theme.ink,
+    )
+    pad = 1.18 * limit
+    ax.set_xlim(-pad, pad)
+    ax.set_ylim(-pad, pad)
+    handles = [
+        _marker(theme.k1, theme, f"K1 (class {trace.classes[0]})"),
+        _marker(theme.k2, theme, f"K2 (class {trace.classes[1]})"),
+    ]
+    _legend(ax, theme, handles, loc="upper center", bbox_to_anchor=(0.5, -0.02), ncols=2)
+    ax.set_title(f"{found.label}: neighbourhoods of {name}  (radius = distance)")
+
+
+def object_context_figure(
+    view: RunView,
+    operator: int,
+    name: str,
+    distances: Any,
+    order: Any,
+    theme: Theme = LIGHT,
+    *,
+    own_class: int | None = None,
+    size: tuple[float, float] = (5.6, 5.0),
+) -> Figure:
+    """:func:`draw_object_context` as a figure of its own, with the exporters' text sizes."""
+    with matplotlib.rc_context(RC):
+        figure = Figure(figsize=size, layout="constrained", facecolor=theme.surface)
+        draw_object_context(
+            figure.subplots(), view, operator, name, distances, order, theme, own_class=own_class
+        )
+    return figure
 
 
 # ---------------------------------------------------------------- Steps 6–8

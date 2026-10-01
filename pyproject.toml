@@ -1,6 +1,6 @@
 [project]
 name = "context-synthetic-recognition"
-version = "0.5.0"
+version = "0.6.0"
 description = "Context-synthetic model of recognition algorithms (CS-model): library, CLI and desktop GUI."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,6 +19,7 @@ keywords = [
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
+  "Environment :: X11 Applications :: Qt",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
@@ -46,13 +47,17 @@ parquet = ["pyarrow>=15"]
 sklearn = ["scikit-learn>=1.4"]
 # PDF run report (ADR-041)
 pdf = ["reportlab>=4.0"]
+# Desktop application (ADR-013, ADR-044)
+gui = ["PySide6-Essentials>=6.7"]
 dev = [
   "hypothesis>=6.100",
   "mypy>=1.11",
   "pre-commit>=3.7",
   "pyarrow>=15",
+  "PySide6-Essentials>=6.7",
   "pytest>=8.2",
   "pytest-cov>=5.0",
+  "pytest-qt>=4.4",
   "reportlab>=4.0",
   "ruff>=0.6",
   "scikit-learn>=1.4",
@@ -68,6 +73,9 @@ docs = [
 [project.scripts]
 csr = "context_synthetic_recognition.cli.app:main"
 
+[project.gui-scripts]
+csr-gui = "context_synthetic_recognition.gui.app:main"
+
 [project.urls]
 Repository = "https://github.com/ktuhtabayev/context-synthetic-recognition"
 
@@ -82,14 +90,26 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-context_synthetic_recognition = ["py.typed", "data/datasets/*.csv", "export/excel/*.json"]
+context_synthetic_recognition = [
+  "py.typed",
+  "data/datasets/*.csv",
+  "export/excel/*.json",
+  "gui/assets/*.svg",
+  "gui/translations/*.qm",
+]
 
 # ---------------------------------------------------------------- tests
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
-filterwarnings = ["error"]
+filterwarnings = [
+  "error",
+  # matplotlib's Qt toolbar reads a Qt attribute that PySide6 marks as deprecated. The warning
+  # is raised inside a Qt paint callback, where an error would crash the interpreter (ADR-048).
+  "ignore:Enum value .*AA_UseHighDpiPixmaps. is marked as deprecated:DeprecationWarning",
+]
+qt_api = "pyside6"
 markers = [
   "golden: acceptance tests against the Excel experiment workbook",
   "slow: long-running tests (large datasets, full cross-validation)",
@@ -150,6 +170,8 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D", "N802"]
+# Qt names its methods and signals in camelCase (rowCount, datasetChanged)
+"src/context_synthetic_recognition/gui/**" = ["N802", "N815"]
 
 # ---------------------------------------------------------------- types
 [tool.mypy]

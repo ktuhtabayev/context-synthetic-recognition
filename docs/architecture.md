@@ -39,8 +39,8 @@ flowchart TB
 | `evaluation` | Protocols, metrics, AUC/ROC, margins, baselines | ✓ M4 |
 | `services` | Runs and manifests, validation against the workbook and the templates, dataset summaries, experiment runner, run folders that can be repeated, switch sensitivity, configuration checks | ✓ M1 → M5 |
 | `export` | Excel mirror, CSV/JSON, LaTeX/Markdown, figures, report | ✓ M5 |
-| `cli` | `csr` command | `config` ✓ (M1), `data`, `validate` ✓ (M2), `fit`, `classify` ✓ (M3), `run` ✓ (M4), `export` ✓ (M5) |
-| `gui` | Desktop application | M6 |
+| `cli` | `csr` command | `config` ✓ (M1), `data`, `validate` ✓ (M2), `fit`, `classify` ✓ (M3), `run` ✓ (M4), `export` ✓ (M5), `gui` ✓ (M6) |
+| `gui` | Desktop application (PySide6, optional extra `[gui]`) | ✓ M6 |
 
 ## Pipeline and information flow
 
@@ -95,6 +95,31 @@ share; `export.excel` lays it out as the mirror of the experiment workbook (shee
 `export.figures` draws on axes it is given, so the GUI reuses the drawings; `export.report`
 arranges tables and figures into a document and renders it as HTML and PDF. Formats are plug-ins
 of the `EXPORTERS` registry ([Exporting](exporting.md), ADR-036 – ADR-043).
+
+## Desktop application
+
+```mermaid
+flowchart LR
+    subgraph pages["Pages"]
+        direction TB
+        P1["Dataset"] --- P2["Configure"] --- P3["Run"] --- P4["Results"]
+        P5["New object"] --- P6["Compare"] --- P7["Export"]
+    end
+    S["AppState<br/>dataset · configuration + undo ·<br/>RunView · selected object"]
+    W["Task (QThread)<br/>run_job · open_job · export_job"]
+    SV["services<br/>runner · runs · datasets · configs"]
+    EX["export<br/>view · tables · figures"]
+    pages <--> S
+    pages --> W --> SV
+    W --> EX
+    pages -. read .-> EX
+```
+
+The package `gui` adds no computation. Pages change the shared `AppState` and listen to its
+signals; a run, the opening of a saved run and an export are plain functions over the services,
+run in a worker thread; tables and figures are the exporters' own, shown through a Qt model that
+adds the workbook's colour semantics. Plug-in parameter forms are generated from the parameter
+types ([Desktop application](gui.md), ADR-044 – ADR-048).
 
 ## Extension points
 

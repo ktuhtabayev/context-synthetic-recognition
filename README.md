@@ -33,8 +33,8 @@ without its class (Theorem of the article).
 | M3 | HAG, meta-algorithm, new-object path, template replication | ✓ |
 | M4 | Evaluation (LOO re-fit, baselines, metrics, margins, properties), `csr validate` | ✓ |
 | M5 | Exporters: Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures, HTML/PDF report | ✓ |
-| M6 | Desktop GUI (PySide6) | next |
-| M7 | More metrics, normalizers and datasets | |
+| M6 | Desktop GUI (PySide6): dataset, configure, run, results explorer, new object, compare, export | ✓ |
+| M7 | More metrics, normalizers and datasets | next |
 | M8 | Documentation, polish, release build | |
 
 ## Quick start (Windows PowerShell)
@@ -59,12 +59,13 @@ Commands available now:
 .\.venv\Scripts\csr.exe fit heart-disease-10               # Ψ(r), the HAG step by step, TUPLAM
 .\.venv\Scripts\csr.exe classify heart-disease-10 --object 1                         # S₁ left out of its context
 .\.venv\Scripts\csr.exe classify heart-disease-10 --values "58 1 3 125 250 0 2 150 0 1 2 1 7"  # a new object
-.\.venv\Scripts\csr.exe validate --against "resources\experiments\context-synthetic-model\Context-Synthetic Model – Full Experiment [My Experiment on Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+.\.venv\Scripts\csr.exe validate --against "resources\experiments\context-synthetic-model\Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 .\.venv\Scripts\csr.exe validate --against "tests\data\templates\RegularizedStackingEnsembleWithHAG [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 .\.venv\Scripts\csr.exe run heart-disease-10 --sensitivity  # resubstitution, LOO, k-NN baselines, margins, switches
 .\.venv\Scripts\csr.exe run -c configs\heart-disease-270-large-data.yaml   # the large-data setting (ADR-030)
 .\.venv\Scripts\csr.exe run heart-disease-10 --export all  # … and export: workbook, tables, figures, report
 .\.venv\Scripts\csr.exe export -f excel,html               # export the latest run again (repeated from its folder)
+.\.venv\Scripts\csr.exe gui                                # the desktop application
 ```
 
 `csr validate` compares the package with a workbook's cached cell values, reading the inputs (data,
@@ -78,6 +79,13 @@ B2(a₄) = {S₉, S₁₀}). `csr run` evaluates the model and writes a run fold
 sheets, layout and style, generated for any data; for Heart-Disease (10, 13, 2) it passes
 `csr validate` cell for cell — as CSV/JSON, as Markdown and LaTeX tables, as PNG/SVG figures and
 as an HTML/PDF report ([Exporting](docs/exporting.md)).
+
+`csr gui` starts the desktop application: load a dataset, configure the method (the two ⚠
+switches are always in sight), run in the background, explore every table and figure of the
+workbook with cross-highlighting, classify a new object with a step-by-step explanation,
+compare runs and export ([Desktop application](docs/gui.md)).
+
+![The results explorer](docs/images/gui/results-table.png)
 
 > [!NOTE]
 > On large datasets the literal k range (k_max = 2·min|Kᵢ| − 3) reaches near-global
@@ -127,6 +135,7 @@ src/context_synthetic_recognition/
   services/         experiment runner, run folders, validation against the workbooks,
                     switch sensitivity, dataset summaries
   export/           Excel mirror, tables (CSV, JSON, Markdown, LaTeX), figures, report
+  gui/              desktop application (PySide6): pages, shared state, worker threads
   cli/              the csr command
 tests/              pytest suite; tests/data/templates = copies of the template workbooks
 ```
@@ -135,7 +144,7 @@ tests/              pytest suite; tests/data/templates = copies of the template 
 
 - [Architecture](docs/architecture.md) · [Algorithm reference](docs/algorithm-reference.md) ·
   [Datasets](docs/datasets.md) · [Evaluation](docs/evaluation.md) · [Exporting](docs/exporting.md) ·
-  [Extending](docs/extending.md) ·
+  [Desktop application](docs/gui.md) · [Extending](docs/extending.md) ·
   [Decisions](docs/DECISIONS.md) · [Development](docs/development.md)
 - Specification: `resources/experiments/context-synthetic-model/` and
   `docs/handoff/CONTEXT_HANDOFF.md`

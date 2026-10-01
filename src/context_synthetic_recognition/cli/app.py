@@ -3,8 +3,9 @@
 Commands: ``config`` (show, init, check), ``data`` (list, check, info), ``fit`` (the CS-model:
 Ψ(r), the HAG and the meta-dataset), ``classify`` (an object through the meta-algorithm, step by
 step), ``run`` (fit and evaluate under every configured protocol, write a run folder, optionally
-export it), ``export`` (a run folder as Excel mirror, tables, figures and report) and
-``validate`` (the package against the Excel experiment and the template workbooks).
+export it), ``export`` (a run folder as Excel mirror, tables, figures and report),
+``validate`` (the package against the Excel experiment and the template workbooks) and ``gui``
+(the desktop application).
 """
 
 import sys
@@ -49,6 +50,7 @@ from context_synthetic_recognition.export import (
     resolve_formats,
 )
 from context_synthetic_recognition.export.run import AUTO_SENSITIVITY_OBJECTS
+from context_synthetic_recognition.gui import GUI_EXTRA_HINT
 from context_synthetic_recognition.log import configure_logging
 from context_synthetic_recognition.notation import class_name, subscript, synthetic_name
 from context_synthetic_recognition.services.configs import config_problems
@@ -788,6 +790,29 @@ def validate(
         typer.echo("validation FAILED", err=True)
         raise typer.Exit(EXIT_FAILED)
     typer.echo("validation passed")
+
+
+# ---------------------------------------------------------------- csr gui
+
+
+@app.command("gui")
+def gui(
+    source: Annotated[
+        str | None,
+        typer.Argument(help="Dataset file or name to open; default: the project's default."),
+    ] = None,
+    config_path: ConfigOption = None,
+    run: Annotated[
+        Path | None, typer.Option("--run", "-r", help="Run folder to repeat and show.")
+    ] = None,
+) -> None:
+    """Start the desktop application (needs the extra [gui])."""
+    try:
+        from context_synthetic_recognition.gui.app import launch
+    except ImportError as error:
+        typer.echo(f"error: {GUI_EXTRA_HINT} ({error.name})", err=True)
+        raise typer.Exit(EXIT_FAILED) from error
+    raise typer.Exit(launch(dataset=source, config=config_path, run=run))
 
 
 def _utf8_console() -> None:

@@ -17,6 +17,8 @@ The virtual environment stores absolute paths; if the project folder moves, crea
 .\.venv\Scripts\python.exe -m pytest --cov              # tests + coverage (≥ 90 %)
 .\.venv\Scripts\python.exe -m pytest -m golden          # acceptance tests against the workbook
 .\.venv\Scripts\python.exe -m pytest -m "not slow"      # skip the long tests
+.\.venv\Scripts\python.exe -m pytest -m gui             # the desktop application (no window appears)
+.\.venv\Scripts\python.exe scripts\gui_screenshots.py   # the screenshots of docs/gui.md
 .\.venv\Scripts\ruff.exe check .                         # lint
 .\.venv\Scripts\ruff.exe format .                        # format
 .\.venv\Scripts\mypy.exe                                 # strict type check of src/
@@ -46,5 +48,6 @@ The virtual environment stores absolute paths; if the project folder moves, crea
 GitHub Actions (`.github/workflows/ci.yml`):
 
 - ruff (lint and format check) and mypy on Linux;
-- pytest with coverage on Windows and Linux, Python 3.11, 3.12 and 3.13;
+- pytest with coverage on Windows and Linux, Python 3.11, 3.12 and 3.13 — including the GUI
+  tests, which run on Qt's `offscreen` platform (ADR-048);
 - `mkdocs build --strict`.

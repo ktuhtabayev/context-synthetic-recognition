@@ -5,6 +5,38 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-01 — M6 desktop application
+
+### Added
+
+- Desktop application (`gui`, PySide6; optional extra `[gui]`; `csr gui` and the `csr-gui`
+  script) with the workflow Dataset → Configure → Run → Results → New object → Compare → Export
+  (ADR-044):
+  - *Dataset*: project and built-in datasets, files, drag-and-drop; preview; feature types;
+    reading options; live |K1|, |K2|, permitted k and r.
+  - *Configure*: every setting with plug-in parameter forms generated from the parameter types;
+    presets; the two ⚠ switches marked; validation; undo / redo (ADR-046).
+  - *Run*: worker thread with progress, log and cancel; optional run folder; switch sensitivity.
+  - *Results*: the workbook's steps as a tree of sortable tables and interactive figures, with
+    the workbook's colour semantics, formula tooltips and cross-highlighting of the selected
+    object (ADR-045).
+  - *New object*: a form or a pasted row; the decision explained by B1 / B2 per step, Ψ(r) and
+    the neighbours; the Theorem check for a training object left out of its context.
+  - *Compare*: saved runs side by side with the differences marked (ADR-047).
+  - *Export*: every export format in the background.
+  - Light and dark themes, zoom, keyboard shortcuts, recent files, remembered window state;
+    every string passes through a translation hook.
+- `services.runs`: `list_runs`, `comparison`, `config_differences` — saved runs side by side
+  without recomputation (ADR-047).
+- Figure `draw_object_context`: one object's neighbours with the nested k-neighbourhoods.
+- GUI user guide with screenshots (`docs/gui.md`, `scripts/gui_screenshots.py`); pytest-qt
+  tests of the whole workflow on Qt's offscreen platform (ADR-048).
+
+### Changed
+
+- `switch_sensitivity` takes a `cancelled` callback, like `run_protocol`.
+- CI installs the system libraries Qt needs on Linux.
+
 ## [0.5.0] — 2026-10-01 — M5 exporters
 
 ### Added
