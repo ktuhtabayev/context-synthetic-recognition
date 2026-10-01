@@ -705,3 +705,115 @@ contributions, weights, classes — and its latent features r₁ … r₄ are ke
 two). Everything shown about it — θ, γ and θ/γ with running and with final centres, r₁ with one
 and with two majorizer passes, SET under the four switch settings — is computed by the package's
 HAG at export time, so the examples cannot drift from the code.
+
+## ADR-044 — Desktop application: one more interface above the services
+
+*Accepted, 2026-10-01 (M6).*
+
+**Context.** The author asked for an excellent desktop GUI: Dataset → Configure → Run → Explore
+results → Classify a new object → Compare runs → Export. ADR-013 chose PySide6; the template's GUI
+(one window, a theme dictionary shared by the style sheet and matplotlib, a worker thread,
+`QSettings`, document-mode tabs) was inspected and what works was kept.
+
+**Decision.**
+
+- Package `gui`, installed with the optional extra `[gui]` (`PySide6-Essentials` — Widgets, Gui,
+  Core and Svg are all the application uses; the full `PySide6` also satisfies it). Nothing in the
+  library or the CLI imports Qt; `csr gui` and the `csr-gui` script start the application, and
+  without PySide6 `csr gui` prints the install hint.
+- **The GUI computes nothing.** A run is `services.runner.run_experiment`; what the pages show is
+  the exporters' `RunView`, its tables (`export.tables`) and its figures (`export.figures`). The
+  screen, the Excel mirror and the article's tables therefore cannot disagree, and a table or
+  figure added to the exporters appears in the results explorer without GUI code.
+- **Pages share one state** (`gui.state.AppState`: dataset, configuration with its undo stack, the
+  run on screen, the selected object, the appearance) and never call each other.
+- **Background work** (`gui.workers`): `run_job`, `open_job` and `export_job` are plain functions
+  over the services; a `Task` (`QThread`) runs one and reports progress, the result, the error or
+  the cancellation through signals. The run can be cancelled between folds (`switch_sensitivity`
+  takes the same `cancelled` callback as `run_protocol` for this). The package's log is shown in
+  the Run page through a logging handler.
+- **Look.** The Fusion style with the application's own palette and style sheet — the same on
+  every platform; a light and a dark theme from one set of design tokens (`gui.theme.Palette`),
+  which also names the matching figure theme; zoom steps scale the whole interface.
+- **Remembered** (`QSettings`): window geometry, theme, zoom, runs folder, recent datasets,
+  configurations and runs.
+- **Translation.** Every user-visible string passes through `gui.i18n.tr`; a translation is a Qt
+  `.qm` file `gui/translations/csr_<locale>.qm`, loaded when the system locale asks for it. The
+  interface is English; no translation ships yet.
+
+## ADR-045 — Colour semantics of the tables on screen
+
+*Accepted, 2026-10-01 (M6).*
+
+Tables are the exporters' `Table` objects behind a Qt model; `gui.models.style_for` decides what
+every column and cell *means* (`CellRole`) and the theme turns the meaning into colours, so both
+themes show the same semantics.
+
+- From the workbook: quantitative (blue) and nominal (yellow) features, synthetic features (light
+  green), latent features (stronger green), correct (green) and wrong (red), warnings.
+- **Classes** are tinted in the two colours they have in every figure (K1 blue, K2 orange) —
+  the workbook colours the class column with one colour; two make a table readable at a glance and
+  tie tables to figures. The same tints mark aᵤ = 1 / aᵤ = 2 in Ψ(r): the class a neighbourhood
+  votes for.
+- **Decisions** (predicted class per method) are coloured by whether they are correct, wrong or a
+  refusal — the table form of the *prediction map* figure.
+- **TUPLAM** features and the chosen candidate q of a HAG iteration are yellow ("selected").
+- Colour is never the only cue: classes and decisions are written, statuses carry ✓ / ✗ / ⚠.
+- Selecting an object (a row or the selector) marks it in every table (cross-highlighting) and
+  draws its neighbours with the nested k-neighbourhoods (`export.figures.draw_object_context`).
+- Header tooltips name the article's formula a column comes from.
+
+## ADR-046 — Editing the configuration in the GUI
+
+*Accepted, 2026-10-01 (M6).*
+
+- Every edit builds a new immutable `ExperimentConfig` from the widgets and pushes it on a
+  `QUndoStack`; the widgets are then refreshed from the state, so undo, redo, the presets and an
+  opened file take one path.
+- **The `dataset` section belongs to the loaded dataset**: it is written when a dataset is loaded
+  (path, reading options, feature types) and is never changed by undo or by a preset. Presets
+  also keep the name, the seed and the output folder.
+- **Parameter forms are generated** from the plug-ins' parameter types (their JSON schema): check
+  box, spin box with the declared bounds, list field, JSON field. A form reports only values that
+  differ from the defaults, so a configuration edited in the GUI stays as short as a hand-written
+  one, keeps its hash, and keeps matching its preset.
+- Protocols and baselines are check lists in the registry's order; a configuration that lists
+  the same plug-in twice shows its first entry.
+- Problems — invalid parameters, a k rule that permits nothing, no protocol, data the model is
+  undefined for — are listed on the Configure and Run pages and keep *Run* disabled.
+- After an edit the run on screen is kept and marked as computed with another configuration
+  ("stale") until the experiment is run again; changing the data drops it.
+
+## ADR-047 — Runs in the GUI: saving, opening, comparing, the new object
+
+*Accepted, 2026-10-01 (M6).*
+
+- Saving a run is optional on the Run page; the runs folder is one setting for the whole
+  application.
+- **Opening a run** repeats it from its folder (`load_run`, ADR-036) in the worker thread; its
+  dataset and configuration become current.
+- **Comparing** reads only `manifest.yaml` and `results.json` (`services.runs`: `list_runs`,
+  `comparison`, `config_differences`) — nothing is recomputed. A result that was not saved takes
+  part as *current*.
+- **New object.** Classifying an object on the New object page replaces the run's demonstration
+  object (`RunView.new_object`), so the *New object* tables of the results and every export show
+  the object the user classified. The default is the workbook's: S₁ left out of its own context.
+
+## ADR-048 — Testing the GUI
+
+*Accepted, 2026-10-01 (M6).*
+
+- pytest-qt drives the real application — load, configure, run in the worker thread, explore,
+  classify, compare, export — on Qt's `offscreen` platform (set in `tests/conftest.py` before Qt
+  loads): no window appears and CI needs no display. The Linux jobs install the system libraries
+  Qt links against (`libegl1`, `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`).
+- File dialogs and message boxes are attributes of the pages and the window, replaced in tests;
+  settings go to an ini file in the test's temporary folder, never to the user's.
+- The jobs behind the worker thread are tested as plain functions; the thread itself with small
+  tasks; a cancelled run on Heart-Disease (270, 13, 2).
+- The screenshots of the user guide are made by `scripts/gui_screenshots.py`, which drives the
+  same application (native fonts on Windows, the window never mapped on screen).
+- The suite turns warnings into errors, with one exemption: matplotlib's Qt toolbar reads a Qt
+  attribute (`AA_UseHighDpiPixmaps`) that PySide6 marks as deprecated. The warning is raised
+  inside a Qt paint callback, where an error crashes the interpreter instead of failing a test;
+  `gui.canvas` ignores it for the same reason. A test paints every page in both themes.

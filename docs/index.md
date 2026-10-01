@@ -26,6 +26,7 @@ without its class.
 - [Evaluation](evaluation.md) — protocols, metrics, baselines, run folders, large datasets
 - [Exporting](exporting.md) — the Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures,
   the HTML/PDF report
+- [Desktop application](gui.md) — the workflow from dataset to export, with screenshots
 - [Extending](extending.md) — plug-ins: metrics, normalizers, k strategies, encoders, weights,
   majorizers, decision rules
 - [Decisions](DECISIONS.md) — the ADR log
