@@ -12,6 +12,7 @@ features and the model-property checks.
 .\.venv\Scripts\csr.exe run heart-disease-10                     # template preset, resubstitution + LOO
 .\.venv\Scripts\csr.exe run heart-disease-10 --sensitivity       # plus the four switch settings
 .\.venv\Scripts\csr.exe run -c configs\heart-disease-270-large-data.yaml
+.\.venv\Scripts\csr.exe run heart-disease-10 --export all        # plus workbook, tables, figures, report
 ```
 
 Every run writes `runs/<YYYYMMDD_HHMMSS>_<hash>/` (unless `--no-save`):
@@ -22,6 +23,12 @@ Every run writes `runs/<YYYYMMDD_HHMMSS>_<hash>/` (unless `--no-save`):
 | `results.json` | TUPLAM, crit, metrics per protocol and method, margins, properties |
 | `predictions.csv` | protocol, method, repetition, object, true class, decision, predicted class, score |
 | `folds.csv` | per fold: held-out objects, \|K1\|, \|K2\|, permitted k, r, TUPLAM, undefined |
+| `dataset.json` | the dataset exactly as it was used (values, labels, types, names, hash) |
+
+The folder is self-contained: `csr export` repeats the run from `manifest.yaml` and
+`dataset.json` and writes the Excel mirror, the tables, the figures and the report —
+see [Exporting](exporting.md). `csr run … --export all` does both at once. When the four
+switch settings were evaluated, `results.json` keeps them under `sensitivity`.
 
 From Python:
 

@@ -5,14 +5,46 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-01 — M5 exporters
+
 ### Added
 
+- Excel mirror (`export.excel`, `workbook.xlsx`): the sheets, layout and style of the Excel
+  experiment, generated for any data — a *Sorted Neighbors* sheet per operator, a *Greedy upon
+  Weight* sheet per HAG iteration, a fold sheet per hold-out protocol; values, no formulas. The
+  export of Heart-Disease (10, 13, 2) passes `csr validate` (11,631 cells) and matches the
+  experiment workbook in structure and style (golden tests). Size limits with notes on the
+  sheets for large data (ADR-037, ADR-038).
+- Tables of a run as plain data (`export.tables`, 44 for the experiment) and their forms: CSV
+  and JSON at full precision, Markdown and LaTeX (`booktabs`, the notation in math mode) for
+  the article (ADR-040).
+- Figures (`export.figures`, matplotlib): distances, neighbourhoods, ω and stability, HAG
+  candidates and criterion, margins, ROC, confusion, outcomes, prediction map, sensitivity; PNG
+  and SVG, light and dark; drawn on given axes for reuse by the GUI (ADR-041).
+- Run report (`export.report`): self-contained `report.html` and `report.pdf` (optional extra
+  `[pdf]`, reportlab), with the two template deviations highlighted first (ADR-041).
+- `csr run --export FORMATS` and `csr export [RUN]` (`--format`, `--out`, `--object`, `--values`,
+  `--sensitivity/--no-sensitivity`, `--decimals`, `--dpi`, `--theme`); `export_result` and the
+  `EXPORTERS` registry in Python (ADR-036, ADR-042).
+- Run folders are self-contained: `dataset.json` (the dataset as used) and the switch settings
+  in `results.json`; `load_run` repeats a run from its folder and reports differences from the
+  stored results (ADR-036).
+- The worked examples of *Template Deviations* are computed by the package from the template's
+  data, shipped as `export/excel/hag_template.json` (ADR-043).
 - The dataset folder (ADR-035): `datasets/default.dat|.csv` (Heart-Disease (10, 13, 2), the default
   dataset) and `datasets/raw/Heart-Disease/Heart-Disease (270, 13, 2).dat|.csv`, byte for byte;
   `data.catalog` (discovery, ids, `.dat`/`.csv` identity checks, name resolution with the
   built-ins as fallback); `csr data check`; `csr data list` shows the folder; `data info`, `fit`,
   `classify` and `run` use the default dataset without an argument; `dataset.path` may be empty
   or an id; format alias `extended`.
+
+### Changed
+
+- matplotlib is a core dependency; reportlab is the optional extra `[pdf]` (ADR-041).
+- `csr validate` accepts the sheet *Zhuravlyov Distances* of an exported workbook as well as
+  the experiment's *Zhuravlev Distances*, and reports the sheet under the name it found
+  (ADR-039).
+- SVG figures are written with LF line endings on every platform.
 
 ## [0.4.0] — 2026-09-30 — M4 evaluation
 

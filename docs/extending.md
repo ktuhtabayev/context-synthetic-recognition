@@ -16,6 +16,7 @@ a function with the signature of its kind; it may declare a parameter type, whic
 | protocol | `evaluation.protocols.PROTOCOLS` | `(class_index, seed, params) → [Split]` | `resubstitution`, `leave-one-out` |
 | baseline | `evaluation.baselines.BASELINES` | `(BaselineInput, params) → [BaselineOutput]` | `knn-vote` |
 | dataset format | `data.loaders.LOADERS` | `(path, LoadOptions) → Dataset` | detected |
+| export format | `export.run.EXPORTERS` | `(ExportContext) → [Path]` | `all` ([Exporting](exporting.md)) |
 
 ## Example: a metric with a parameter
 

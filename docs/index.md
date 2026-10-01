@@ -24,6 +24,8 @@ without its class.
 - [Algorithm reference](algorithm-reference.md) — article element → workbook sheet → module
 - [Datasets](datasets.md) — formats, feature types, classes, built-in datasets, `csr data info`
 - [Evaluation](evaluation.md) — protocols, metrics, baselines, run folders, large datasets
+- [Exporting](exporting.md) — the Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures,
+  the HTML/PDF report
 - [Extending](extending.md) — plug-ins: metrics, normalizers, k strategies, encoders, weights,
   majorizers, decision rules
 - [Decisions](DECISIONS.md) — the ADR log

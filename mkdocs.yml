@@ -35,6 +35,7 @@ nav:
   - Algorithm reference: algorithm-reference.md
   - Datasets: datasets.md
   - Evaluation: evaluation.md
+  - Exporting: exporting.md
   - Extending: extending.md
   - Decisions: DECISIONS.md
   - Development: development.md

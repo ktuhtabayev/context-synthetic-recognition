@@ -32,8 +32,8 @@ without its class (Theorem of the article).
 | M2 | Data layer; core pipeline up to Ψ(r) and formulas (1)–(6); golden tests Steps 1–8 | ✓ |
 | M3 | HAG, meta-algorithm, new-object path, template replication | ✓ |
 | M4 | Evaluation (LOO re-fit, baselines, metrics, margins, properties), `csr validate` | ✓ |
-| M5 | Exporters (Excel mirror, figures, report) | next |
-| M6 | Desktop GUI (PySide6) | |
+| M5 | Exporters: Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures, HTML/PDF report | ✓ |
+| M6 | Desktop GUI (PySide6) | next |
 | M7 | More metrics, normalizers and datasets | |
 | M8 | Documentation, polish, release build | |
 
@@ -63,6 +63,8 @@ Commands available now:
 .\.venv\Scripts\csr.exe validate --against "tests\data\templates\RegularizedStackingEnsembleWithHAG [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 .\.venv\Scripts\csr.exe run heart-disease-10 --sensitivity  # resubstitution, LOO, k-NN baselines, margins, switches
 .\.venv\Scripts\csr.exe run -c configs\heart-disease-270-large-data.yaml   # the large-data setting (ADR-030)
+.\.venv\Scripts\csr.exe run heart-disease-10 --export all  # … and export: workbook, tables, figures, report
+.\.venv\Scripts\csr.exe export -f excel,html               # export the latest run again (repeated from its folder)
 ```
 
 `csr validate` compares the package with a workbook's cached cell values, reading the inputs (data,
@@ -71,6 +73,11 @@ of the experiment (11,631 cells in 29 sheets, Steps 1–12 and the evaluation), 
 (SET {x₃, x₆, x₁₃, x₄, x₉}, 6,131 cells) and the meta-algorithm template (Class 2, B1(a₄) = ∅,
 B2(a₄) = {S₉, S₁₀}). `csr run` evaluates the model and writes a run folder
 ([Evaluation](docs/evaluation.md)).
+
+`csr export` writes a run as `workbook.xlsx` — a mirror of the Excel experiment with the same
+sheets, layout and style, generated for any data; for Heart-Disease (10, 13, 2) it passes
+`csr validate` cell for cell — as CSV/JSON, as Markdown and LaTeX tables, as PNG/SVG figures and
+as an HTML/PDF report ([Exporting](docs/exporting.md)).
 
 > [!NOTE]
 > On large datasets the literal k range (k_max = 2·min|Kᵢ| − 3) reaches near-global
@@ -119,6 +126,7 @@ src/context_synthetic_recognition/
   data/             dataset schema, loaders, built-in datasets
   services/         experiment runner, run folders, validation against the workbooks,
                     switch sensitivity, dataset summaries
+  export/           Excel mirror, tables (CSV, JSON, Markdown, LaTeX), figures, report
   cli/              the csr command
 tests/              pytest suite; tests/data/templates = copies of the template workbooks
 ```
@@ -126,7 +134,8 @@ tests/              pytest suite; tests/data/templates = copies of the template 
 ## Documentation
 
 - [Architecture](docs/architecture.md) · [Algorithm reference](docs/algorithm-reference.md) ·
-  [Datasets](docs/datasets.md) · [Evaluation](docs/evaluation.md) · [Extending](docs/extending.md) ·
+  [Datasets](docs/datasets.md) · [Evaluation](docs/evaluation.md) · [Exporting](docs/exporting.md) ·
+  [Extending](docs/extending.md) ·
   [Decisions](docs/DECISIONS.md) · [Development](docs/development.md)
 - Specification: `resources/experiments/context-synthetic-model/` and
   `docs/handoff/CONTEXT_HANDOFF.md`
