@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 from matplotlib.colors import to_hex
 from matplotlib.figure import Figure
+from matplotlib.patches import Circle
 
 from context_synthetic_recognition.export import RunView
 from context_synthetic_recognition.export.figures import (
@@ -23,6 +24,7 @@ from context_synthetic_recognition.export.figures import (
     draw_roc,
     draw_sensitivity,
     figure_specs,
+    object_context_figure,
     render,
     save_figure,
     save_figures,
@@ -199,3 +201,42 @@ def test_many_panels_are_capped() -> None:
     figure = render(spec)
     # 354 features are not named one by one along the axis
     assert all(len(ax.get_xticklabels()) < 60 for ax in figure.get_axes())
+
+
+def test_the_context_of_one_object(experiment_view: RunView) -> None:
+    view = experiment_view
+    found = view.trace.operators[0]
+    figure = object_context_figure(
+        view, 0, "S₃", found.distances[2], found.order[2], own_class=int(view.trace.class_index[2])
+    )
+    ax = figure.get_axes()[0]
+    assert ax.get_title() == "ρ: neighbourhoods of S₃  (radius = distance)"
+    circles = [patch for patch in ax.patches if isinstance(patch, Circle)]
+    assert len(circles) == 2  # the permitted k: 3 and 5
+    # the circle of k passes through the k-th neighbour: the neighbourhoods are nested
+    radii = [float(found.distances[2][found.order[2][k - 1]]) for k in (3, 5)]
+    assert [circle.get_radius() for circle in circles] == radii
+    assert radii[0] <= radii[1]
+    texts = [text.get_text() for text in ax.texts]
+    assert [text for text in texts if text.startswith("k = ")] == ["k = 3", "k = 5"]
+    assert "S₃" in texts  # the object at the centre
+    assert {"S₁", "S₂", "S₉"} <= set(texts)  # its neighbours are named
+    assert "S₁₀" not in texts  # the ninth neighbour: beyond the largest k and three more
+    assert legend(ax) == ["K1 (class 1)", "K2 (class 2)"]
+    assert to_hex(figure.get_facecolor()) == LIGHT.surface
+
+
+def test_the_context_on_large_data() -> None:
+    view = shape("literal")  # 270 objects, 118 permitted k
+    found = view.trace.operators[1]
+    figure = object_context_figure(view, 1, "S", found.distances[0], found.order[0], DARK)
+    ax = figure.get_axes()[0]
+    assert ax.get_title().startswith("ρ_I: neighbourhoods of S ")
+    circles = [patch for patch in ax.patches if isinstance(patch, Circle)]
+    assert len(circles) == 6  # the first six of the neighbourhoods among the 40 neighbours shown
+    texts = [text.get_text() for text in ax.texts]
+    assert [text for text in texts if text.startswith("k = ")] == [
+        f"k = {k}" for k in (3, 5, 7, 9, 11, 13)
+    ]
+    assert [text for text in texts if not text.startswith("k = ")] == ["S"]  # too many to name
+    assert to_hex(figure.get_facecolor()) == DARK.surface

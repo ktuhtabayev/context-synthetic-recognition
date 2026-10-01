@@ -11,7 +11,8 @@ additional (latent) features D, and the meta-algorithm R classifies in the space
 is represented and classified without its class (Theorem of the article).
 
 Layers: :mod:`.core` (pure numerical core), :mod:`.config`, :mod:`.data`, :mod:`.services` (runs,
-validation, summaries), :mod:`.cli`; evaluation, exporters and the GUI follow in later milestones.
+validation, summaries, runs side by side), :mod:`.evaluation`, :mod:`.export`, :mod:`.cli` and
+:mod:`.gui` (the desktop application, optional extra ``[gui]``).
 """
 
 import logging

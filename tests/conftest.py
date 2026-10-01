@@ -1,5 +1,6 @@
 """Shared paths and fixtures."""
 
+import os
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -15,6 +16,9 @@ from context_synthetic_recognition.services.sensitivity import switch_sensitivit
 
 EXPERIMENT_RUN_ID = "20260930_120000_0a1b2c3d"
 """Run id of the :func:`experiment_view` fixture."""
+# GUI tests draw into memory: no window appears and no display is needed (set before Qt loads)
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
 ROOT = Path(__file__).resolve().parents[1]
 CONFIGS = ROOT / "configs"
 EXPERIMENTS = ROOT / "resources" / "experiments" / "context-synthetic-model"
