@@ -5,6 +5,11 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+### Changed
+
+- The project is Windows-only (ADR-049): every CI job runs on Windows, the package metadata
+  names Windows, and `scripts/gui_screenshots.py` always uses the native Windows platform.
+
 ## [0.6.0] — 2026-10-01 — M6 desktop application
 
 ### Added
@@ -35,7 +40,6 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 ### Changed
 
 - `switch_sensitivity` takes a `cancelled` callback, like `run_protocol`.
-- CI installs the system libraries Qt needs on Linux.
 
 ## [0.5.0] — 2026-10-01 — M5 exporters
 
@@ -186,6 +190,6 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   package versions, timings).
 - `csr config show | init | check`.
 - Tooling: ruff, mypy (strict), pytest with hypothesis and coverage ≥ 90 %, pre-commit, GitHub
-  Actions (Windows and Linux, Python 3.11–3.13, strict docs build).
+  Actions (Windows, Python 3.11–3.13, strict docs build).
 - Documentation: architecture, algorithm reference with notes for the article text, ADR log
   (ADR-001 – ADR-017), development guide.

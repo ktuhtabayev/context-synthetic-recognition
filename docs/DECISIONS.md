@@ -166,7 +166,7 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
 
 *Accepted, 2026-09-30.*
 
-- Public GitHub repository `ktuhtabayev/context-synthetic-recognition`, CI on Windows and Linux.
+- Public GitHub repository `ktuhtabayev/context-synthetic-recognition`, CI on Windows.
 - Committed: the experiment workbooks, `CONTEXT_HANDOFF.md`, the task prompt, the images and the
   reference engine. **Not committed** until the article is published (listed in `.gitignore`, kept
   on disk): `docs/handoff/article/` (the draft) and `docs/handoff/CHAT_TRANSCRIPT.md`.
@@ -181,8 +181,8 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
   an editable pip install (the template's workflow). Runtime dependencies are added with the
   milestone that first uses them.
 - ruff (lint + format, line length 100), mypy `strict` on the whole package, pytest with
-  hypothesis and coverage ≥ 90 %, pre-commit, GitHub Actions (lint, type-check, tests on Windows and
-  Linux, Python 3.11–3.13, strict docs build).
+  hypothesis and coverage ≥ 90 %, pre-commit, GitHub Actions (lint, type-check, tests on Windows,
+  Python 3.11–3.13, strict docs build).
 - Conventional commits; one branch per milestone (`feat/m<n>-…`), merged into `main` and tagged
   `v0.<n>.0`; `CHANGELOG.md` in Keep-a-Changelog form.
 - Docstrings (Google style) name the article formula or step each public function implements; the
@@ -805,8 +805,7 @@ themes show the same semantics.
 
 - pytest-qt drives the real application — load, configure, run in the worker thread, explore,
   classify, compare, export — on Qt's `offscreen` platform (set in `tests/conftest.py` before Qt
-  loads): no window appears and CI needs no display. The Linux jobs install the system libraries
-  Qt links against (`libegl1`, `libxkbcommon0`, `libdbus-1-3`, `libfontconfig1`).
+  loads): no window appears and CI needs no display.
 - File dialogs and message boxes are attributes of the pages and the window, replaced in tests;
   settings go to an ini file in the test's temporary folder, never to the user's.
 - The jobs behind the worker thread are tested as plain functions; the thread itself with small
@@ -817,3 +816,29 @@ themes show the same semantics.
   attribute (`AA_UseHighDpiPixmaps`) that PySide6 marks as deprecated. The warning is raised
   inside a Qt paint callback, where an error crashes the interpreter instead of failing a test;
   `gui.canvas` ignores it for the same reason. A test paints every page in both themes.
+
+## ADR-049 — Windows only (author)
+
+*Accepted, 2026-10-01.*
+
+**Decision.** The project is developed, tested and released for Windows only; no other operating
+system is supported.
+
+- CI: every job (lint and type-check, tests on Python 3.11–3.13, strict docs build) runs on
+  `windows-latest`.
+- Package metadata names Windows (`Environment :: Win32 (MS Windows)`,
+  `Operating System :: Microsoft :: Windows`).
+- `scripts/gui_screenshots.py` always uses the native Windows platform; `.gitignore` lists no
+  artefacts of other systems.
+- Unchanged, because they do not depend on the operating system: Qt's `offscreen` platform for the
+  GUI tests (ADR-048: no window appears during a test run), LF line endings in the repository and
+  in every exported text file (ADR-014, ADR-040: the same bytes and checksums in every checkout),
+  forward slashes in displayed relative paths.
+- The handoff prompt's CI line (`docs/handoff/PROMPT_FOR_CLAUDE_CODE.md`) was changed to name
+  Windows alone — the one phrase, with the author's explicit permission; nothing else in the
+  protected folder was touched.
+- At the author's request the earlier entries of this log (ADR-014, ADR-015, ADR-048) and of
+  `CHANGELOG.md` (0.1.0, 0.6.0) were reworded to name Windows alone; until v0.6.0 the CI also ran
+  on a second operating system.
+
+No numerical result changes.

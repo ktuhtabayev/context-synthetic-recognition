@@ -10,7 +10,6 @@ docs/handoff/CHAT_TRANSCRIPT.md
 # =========================
 __pycache__/
 *.py[cod]
-*.so
 *.egg
 *.egg-info/
 .eggs/
@@ -51,7 +50,6 @@ site/
 .idea/
 *.swp
 *~
-.DS_Store
 Thumbs.db
 Desktop.ini
 .claude/settings.local.json

@@ -66,7 +66,7 @@ Desktop GUI (PySide6/Qt recommended — confirm against the template's choice an
 
 ## 6. Git, docs and delivery
 
-- Initialize Git (main branch), `.gitignore`, `.gitattributes` (keep `.xlsx`/`.docx` binary; consider Git LFS for experiment files), conventional commits, one feature branch per milestone, a tag per milestone, CI (GitHub Actions: lint, type-check, tests on Windows and Linux). Commit only after tests pass. Keep `CHANGELOG.md`.
+- Initialize Git (main branch), `.gitignore`, `.gitattributes` (keep `.xlsx`/`.docx` binary; consider Git LFS for experiment files), conventional commits, one feature branch per milestone, a tag per milestone, CI (GitHub Actions: lint, type-check, tests on Windows). Commit only after tests pass. Keep `CHANGELOG.md`.
 - Docs (mkdocs-material or the template's choice): README with quick start, architecture overview (diagrams), algorithm reference mapping every article formula/step/definition to code, how-to add a metric/normalizer/dataset, GUI user guide, experiment reproduction guide, and `docs/DECISIONS.md` (ADR log — record every decision, including the two switches).
 - Keep `resources/experiments/` and `docs/handoff/` unchanged; never modify the template project or the original workbooks.
 

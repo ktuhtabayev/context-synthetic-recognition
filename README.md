@@ -39,6 +39,8 @@ without its class (Theorem of the article).
 
 ## Quick start (Windows PowerShell)
 
+The project is developed, tested and supported on Windows only (ADR-049).
+
 ```powershell
 git clone https://github.com/ktuhtabayev/context-synthetic-recognition.git
 cd context-synthetic-recognition
