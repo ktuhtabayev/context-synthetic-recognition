@@ -1,5 +1,5 @@
-# Protected source material is never touched by hooks (CLAUDE.md)
-exclude: ^(resources|docs/handoff)/
+# Protected source material and the author's datasets are never touched by hooks (CLAUDE.md)
+exclude: ^(resources|docs/handoff|datasets|tests/data)/
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -31,6 +31,7 @@ repos:
         files: ^src/
         args: []
         additional_dependencies:
+          - matplotlib>=3.8
           - numpy>=1.26
           - openpyxl>=3.1
           - types-openpyxl>=3.1

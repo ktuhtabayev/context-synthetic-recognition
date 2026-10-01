@@ -190,6 +190,19 @@ def _show(value: Any) -> str:
     return f"{value:.12g}" if isinstance(value, float) else repr(value)
 
 
+SHEET_ALIASES: dict[str, tuple[str, ...]] = {"Zhuravlev Distances": ("Zhuravlyov Distances",)}
+"""Other names a sheet of the map may have: the author's workbook keeps *Zhuravlev Distances*,
+workbooks exported by this package use the agreed spelling (ADR-023)."""
+
+
+def find_sheet(sheet_names: Sequence[str], name: str) -> str | None:
+    """The workbook's name of the map's sheet ``name`` (the name itself or an alias), if any."""
+    for candidate in (name, *SHEET_ALIASES.get(name, ())):
+        if candidate in sheet_names:
+            return candidate
+    return None
+
+
 def run_check(check: Check[S], worksheet: Any, subject: S, tolerance: float) -> CheckResult:
     """Compare one range of a worksheet with the values computed for ``subject``."""
     utils = importlib.import_module("openpyxl.utils")
@@ -212,7 +225,7 @@ def run_check(check: Check[S], worksheet: Any, subject: S, tolerance: float) -> 
             else:
                 largest = max(largest, difference)
     return CheckResult(
-        check.sheet, check.ref, check.what, shape[0] * shape[1], largest, tuple(mismatches)
+        str(worksheet.title), check.ref, check.what, shape[0] * shape[1], largest, tuple(mismatches)
     )
 
 
@@ -228,9 +241,10 @@ def run_checks(
     for check in checks:
         if not check.applies(subject):
             continue
-        if check.sheet not in workbook.sheetnames:
+        sheet = find_sheet(workbook.sheetnames, check.sheet)
+        if sheet is None:
             raise ValidationError(f"{name}: sheet '{check.sheet}' is missing")
-        results.append(run_check(check, workbook[check.sheet], subject, tolerance))
+        results.append(run_check(check, workbook[sheet], subject, tolerance))
     order = {sheet: i for i, sheet in enumerate(workbook.sheetnames)}
     return tuple(sorted(results, key=lambda result: order[result.sheet]))  # workbook order
 

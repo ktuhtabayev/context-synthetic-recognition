@@ -12,21 +12,23 @@ from __future__ import annotations
 import csv
 import json
 import time
-from collections.abc import Callable
-from dataclasses import dataclass, field
+from collections.abc import Callable, Sequence
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from context_synthetic_recognition.config.io import config_hash
-from context_synthetic_recognition.config.models import ExperimentConfig
+from context_synthetic_recognition.config.models import CentreMode, ExperimentConfig
 from context_synthetic_recognition.config.presets import active_deviations
 from context_synthetic_recognition.core.meta import REFUSAL
 from context_synthetic_recognition.core.model import CSModel, fit_model
 from context_synthetic_recognition.core.properties import ModelProperties, model_properties
+from context_synthetic_recognition.data.loaders import load_from_config
 from context_synthetic_recognition.data.schema import Dataset, Label
-from context_synthetic_recognition.errors import ConfigError
+from context_synthetic_recognition.data.snapshot import SNAPSHOT_NAME, load_snapshot, save_snapshot
+from context_synthetic_recognition.errors import ConfigError, CSRError, DatasetError
 from context_synthetic_recognition.evaluation.margins import MarginAnalysis, margin_analysis
 from context_synthetic_recognition.evaluation.metrics import ClassificationMetrics
 from context_synthetic_recognition.evaluation.protocols import (
@@ -35,13 +37,21 @@ from context_synthetic_recognition.evaluation.protocols import (
     run_protocol,
 )
 from context_synthetic_recognition.services.manifest import (
+    RUN_ID_PATTERN,
+    RunManifest,
     build_manifest,
     create_run_dir,
+    read_manifest,
     write_manifest,
 )
 
+if TYPE_CHECKING:
+    from context_synthetic_recognition.services.sensitivity import SwitchVariant
+
 Progress = Callable[[str, int, int], None]
 """Called with (stage, done, total) — e.g. ("leave-one-out", 3, 10)."""
+RESULTS_NAME = "results.json"
+"""The results file of a run folder."""
 
 
 def positive_code(classes: tuple[Label, ...], positive_class: Label) -> int:
@@ -168,9 +178,21 @@ def _metrics_dict(result: ExperimentResult, predictions: MethodPredictions) -> d
     }
 
 
-def results_dict(result: ExperimentResult) -> dict[str, Any]:
-    """The run's results as JSON-ready data (``results.json``)."""
+def results_dict(
+    result: ExperimentResult, sensitivity: Sequence[SwitchVariant] | None = None
+) -> dict[str, Any]:
+    """The run's results as JSON-ready data (``results.json``).
+
+    ``sensitivity`` — the four switch settings, if they were evaluated — is stored under the key
+    of the same name, so that a later export does not have to evaluate them again.
+    """
     model, dataset = result.model, result.dataset
+    extra: dict[str, Any] = {}
+    if sensitivity is not None:
+        extra["sensitivity"] = [
+            {**asdict(variant), "centres": variant.centres.value, "crit": list(variant.crit)}
+            for variant in sensitivity
+        ]
     return {
         "dataset": {
             "name": dataset.name,
@@ -210,6 +232,7 @@ def results_dict(result: ExperimentResult) -> dict[str, Any]:
             "psi_conflicts": result.properties.psi_conflicts,
         },
         "timings": result.timings,
+        **extra,
     }
 
 
@@ -217,8 +240,17 @@ def _label(result: ExperimentResult, decision: int) -> str:
     return "" if decision == REFUSAL else str(result.model.classes[decision - 1])
 
 
-def save_run(result: ExperimentResult, runs_dir: Path | None = None) -> Path:
-    """Write the run folder and return it."""
+def save_run(
+    result: ExperimentResult,
+    runs_dir: Path | None = None,
+    *,
+    sensitivity: Sequence[SwitchVariant] | None = None,
+) -> Path:
+    """Write the run folder and return it.
+
+    Besides the manifest and the results the folder holds ``dataset.json``, the dataset exactly
+    as it was used, so that the run can be repeated and exported later (:func:`load_run`).
+    """
     root = Path(runs_dir if runs_dir is not None else result.config.output.runs_dir)
     run_dir = create_run_dir(root, config_hash(result.config))
     manifest = build_manifest(
@@ -228,8 +260,9 @@ def save_run(result: ExperimentResult, runs_dir: Path | None = None) -> Path:
         timings=result.timings,
     )
     write_manifest(manifest, run_dir)
-    text = json.dumps(results_dict(result), indent=2, ensure_ascii=False)
-    (run_dir / "results.json").write_text(text + "\n", encoding="utf-8", newline="\n")
+    save_snapshot(result.dataset, run_dir)
+    text = json.dumps(results_dict(result, sensitivity), indent=2, ensure_ascii=False)
+    (run_dir / RESULTS_NAME).write_text(text + "\n", encoding="utf-8", newline="\n")
     ids = result.dataset.object_ids
     labels = result.dataset.y
     with (run_dir / "predictions.csv").open("w", encoding="utf-8", newline="") as handle:
@@ -286,3 +319,128 @@ def save_run(result: ExperimentResult, runs_dir: Path | None = None) -> Path:
                     ]
                 )
     return run_dir
+
+
+# ---------------------------------------------------------------- reading a run back
+
+
+class RunError(CSRError, RuntimeError):
+    """A run folder cannot be read back (missing files, or the data no longer match)."""
+
+
+@dataclass(frozen=True, eq=False)
+class LoadedRun:
+    """A run repeated from its folder."""
+
+    folder: Path
+    manifest: RunManifest
+    result: ExperimentResult
+    sensitivity: tuple[SwitchVariant, ...] | None
+    """The four switch settings as stored with the run, or ``None`` if they were not evaluated."""
+    warnings: tuple[str, ...] = ()
+    """Differences between the stored results and the repeated ones (another package version)."""
+
+
+def latest_run(runs_dir: Path) -> Path | None:
+    """The most recent run folder of ``runs_dir`` (by its time stamp), or ``None``."""
+    if not runs_dir.is_dir():
+        return None
+    runs = sorted(
+        folder
+        for folder in runs_dir.iterdir()
+        if folder.is_dir() and RUN_ID_PATTERN.match(folder.name)
+    )
+    return runs[-1] if runs else None
+
+
+def _stored_sensitivity(stored: dict[str, Any]) -> tuple[SwitchVariant, ...] | None:
+    # services.sensitivity imports this module, so its type is looked up here
+    from context_synthetic_recognition.services.sensitivity import SwitchVariant
+
+    variants = stored.get("sensitivity")
+    if not variants:
+        return None
+    try:
+        return tuple(
+            SwitchVariant(
+                **{
+                    **variant,
+                    "centres": CentreMode(variant["centres"]),
+                    "crit": tuple(variant["crit"]),
+                }
+            )
+            for variant in variants
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _differences(stored: dict[str, Any], result: ExperimentResult) -> list[str]:
+    """How the repeated run differs from the stored results (empty if it reproduces them)."""
+    repeated = results_dict(result)
+    differences = []
+    for key in ("permitted_k", "r", "tuplam", "p"):
+        before, now = stored.get("model", {}).get(key), repeated["model"][key]
+        if before is not None and before != now:
+            differences.append(f"model.{key}: stored {before}, repeated {now}")
+    for protocol, entry in stored.get("protocols", {}).items():
+        before = entry.get("methods", {}).get("CS-model", {}).get("accuracy")
+        now = repeated["protocols"].get(protocol, {}).get("methods", {}).get("CS-model", {})
+        if before is not None and now and abs(before - now["accuracy"]) > 1e-12:
+            differences.append(
+                f"{protocol}: accuracy stored {before:.6g}, repeated {now['accuracy']:.6g}"
+            )
+    return differences
+
+
+def load_run(
+    run_dir: Path,
+    *,
+    progress: Progress | None = None,
+    cancelled: Callable[[], bool] | None = None,
+) -> LoadedRun:
+    """Repeat a run from its folder: the manifest's configuration on the stored dataset.
+
+    The computation is deterministic, so the repeated run has the full trace the exporters need
+    (the folder itself keeps only the results). The dataset is read from the folder's
+    ``dataset.json``; a folder without it (written by version 0.4) falls back to the
+    configuration's ``dataset.path``. In both cases the content hash must equal the manifest's.
+
+    Raises:
+        RunError: The folder is not a run folder, its dataset is missing or has changed.
+        ConfigError: The manifest cannot be read.
+    """
+    if not run_dir.is_dir():
+        raise RunError(f"{run_dir}: not a run folder")
+    manifest = read_manifest(run_dir)
+    config = manifest.config
+    if (run_dir / SNAPSHOT_NAME).is_file():
+        dataset = load_snapshot(run_dir)
+    else:
+        try:
+            dataset = load_from_config(config.dataset)
+        except DatasetError as error:
+            raise RunError(
+                f"{run_dir.name}: the run folder has no {SNAPSHOT_NAME} and its dataset cannot be "
+                f"found from the configuration ({error})"
+            ) from error
+    if manifest.dataset_hash is not None and dataset.content_hash() != manifest.dataset_hash:
+        raise RunError(
+            f"{run_dir.name}: the dataset is not the one the run was computed on "
+            "(its content hash differs from the manifest's)"
+        )
+    stored: dict[str, Any] = {}
+    results_file = run_dir / RESULTS_NAME
+    if results_file.is_file():
+        try:
+            stored = json.loads(results_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise RunError(f"{results_file}: cannot read the results ({error})") from error
+    result = run_experiment(dataset, config, progress=progress, cancelled=cancelled)
+    return LoadedRun(
+        folder=run_dir,
+        manifest=manifest,
+        result=result,
+        sensitivity=_stored_sensitivity(stored),
+        warnings=tuple(_differences(stored, result)),
+    )

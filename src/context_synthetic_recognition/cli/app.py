@@ -1,10 +1,10 @@
 """The ``csr`` command.
 
-Commands: ``config`` (show, init, check), ``data`` (list, info), ``fit`` (the CS-model: Ψ(r), the
-HAG and the meta-dataset), ``classify`` (an object through the meta-algorithm, step by step),
-``run`` (fit and evaluate under every configured protocol, write a run folder) and ``validate``
-(the package against the Excel experiment and the template workbooks); ``export`` follows with
-milestone M5.
+Commands: ``config`` (show, init, check), ``data`` (list, check, info), ``fit`` (the CS-model:
+Ψ(r), the HAG and the meta-dataset), ``classify`` (an object through the meta-algorithm, step by
+step), ``run`` (fit and evaluate under every configured protocol, write a run folder, optionally
+export it), ``export`` (a run folder as Excel mirror, tables, figures and report) and
+``validate`` (the package against the Excel experiment and the template workbooks).
 """
 
 import sys
@@ -36,17 +36,32 @@ from context_synthetic_recognition.data import (
     LOADERS,
     Dataset,
     detect_format,
-    load_builtin,
     load_dataset,
     load_from_config,
 )
-from context_synthetic_recognition.errors import CSRError, DatasetError
+from context_synthetic_recognition.data.catalog import project_catalog, resolve_dataset
+from context_synthetic_recognition.errors import ConfigError, CSRError, DatasetError
+from context_synthetic_recognition.export import (
+    ALL,
+    EXPORTERS,
+    ExportOptions,
+    export_result,
+    resolve_formats,
+)
+from context_synthetic_recognition.export.run import AUTO_SENSITIVITY_OBJECTS
 from context_synthetic_recognition.log import configure_logging
 from context_synthetic_recognition.notation import class_name, subscript, synthetic_name
 from context_synthetic_recognition.services.configs import config_problems
 from context_synthetic_recognition.services.datasets import parse_object, summarize
-from context_synthetic_recognition.services.runner import run_experiment, save_run
-from context_synthetic_recognition.services.sensitivity import switch_sensitivity
+from context_synthetic_recognition.services.runner import (
+    ExperimentResult,
+    RunError,
+    latest_run,
+    load_run,
+    run_experiment,
+    save_run,
+)
+from context_synthetic_recognition.services.sensitivity import SwitchVariant, switch_sensitivity
 from context_synthetic_recognition.services.validation import DEFAULT_TOLERANCE, validate_workbook
 
 EXIT_FAILED = 1
@@ -169,11 +184,18 @@ def _k_text(ks: PermittedK) -> str:
 
 
 def _load_source(
-    source: str, fmt: str, sheet: str | None, class_column: str | None, id_column: str | None
+    source: str | None,
+    fmt: str,
+    sheet: str | None,
+    class_column: str | None,
+    id_column: str | None,
 ) -> tuple[Dataset, str]:
-    path = Path(source)
-    if not path.is_file() and source in DATASETS:
-        return load_builtin(source), f"built-in dataset '{DATASETS.info(source).name}'"
+    """Load ``source``: a file, a dataset of the ``datasets`` folder, a built-in, or the default."""
+    path = Path(source) if source is not None else None
+    if path is None or (not path.is_file() and not path.suffix and fmt == "auto"):
+        dataset = resolve_dataset(source)
+        where = dataset.source or f"built-in dataset '{source or 'heart-disease-10'}'"
+        return dataset, f"{where}" + ("" if source else " (the default dataset)")
     chosen = detect_format(path, sheet) if fmt == "auto" and path.is_file() else fmt
     dataset = load_dataset(
         path, chosen, sheet=sheet, class_column=class_column, id_column=id_column
@@ -183,7 +205,20 @@ def _load_source(
 
 @data_app.command("list")
 def data_list() -> None:
-    """List the built-in datasets and the supported file formats."""
+    """List the project's datasets, the built-in datasets and the supported file formats."""
+    try:
+        catalog = project_catalog()
+    except CSRError as error:
+        raise _fail(error) from error
+    if catalog is None:
+        typer.echo("datasets folder: none found (the built-in datasets are used)")
+    else:
+        typer.echo(f"datasets folder: {catalog.root}")
+        for entry in catalog:
+            shape = f"({', '.join(map(str, entry.shape))})" if entry.shape else ""
+            formats = ", ".join(ext.lstrip(".") for ext in entry.formats)
+            where = entry.path.parent.relative_to(catalog.root).as_posix()
+            typer.echo(f"  {entry.id:20s} {entry.name:28s} {shape:14s} {formats:9s} {where or '.'}")
     typer.echo("built-in datasets:")
     for info in DATASETS:
         typer.echo(f"  {info.name:20s} {info.obj.description}")
@@ -192,11 +227,42 @@ def data_list() -> None:
         typer.echo(f"  {loader.name:20s} {loader.summary}")
 
 
+@data_app.command("check")
+def data_check() -> None:
+    """Check the datasets folder: every file readable, (m, n, c) as named, .dat = .csv."""
+    try:
+        catalog = project_catalog()
+    except CSRError as error:
+        raise _fail(error) from error
+    if catalog is None:
+        typer.echo("error: no datasets folder found", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    typer.echo(f"datasets folder: {catalog.root}")
+    failed = 0
+    for result in catalog.check():
+        shape = f"({', '.join(map(str, result.shape))})" if result.shape else "—"
+        mark = "✓" if result.passed else "✗"
+        data = (result.content_hash or "—")[:12]
+        typer.echo(f"  {mark} {result.entry.id:20s} {shape:14s} data {data}")
+        for ext, digest in result.sha256.items():
+            typer.echo(f"      {ext:5s} sha256 {digest}")
+        for problem in result.problems:
+            typer.echo(f"      ✗ {problem}")
+        failed += not result.passed
+    if failed:
+        typer.echo(f"{failed} dataset(s) with problems", err=True)
+        raise typer.Exit(EXIT_FAILED)
+    typer.echo("all datasets consistent")
+
+
 @data_app.command("info")
 def data_info(
     source: Annotated[
-        str, typer.Argument(help="Dataset file, or a built-in name (csr data list).")
-    ],
+        str | None,
+        typer.Argument(
+            help="Dataset file, dataset id or name (csr data list); default: the default dataset."
+        ),
+    ] = None,
     fmt: Annotated[
         str, typer.Option("--format", "-f", help="File format (auto: from extension and content).")
     ] = "auto",
@@ -247,7 +313,10 @@ def data_info(
 
 
 SourceArgument = Annotated[
-    str, typer.Argument(help="Dataset file, or a built-in name (csr data list).")
+    str | None,
+    typer.Argument(
+        help="Dataset file, dataset id or name (csr data list); default: the default dataset."
+    ),
 ]
 FormatOption = Annotated[
     str, typer.Option("--format", "-f", help="File format (auto: from extension and content).")
@@ -261,7 +330,7 @@ ConfigOption = Annotated[
 
 
 def _fitted(
-    source: str,
+    source: str | None,
     fmt: str,
     sheet: str | None,
     class_column: str | None,
@@ -280,7 +349,7 @@ def _names(dataset: Dataset, indices: Sequence[int] | IntArray) -> str:
 
 @app.command("fit")
 def fit(
-    source: SourceArgument,
+    source: SourceArgument = None,
     fmt: FormatOption = "auto",
     sheet: SheetOption = None,
     class_column: ClassOption = None,
@@ -355,7 +424,7 @@ def _explain(dataset: Dataset, model: CSModel, result: Classification) -> None:
 
 @app.command("classify")
 def classify(
-    source: SourceArgument,
+    source: SourceArgument = None,
     values: Annotated[
         str | None,
         typer.Option("--values", help="A new object: n values separated by commas or spaces."),
@@ -432,9 +501,22 @@ def run(
     sensitivity: Annotated[
         bool, typer.Option("--sensitivity", help="Also evaluate all four switch settings.")
     ] = False,
+    export: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--export",
+            "-e",
+            help="Export the run into its folder: all, excel, csv, json, markdown, latex, "
+            "figures, html, pdf (repeat the option or separate by commas).",
+        ),
+    ] = None,
 ) -> None:
     """Fit and evaluate the CS-model: every configured protocol, baselines, margins, properties."""
+    if export and not save:
+        typer.echo("error: --export writes into the run folder; remove --no-save", err=True)
+        raise typer.Exit(EXIT_USAGE)
     try:
+        formats = _formats(export) if export else []
         config = _config_or_default(config_path)
         dataset = _dataset_for_run(source, config_path, config)
         typer.echo(f"{dataset.name}: m = {dataset.m}, n = {dataset.n}", err=True)
@@ -445,7 +527,10 @@ def run(
                 typer.echo(f"  {stage}: {done}/{total}", err=True) if done == total else None
             ),
         )
-        variants = switch_sensitivity(dataset, config) if sensitivity else ()
+        # an export of a small sample shows the four switch settings as the workbook does
+        wanted = sensitivity or (bool(formats) and dataset.m <= AUTO_SENSITIVITY_OBJECTS)
+        evaluated = switch_sensitivity(dataset, config) if wanted else None
+        variants = evaluated if sensitivity and evaluated else ()
     except CSRError as error:
         raise _fail(error) from error
     model = result.model
@@ -493,8 +578,165 @@ def run(
             f" AUC {variant.auc_resubstitution:.3f} / {variant.auc_leave_one_out:.3f}"
         )
     if save:
-        folder = save_run(result, runs_dir)
+        folder = save_run(result, runs_dir, sensitivity=evaluated)
         typer.echo(f"  run folder: {folder}")
+        if formats:
+            _export(result, folder, formats, evaluated, ExportOptions(), folder.name)
+
+
+# ---------------------------------------------------------------- csr export
+
+
+def _formats(names: Sequence[str]) -> list[str]:
+    """Canonical export formats, or a usage error that lists them."""
+    try:
+        return resolve_formats(names)
+    except CSRError as error:
+        raise ConfigError(
+            f"{error} Formats: {ALL}, " + ", ".join(i.name for i in EXPORTERS) + "."
+        ) from error
+
+
+def _export(
+    result: ExperimentResult,
+    folder: Path,
+    formats: Sequence[str],
+    sensitivity: Sequence[SwitchVariant] | None,
+    options: ExportOptions,
+    run_id: str,
+    new_object: Sequence[float] | None = None,
+    exclude: int | None = None,
+) -> None:
+    """Write the formats into ``folder`` and report the files."""
+    try:
+        summary = export_result(
+            result,
+            folder,
+            formats,
+            options,
+            sensitivity=sensitivity if sensitivity is not None else False,
+            new_object=new_object,
+            exclude=exclude,
+            run_id=run_id,
+            progress=lambda name: typer.echo(f"  exporting {name} …", err=True),
+        )
+    except CSRError as error:
+        raise _fail(error) from error
+    for name, files in summary.files.items():
+        first = files[0].relative_to(folder).as_posix()
+        where = (
+            first if len(files) == 1 else f"{Path(first).parent.as_posix()}/ ({len(files)} files)"
+        )
+        typer.echo(f"  {name:9s} {where}")
+    for note in summary.notes:
+        typer.echo(f"  note: {note}")
+
+
+@app.command("export")
+def export_run(
+    run: Annotated[
+        Path | None,
+        typer.Argument(help="Run folder (or its name under --runs-dir); default: the latest run."),
+    ] = None,
+    fmt: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--format",
+            "-f",
+            help="all, excel, csv, json, markdown, latex, figures, html, pdf "
+            "(repeat the option or separate by commas); default: all.",
+        ),
+    ] = None,
+    runs_dir: Annotated[
+        Path, typer.Option(help="Folder of the run folders (to find a run by name).")
+    ] = Path("runs"),
+    out: Annotated[
+        Path | None, typer.Option("--out", "-o", help="Where to write; default: the run folder.")
+    ] = None,
+    sensitivity: Annotated[
+        bool | None,
+        typer.Option(
+            "--sensitivity/--no-sensitivity",
+            help="Show all four switch settings (default: as stored with the run, otherwise "
+            f"only for samples of at most {AUTO_SENSITIVITY_OBJECTS} objects).",
+        ),
+    ] = None,
+    values: Annotated[
+        str | None,
+        typer.Option("--values", help="New object for the meta-algorithm sheets: n values."),
+    ] = None,
+    obj: Annotated[
+        int | None,
+        typer.Option(
+            "--object",
+            help="Training object № (1-based) to demonstrate the meta-algorithm on, left out "
+            "of its own context; default: 1.",
+        ),
+    ] = None,
+    decimals: Annotated[
+        int, typer.Option(help="Decimals in Markdown, LaTeX and the report.", min=0, max=15)
+    ] = 4,
+    dpi: Annotated[int, typer.Option(help="Resolution of the PNG figures.", min=50, max=600)] = 200,
+    theme: Annotated[str, typer.Option(help="Figure colours: light or dark.")] = "light",
+) -> None:
+    """Export a run: Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures, HTML/PDF report.
+
+    The run is repeated from its folder (the manifest's configuration on the stored dataset —
+    the computation is deterministic), so every export shows the complete trace.
+    """
+    if values is not None and obj is not None:
+        typer.echo("error: give at most one of --values and --object", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    try:
+        formats = _formats(fmt or [ALL])
+        folder = _run_folder(run, runs_dir)
+        typer.echo(f"{folder.name}: repeating the run from its manifest", err=True)
+        loaded = load_run(
+            folder,
+            progress=lambda stage, done, total: (
+                typer.echo(f"  {stage}: {done}/{total}", err=True) if done == total else None
+            ),
+        )
+        result = loaded.result
+        dataset = result.dataset
+        new_object: Sequence[float] | None = None
+        exclude: int | None = None
+        if values is not None:
+            new_object = parse_object(dataset, values).tolist()
+        elif obj is not None:
+            if not 1 <= obj <= dataset.m:
+                raise DatasetError(f"there is no training object № {obj} (m = {dataset.m})")
+            new_object, exclude = dataset.X[obj - 1].tolist(), obj - 1
+        variants: Sequence[SwitchVariant] | None = loaded.sensitivity
+        if sensitivity is False:
+            variants = None
+        elif variants is None and (
+            sensitivity or (sensitivity is None and dataset.m <= AUTO_SENSITIVITY_OBJECTS)
+        ):
+            typer.echo("  evaluating the four switch settings …", err=True)
+            variants = switch_sensitivity(dataset, result.config)
+    except CSRError as error:
+        raise _fail(error) from error
+    for warning in loaded.warnings:
+        typer.echo(f"  ⚠ the repeated run differs from the stored results — {warning}", err=True)
+    typer.echo(f"{dataset.name} · run {folder.name}")
+    options = ExportOptions(decimals=decimals, dpi=dpi, theme=theme)
+    target = out if out is not None else folder
+    _export(result, target, formats, variants, options, folder.name, new_object, exclude)
+    typer.echo(f"  folder: {target}")
+
+
+def _run_folder(run: Path | None, runs_dir: Path) -> Path:
+    """The run folder named on the command line: a path, a name in ``runs_dir``, or the latest."""
+    if run is None:
+        found = latest_run(runs_dir)
+        if found is None:
+            raise RunError(f"no run folder in {runs_dir} (csr run writes one)")
+        return found
+    for candidate in (run, runs_dir / run):
+        if candidate.is_dir():
+            return candidate
+    raise RunError(f"run folder not found: {run}")
 
 
 # ---------------------------------------------------------------- csr validate

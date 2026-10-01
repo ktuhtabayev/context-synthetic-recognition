@@ -145,7 +145,7 @@ def test_the_large_data_example_config() -> None:
     config = load_config(CONFIGS / "heart-disease-270-large-data.yaml")
     assert config.synthetic.skip_constant
     assert config.k.params == {"k_max_cap": 21}
-    assert config.dataset.path == "builtin:heart-disease-270"
+    assert config.dataset.path == "heart-disease-270"  # the datasets folder, by id
     assert preset("template").synthetic.skip_constant is False
 
 
@@ -180,10 +180,10 @@ def test_csr_run_with_a_config_and_sensitivity(tmp_path: Path) -> None:
     assert "run folder" not in result.output
 
 
-def test_csr_run_errors(tmp_path: Path) -> None:
-    missing = runner.invoke(app, ["run", "--no-save"])
+def test_csr_run_errors() -> None:
+    missing = runner.invoke(app, ["run", "cancer-589", "--no-save"])
     assert missing.exit_code == EXIT_USAGE
-    assert "names no dataset" in missing.output
+    assert "unknown dataset 'cancer-589'" in missing.output
 
 
 def test_config_problems_cover_the_evaluation_plugins() -> None:

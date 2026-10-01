@@ -63,8 +63,12 @@ class DatasetConfig(ConfigModel):
     """Where the data comes from and how to read it (loaders arrive in M2)."""
 
     path: str | None = None
-    """Dataset file; relative paths are resolved against the configuration file's folder."""
-    format: Literal["auto", "cs-workbook", "template-extended", "csv", "xlsx", "parquet"] = "auto"
+    """A dataset file (relative paths: against the configuration file's folder), a dataset of the
+    project's ``datasets`` folder by id or name (``heart-disease-270``), ``builtin:<name>``, or
+    ``None`` for the default dataset (``datasets/default.dat``; ADR-035)."""
+    format: Literal[
+        "auto", "cs-workbook", "extended", "template-extended", "csv", "xlsx", "parquet"
+    ] = "auto"
     """``auto`` picks the loader from the file extension and content."""
     sheet: str | None = None
     """Sheet name for Excel files (the experiment workbook uses ``Dataset``)."""

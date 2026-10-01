@@ -9,7 +9,12 @@ import pytest
 from context_synthetic_recognition.core.context import ContextModel, fit_context
 from context_synthetic_recognition.core.model import CSModel, fit_model
 from context_synthetic_recognition.data import Dataset, load_builtin, load_dataset
+from context_synthetic_recognition.export import RunView, build_view
+from context_synthetic_recognition.services.runner import ExperimentResult, run_experiment
+from context_synthetic_recognition.services.sensitivity import switch_sensitivity
 
+EXPERIMENT_RUN_ID = "20260930_120000_0a1b2c3d"
+"""Run id of the :func:`experiment_view` fixture."""
 ROOT = Path(__file__).resolve().parents[1]
 CONFIGS = ROOT / "configs"
 EXPERIMENTS = ROOT / "resources" / "experiments" / "context-synthetic-model"
@@ -60,6 +65,20 @@ def experiment_cs_model(experiment: Dataset) -> CSModel:
 @pytest.fixture(scope="session")
 def heart270() -> Dataset:
     return load_builtin("heart-disease-270")
+
+
+@pytest.fixture(scope="session")
+def experiment_result(experiment: Dataset) -> ExperimentResult:
+    """The experiment evaluated with the default (template) configuration."""
+    return run_experiment(experiment)
+
+
+@pytest.fixture(scope="session")
+def experiment_view(experiment: Dataset, experiment_result: ExperimentResult) -> RunView:
+    """What the exporters show of the experiment, with the four switch settings."""
+    return build_view(
+        experiment_result, sensitivity=switch_sensitivity(experiment), run_id=EXPERIMENT_RUN_ID
+    )
 
 
 def reference_engine() -> ModuleType:

@@ -8,7 +8,7 @@ A dataset is a classified sample E₀ = {S₁ … Sₘ} with heterogeneous featu
 | Format | Files | Layout |
 |---|---|---|
 | `cs-workbook` | `.xlsx` | The *Dataset* sheet of the Excel experiment: a header row with `Class` above the class column, one row per object, then the feature-type row (1 = quantitative, 0 = nominal). |
-| `template-extended` | `.csv`, `.dat` | The template project's layout: first row `m, n, c`; m rows of n values and the class label; last row of n type flags. `.dat` is whitespace-separated and may use decimal commas. |
+| `template-extended` (alias `extended`) | `.csv`, `.dat` | The author's layout (see [below](#the-extended-layout)): first row `m, n, c`; m rows of n values and the class label; last row of n type flags. `.dat` is whitespace-separated and may use decimal commas. |
 | `csv` | `.csv`, `.txt` | A table with a header row; the delimiter (`,` `;` tab `\|`) is detected. |
 | `xlsx` | `.xlsx` | A table with a header row (first sheet by default). |
 | `parquet` | `.parquet` | A table; needs `pip install "context-synthetic-recognition[parquet]"`. |
@@ -36,6 +36,74 @@ dataset:
 
 Missing values are rejected with an error that names their positions.
 
+## The dataset folder
+
+The project keeps the author's datasets in `datasets/`, in the layout of the template project
+(ADR-035):
+
+```text
+datasets/
+  default.dat, default.csv                  the default dataset: Heart-Disease (10, 13, 2)
+  raw/
+    Heart-Disease/
+      Heart-Disease (270, 13, 2).dat        original datasets, one folder per family,
+      Heart-Disease (270, 13, 2).csv        named <Name> (m, n, c)
+  synthetic/                                reserved for pre-existing synthetic datasets — not read
+```
+
+The files are the author's, byte for byte (Git stores them unchanged, the hooks leave them alone),
+so their SHA-256 checksums are the same on every machine. The synthetic-feature datasets this
+project generates from raw data — normalized values, Ψ(r), the meta-dataset Y — are written to
+run folders by the exporters, with the manifest that says how they were produced.
+
+### The extended layout
+
+Every dataset file follows the same layout, as a `.dat` (whitespace-separated) or a `.csv`
+(comma-separated) file:
+
+```text
+10 13 2                                             m (objects) n (features) c (classes)
+70.0 1.0 4.0 130.0 322.0 0.0 2.0 109.0 0.0 2.4 2.0 3.0 3.0 2     n values, then the class (1 … c)
+…                                                   (m rows)
+1 0 0 1 1 0 0 1 0 1 0 1 0                           n type flags: 1 = quantitative, 0 = nominal
+```
+
+In the `.csv` the first row is padded with empty fields to n + 1 columns and the flag row ends with
+an empty field under the class column; the `.dat` writes every value with a decimal point
+(`70.0`), the `.csv` without (`70`). Features are named x₁ … xₙ and objects S₁ … Sₘ. The loader
+checks the header against the rows: m rows of n + 1 values, n flags, c classes.
+
+### Names and checks
+
+| You write | Means |
+|---|---|
+| nothing / `default` | the default dataset, `datasets/default.dat` |
+| `heart-disease-270` | a dataset by id (`<name>-<m>`; `-<n>` is added when two datasets would share it) |
+| `Heart-Disease (270, 13, 2)` | the same, by display name |
+| `datasets/raw/Heart-Disease/Heart-Disease (270, 13, 2).csv` | a file, in any supported format |
+| `builtin:heart-disease-270` | the package's built-in copy |
+
+When both formats of a dataset exist, the `.dat` is read (the `.csv` of a large dataset may be a
+rounded copy). `csr data check` loads every file and checks that the header's (m, n, c) matches the
+file name and that the `.dat` and `.csv` hold identical data; it prints each file's SHA-256.
+
+```powershell
+.\.venv\Scripts\csr.exe data list          # the dataset folder, the built-ins and the formats
+.\.venv\Scripts\csr.exe data check         # consistency and checksums
+.\.venv\Scripts\csr.exe data info          # the default dataset
+.\.venv\Scripts\csr.exe run heart-disease-270 --no-save
+```
+
+The folder is found from the working directory (or a configuration file's folder) upwards; the
+environment variable `CSR_DATASETS` overrides it. Without a folder — e.g. an installed GUI — the
+package's built-in copies are used, and `heart-disease-10` is the default.
+
+### Adding a dataset
+
+Put `<Name> (m, n, c).dat` (and, if you like, the `.csv`) under `datasets/raw/<Family>/`, run
+`csr data check`, and name it by its id. Other formats (tables with a header row, Excel, Parquet)
+are read from any path; the catalogue can learn them later through the loader registry.
+
 ## Classes
 
 Class labels may be integers or text. They are sorted — numbers numerically, text alphabetically
@@ -58,12 +126,13 @@ experiment = load_dataset(
 )
 ```
 
-A configuration names a built-in dataset with the prefix `builtin:` (the configured
-`feature_types` still apply):
+The built-ins are copies of the dataset folder's Heart-Disease files (the same data, checked by
+the tests). A configuration names a dataset of the folder by id, or a built-in with the prefix
+`builtin:`; no path means the default dataset. The configured `feature_types` apply in every case:
 
 ```yaml
 dataset:
-  path: builtin:heart-disease-270
+  path: heart-disease-270        # datasets/raw/Heart-Disease/Heart-Disease (270, 13, 2).dat
 ```
 
 ## Inspecting a dataset

@@ -37,9 +37,9 @@ flowchart TB
 | `config` | Typed configuration, presets, the two switches, YAML/TOML/JSON, hash | ✓ M1 |
 | `data` | Dataset schema, loaders (workbook, template CSV/DAT, CSV/XLSX/Parquet), built-in datasets, hashing | ✓ M2 |
 | `evaluation` | Protocols, metrics, AUC/ROC, margins, baselines | ✓ M4 |
-| `services` | Runs and manifests, validation against the workbook and the templates, dataset summaries, experiment runner, switch sensitivity, configuration checks | ✓ M1 → M4 |
-| `export` | Excel mirror, CSV/JSON, LaTeX/Markdown, figures, report | M5 |
-| `cli` | `csr` command | `config` ✓ (M1), `data`, `validate` ✓ (M2), `fit`, `classify` ✓ (M3), `run` ✓ (M4) |
+| `services` | Runs and manifests, validation against the workbook and the templates, dataset summaries, experiment runner, run folders that can be repeated, switch sensitivity, configuration checks | ✓ M1 → M5 |
+| `export` | Excel mirror, CSV/JSON, LaTeX/Markdown, figures, report | ✓ M5 |
+| `cli` | `csr` command | `config` ✓ (M1), `data`, `validate` ✓ (M2), `fit`, `classify` ✓ (M3), `run` ✓ (M4), `export` ✓ (M5) |
 | `gui` | Desktop application | M6 |
 
 ## Pipeline and information flow
@@ -71,6 +71,30 @@ neighbour blocks with μ and χ₁, Ψ(r), f/g, ω, η, each HAG iteration with 
 centres, θ, γ and θ/γ, the meta-algorithm's B1/B2 per step, margins and metrics — is captured as
 immutable data. The GUI tables, the exporters and the golden tests read the same trace, so the
 workbook, the software and the article's tables cannot drift apart.
+
+## Exporters
+
+```mermaid
+flowchart LR
+    R["ExperimentResult<br/>(runner or load_run)"] --> V["RunView<br/>+ training rows, new object,<br/>switch settings"]
+    V --> X["excel<br/>workbook.xlsx"]
+    V --> T["tables<br/>(plain data)"]
+    V --> F["figures<br/>(draw_* on axes)"]
+    T --> C["csv · json"]
+    T --> M["markdown · latex"]
+    T --> P["report<br/>html · pdf"]
+    F --> P
+    F --> G["png · svg"]
+```
+
+`export.view.RunView` is the one thing every exporter reads: the evaluated experiment with
+every training object classified, the new-object demonstration and — when evaluated — the four
+switch settings. `export.tables` turns it into plain tables that the text formats and the report
+share; `export.excel` lays it out as the mirror of the experiment workbook (sheet builders in
+`sheets_*.py`, a palette of named styles, a writer that detects overlapping tables);
+`export.figures` draws on axes it is given, so the GUI reuses the drawings; `export.report`
+arranges tables and figures into a document and renders it as HTML and PDF. Formats are plug-ins
+of the `EXPORTERS` registry ([Exporting](exporting.md), ADR-036 – ADR-043).
 
 ## Extension points
 
