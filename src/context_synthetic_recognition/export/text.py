@@ -171,6 +171,7 @@ _LATEX_MATH = {
     "∪": r"\cup",
     "∖": r"\setminus",
     "ŷ": r"\hat{y}",
+    "½": r"\tfrac{1}{2}",
     "✗": r"\times",
     "❌": r"\times",
 }

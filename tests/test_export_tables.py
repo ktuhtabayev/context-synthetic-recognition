@@ -246,6 +246,21 @@ def test_large_tables_are_left_out_and_keys_select(experiment_view: RunView) -> 
     assert [t.key for t in chosen] == ["psi", "margins"]
 
 
+def assert_plain_latex(text: str, where: str) -> None:
+    """What a LaTeX compiler needs: ASCII only, math mode closed and braces balanced per line."""
+    assert text.isascii(), f"{where}: {sorted({c for c in text if not c.isascii()})}"
+    for line in text.splitlines():
+        body = line.replace(r"\$", "").replace(r"\{", "").replace(r"\}", "")
+        assert body.count("$") % 2 == 0, f"{where}: {line[:120]}"
+        assert body.count("{") == body.count("}"), f"{where}: {line[:120]}"
+
+
+def test_the_latex_of_the_experiment_needs_no_unicode(tables: TableSet) -> None:
+    for table in tables:
+        assert_plain_latex(latex_table(table), table.key)
+    assert r"ties $\tfrac{1}{2}$" in latex_table(tables["metrics"])
+
+
 @pytest.mark.parametrize("name", sorted(SHAPES))
 def test_tables_of_other_shapes(name: str) -> None:
     view = shape(name)
@@ -258,7 +273,7 @@ def test_tables_of_other_shapes(name: str) -> None:
         assert table.title
         assert csv_text(table).count("\n") == len(table.rows) + 1
         assert markdown_text(table)
-        assert latex_table(table)
+        assert_plain_latex(latex_table(table), f"{name}/{table.key}")
     assert ("margins" in keys) == (view.hag.p > 0)
     assert "sensitivity" not in keys
     for protocol in view.result.protocols:
