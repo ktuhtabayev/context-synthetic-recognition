@@ -5,21 +5,17 @@ Run from the repository root::
     .\.venv\Scripts\python.exe scripts\gui_screenshots.py
 
 The application runs the experiment on Heart-Disease (10, 13, 2) for real — the template preset,
-then the article preset — and every page is grabbed at 1360 × 860. Nothing appears on screen: on
-Windows the window is laid out by the native platform (for the system fonts) but never mapped;
-elsewhere the offscreen platform is used.
+then the article preset — and every page is grabbed at 1360 × 860. Nothing appears on screen: the
+window is laid out by the native Windows platform (for the system fonts) but never mapped.
 """
 
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
 import time
 from pathlib import Path
 
-if sys.platform != "win32":
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"  # the same pixels on every screen
 
 from PySide6.QtCore import QSettings, Qt

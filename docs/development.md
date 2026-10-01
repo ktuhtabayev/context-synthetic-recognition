@@ -45,9 +45,9 @@ The virtual environment stores absolute paths; if the project folder moves, crea
 
 ## Continuous integration
 
-GitHub Actions (`.github/workflows/ci.yml`):
+GitHub Actions (`.github/workflows/ci.yml`), every job on Windows (ADR-049):
 
-- ruff (lint and format check) and mypy on Linux;
-- pytest with coverage on Windows and Linux, Python 3.11, 3.12 and 3.13 — including the GUI
-  tests, which run on Qt's `offscreen` platform (ADR-048);
+- ruff (lint and format check) and mypy;
+- pytest with coverage on Python 3.11, 3.12 and 3.13 — including the GUI tests, which run on
+  Qt's `offscreen` platform (ADR-048);
 - `mkdocs build --strict`.
