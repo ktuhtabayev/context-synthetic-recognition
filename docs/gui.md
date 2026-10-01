@@ -51,7 +51,9 @@ plug-in added to a registry shows up here by itself.
 - **Presets** — *Template preset* and *Article preset* set the method; the dataset, the name and
   the seed stay. The badge at the top says which preset the configuration matches.
 - **Base operators** — a label, a metric and a feature subset each: `all`, `quantitative`,
-  `nominal`, or feature names separated by commas. Labels must be unique.
+  `nominal`, or feature names separated by commas. Labels must be unique. A metric defined on
+  quantitative features (Euclidean, Mahalanobis, …) or on nominal ones (Hamming) must get a
+  subset of that type; otherwise the problem list names the features that do not fit.
 - **Permitted k** — the rule and, live, the k it gives for the loaded dataset and the resulting
   number of synthetic features.
 - **The two ⚠ switches** — *Class centres in θ, γ* and *STEP 4 passes*, each marked while it is at

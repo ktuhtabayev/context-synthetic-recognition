@@ -136,8 +136,9 @@ def test_explicit_subsets_and_errors() -> None:
     unknown = ContextConfig(operators=(OperatorConfig(label="ρ", features=("x₉",)),))
     with pytest.raises(ConfigError, match=r"unknown features \['x₉'\]"):
         resolve_operators(unknown, NAMES, QUANT)
-    bad_metric = ContextConfig(operators=(OperatorConfig(label="ρ", metric=plugin("cosine")),))
-    with pytest.raises(RegistryError, match="Unknown metrics 'cosine'"):
+    # HVDM reads the classes of the training objects and is deliberately not offered (ADR-051)
+    bad_metric = ContextConfig(operators=(OperatorConfig(label="ρ", metric=plugin("hvdm")),))
+    with pytest.raises(RegistryError, match="Unknown metrics 'hvdm'"):
         resolve_operators(bad_metric, NAMES, QUANT)
     only_j = ContextConfig(operators=(OperatorConfig(label="ρ_J", features="nominal"),))
     with pytest.raises(ModelUndefinedError, match="no base operator is left"):
@@ -154,7 +155,7 @@ def test_blocked_distances_equal_one_pass(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_metric_registry() -> None:
-    assert METRICS.names() == ["zhuravlyov"]
+    assert METRICS.names()[0] == "zhuravlyov"  # the default; the others: tests/test_metrics.py
     # earlier spellings still resolve, so older configuration files keep working
     assert METRICS.get("zhuravlev") is zhuravlyov
     assert METRICS.get("juravlev") is zhuravlyov

@@ -148,6 +148,9 @@ The Zhuravlyov operators ρ, ρ_I, ρ_J remain the default. The first additional
 heterogeneous metrics HEOM, HVDM and Gower (milestone M7); further metrics follow through the
 metric registry.
 
+*Amended in M7 (ADR-051):* HEOM, Gower and the other planned metrics were added; HVDM was left
+out by the author because it reads the classes of the training objects.
+
 ## ADR-012 — First real dataset: Heart-Disease (270, 13, 2) (author)
 
 *Accepted, 2026-09-30.*
@@ -842,3 +845,142 @@ system is supported.
   on a second operating system.
 
 No numerical result changes.
+
+## ADR-050 — Metric traits: domain, fit step, parameter check
+
+*Accepted, 2026-10-02 (M7).*
+
+**Context.** Until M7 a metric was only a function `(A, B, quantitative, decimals, params) →
+distances` on the unified values. The metrics of M7 need more: HEOM and Gower divide by the
+training range of a feature, Mahalanobis needs the training covariance, Euclidean and its relatives
+are meaningless on nominal codes, and feature weights must match the features of the operator.
+
+**Decision.** A metric declares what the pipeline must know about it with
+`core.metrics.traits(domain=…, fit=…, check=…)`, placed below `@METRICS.register`; a metric that
+declares nothing — every plug-in written before M7 — is heterogeneous and needs no fit.
+
+- **Domain** (`any`, `quantitative`, `nominal`). `resolve_operators` raises a `ConfigError` that
+  names the features when an operator gives a metric features of the other type, so the mistake
+  is reported by `csr data info`, by the GUI's problem list and before a run — not silently
+  "fixed" by dropping features. An empty subset is still skipped first (ADR-007).
+- **Fit step** `(Z, quantitative, params) → state`: the metric's training statistics, estimated
+  on the unified training values of the operator's features. `BaseOperator.fit(Z)` returns a
+  fitted copy and the metric then receives the state in place of its parameters; calling
+  `distances` on an operator that still needs its fit is an error. `fit_context` fits the
+  operators right after the scale unification; the k-NN baselines fit them on the fold's training
+  part. Leave-one-out therefore re-estimates the statistics in every fold, like everything else
+  (ADR-009).
+- **A fit step gets no class labels.** Its signature has no place for them, so a metric cannot
+  make the distances of an object depend on a class — its own or anyone else's (ADR-051).
+- **Check** `(quantitative, params)`: parameters that depend on the operator's features (the
+  number of feature weights) are verified when the operators are resolved.
+- Fitting on the *unified* values keeps one definition for every normalizer: a metric that divides
+  by the training range or whitens with the training covariance gives the same distances for
+  every affine normalizer (tested), and composes meaningfully with the rank transform.
+
+No configuration field was added: the hash of every existing configuration is unchanged.
+
+## ADR-051 — The metrics of M7; HVDM is left out (author)
+
+*Accepted, 2026-10-02 (M7). Amends ADR-011.*
+
+**Author.** Add every planned metric. **Leave HVDM out**: its nominal part (the value difference
+metric) is built from the class frequencies of the training sample, so the class of a training
+object would enter its own distances. Only metrics that never read a class label are offered;
+`hvdm` is not a registered name.
+
+**Metrics** (x′, y′ = unified values; I, J = the quantitative and nominal features of the
+operator; n = their number):
+
+| Name | Domain | Definition |
+|---|---|---|
+| `zhuravlyov` (default) | any | Σ_I \|x′ⱼ − y′ⱼ\| + Σ_J [xⱼ ≠ yⱼ] |
+| `weighted-zhuravlyov` | any | Σ_I wⱼ·\|x′ⱼ − y′ⱼ\| + Σ_J wⱼ·[xⱼ ≠ yⱼ], wⱼ = type weight · feature weight |
+| `heom` | any | √(Σ_I (\|x′ⱼ − y′ⱼ\| / rangeⱼ)² + Σ_J [xⱼ ≠ yⱼ]) |
+| `gower` | any | (Σ_I \|x′ⱼ − y′ⱼ\| / rangeⱼ + Σ_J [xⱼ ≠ yⱼ]) / n |
+| `manhattan` | I | Σ \|x′ⱼ − y′ⱼ\| |
+| `euclidean` | I | √(Σ (x′ⱼ − y′ⱼ)²) |
+| `chebyshev` | I | max \|x′ⱼ − y′ⱼ\| |
+| `minkowski` | I | (Σ \|x′ⱼ − y′ⱼ\|ᵖ)^(1/p), p ≥ 1 (default 3) |
+| `canberra` | I | Σ \|x′ⱼ − y′ⱼ\| / (\|x′ⱼ\| + \|y′ⱼ\|) |
+| `cosine` | I | 1 − (x′·y′) / (‖x′‖·‖y′‖) |
+| `mahalanobis` | I | √((x′ − y′)ᵀ S⁺ (x′ − y′)), S the training covariance |
+| `hamming` | J | Σ [xⱼ ≠ yⱼ] |
+
+**Conventions.**
+
+- Every metric rounds its result to `distance_decimals` and adds its terms feature by feature in
+  feature order, so equal objects give bit-identical distances and D is symmetric bit for bit
+  (ADR-008). `weighted-zhuravlyov` rounds like the Zhuravlyov metric (the quantitative part, then
+  the sum): with every weight 1 it is that metric bit for bit (tested).
+- `rangeⱼ` is the training range of the unified values. A feature without spread on the training
+  sample contributes 0 (as min–max maps it to 0); a new value outside the training range is not
+  clipped, so its term may exceed 1 (ADR-009).
+- With min–max unification `gower` is the Zhuravlyov metric divided by n: up to the rounding of
+  the distances the neighbours, and therefore Ψ(r), are those of ρ. It is offered for the name
+  the literature uses.
+- `mahalanobis`: sample covariance (divisor m − 1) of the unified training values; when it is
+  singular — a feature without spread, collinear features, fewer objects than features — the
+  Moore–Penrose inverse S⁺ is used, computed as a whitening matrix from the eigenvectors with a
+  positive eigenvalue.
+- `canberra`: a feature on which both values are 0 contributes 0. `cosine`: two zero vectors are
+  at distance 0, a zero and a non-zero vector at distance 1; it is a dissimilarity of directions
+  and does not satisfy the triangle inequality (the property tests exempt it from that axiom).
+- `feature_weights` of `weighted-zhuravlyov` lists one weight per feature of the operator, in the
+  operator's feature order; weights are non-negative.
+
+The default operators ρ, ρ_I, ρ_J and every golden value are unchanged.
+
+## ADR-052 — The normalizers of M7
+
+*Accepted, 2026-10-02 (M7).*
+
+**Author.** Add all six: z-score, robust, max-abs, decimal scaling, rank, unit length (per object).
+
+| Name | Map of a quantitative feature | Training statistics |
+|---|---|---|
+| `minmax` (default) | (x − min) / (max − min) | min, max |
+| `z-score` | (x − mean) / std | min, max, mean, std |
+| `robust` | (x − median) / (Q3 − Q1) | min, max, median, Q1, Q3 |
+| `max-abs` | x / max\|x\| | min, max, max \|x\| |
+| `decimal-scaling` | x / 10ʲ | min, max, power j |
+| `rank` | (mid-rank − 1) / (m − 1) | min, max |
+| `unit-length` | x_I / ‖x_I‖₂ per object | — |
+| `none` | x | — |
+
+**Conventions.**
+
+- Nominal codes are never changed. Constants are estimated on the training objects only and a new
+  object is mapped with them (ADR-009).
+- **No spread → 0.** A quantitative feature whose training values are all equal is mapped to 0 by
+  every fitted normalizer, for training and new objects alike — the workbook's rule for min–max
+  (`IF(MAX = MIN, 0, …)`). `unit-length` and `none` estimate nothing and have no such features.
+- `z-score`: sample standard deviation (divisor m − 1) by default; parameter `ddof: 0` gives the
+  population one.
+- `robust`: quartiles by linear interpolation (Excel's QUARTILE.INC). If the interquartile range
+  is 0 although the feature has spread (more than half of the values equal), the range max − min
+  is the divisor, so the feature stays on a comparable scale.
+- `decimal-scaling`: j is the smallest integer with max|x| / 10ʲ < 1 on the training sample — the
+  literal definition, so j is negative for a feature whose values are all below 0.1.
+- `rank`: equal training values share their mean rank; a new value is interpolated linearly
+  between the two training values around it and takes the level of the nearest training value
+  outside the training range. This one normalizer therefore does clip new values — a rank cannot
+  leave [0, 1].
+- `unit-length`: each object is divided by the Euclidean norm of its own quantitative values; an
+  object whose quantitative values are all 0 stays 0. Features on large scales dominate the norm,
+  so this normalizer suits data whose quantitative features share a unit.
+- `Scaling` stays the fitted object of every normalizer; `RankScaling` and `UnitLengthScaling`
+  override the map. Every fitted normalizer records the training `min` and `max` first, then its
+  own statistics; the features table, the report and the *Normalized Dataset* sheet show them all.
+  For min–max the exports are unchanged cell for cell.
+
+## ADR-053 — No new datasets in M7 (author)
+
+*Accepted, 2026-10-02 (M7).*
+
+The template project holds further datasets — Cancer (589, 44, 2), Molecular-Biology (100, 10, 2)
+and (100, 50, 2), DDos (10000, 22, 2) and (10000, 80, 2). The author decided to add none of them
+now: ADR-035 stands (Heart-Disease only), nothing was copied into the repository, and the work a
+10,000-object sample would need (a lean trace, a cap on k, k-fold instead of leave-one-out) is not
+part of M7. Any dataset in the extended layout can still be run from its path
+([Datasets](datasets.md)).
