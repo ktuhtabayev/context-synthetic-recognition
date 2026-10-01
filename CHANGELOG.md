@@ -5,10 +5,34 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-10-02 — M7 metrics and normalizers
+
+### Added
+
+- Metrics (ADR-051): `weighted-zhuravlyov` (type and feature weights), `heom`, `gower` on any
+  features; `manhattan`, `euclidean`, `chebyshev`, `minkowski` (order p), `canberra`, `cosine`,
+  `mahalanobis` on quantitative features; `hamming` on nominal features. The Zhuravlyov
+  operators ρ, ρ_I, ρ_J stay the default. HVDM is not offered: it reads the classes of the
+  training objects (author).
+- Metric traits (ADR-050): `core.metrics.traits(domain=…, fit=…, check=…)`. A metric names the
+  feature types it is defined on (a mismatch is a configuration error that names the features),
+  may estimate training statistics in a fit step — ranges for HEOM and Gower, the covariance
+  for Mahalanobis — re-fitted in every fold and never given a class label, and may check its
+  parameters against an operator's features.
+- Normalizers (ADR-052): `z-score` (parameter `ddof`), `robust` (median and interquartile range),
+  `max-abs`, `decimal-scaling`, `rank` (mid-ranks, new values interpolated) and `unit-length`
+  (per object). Min–max stays the default; every fitted normalizer maps a feature without
+  spread to 0 and records the training minimum and maximum next to its own statistics.
+- The features table, the report and the *Normalized Dataset* sheet show the statistics and the
+  formula of the normalizer in use; for min–max they are unchanged.
+- Documentation: definitions of every metric and normalizer in the algorithm reference, metric
+  traits in *Extending*.
+
 ### Changed
 
 - The project is Windows-only (ADR-049): every CI job runs on Windows, the package metadata
   names Windows, and `scripts/gui_screenshots.py` always uses the native Windows platform.
+- No dataset was added: Heart-Disease stays the only one in the repository (ADR-053, author).
 
 ## [0.6.0] — 2026-10-01 — M6 desktop application
 

@@ -33,7 +33,7 @@ flowchart TB
 
 | Package | Role | Status |
 |---|---|---|
-| `core` | Numerical pipeline, plug-in registries, trace objects, model properties | registry ✓ (M1), Steps 1–8 + trace ✓ (M2), HAG, meta-algorithm, model ✓ (M3), properties ✓ (M4) |
+| `core` | Numerical pipeline, plug-in registries, trace objects, model properties | registry ✓ (M1), Steps 1–8 + trace ✓ (M2), HAG, meta-algorithm, model ✓ (M3), properties ✓ (M4), more metrics and normalizers ✓ (M7) |
 | `config` | Typed configuration, presets, the two switches, YAML/TOML/JSON, hash | ✓ M1 |
 | `data` | Dataset schema, loaders (workbook, template CSV/DAT, CSV/XLSX/Parquet), built-in datasets, hashing | ✓ M2 |
 | `evaluation` | Protocols, metrics, AUC/ROC, margins, baselines | ✓ M4 |
@@ -125,8 +125,8 @@ types ([Desktop application](gui.md), ADR-044 – ADR-048).
 
 | Kind | Default | Planned alternatives |
 |---|---|---|
-| metrics | Zhuravlyov on all / I / J | HEOM, HVDM, Gower (ADR-011), then Euclidean, Manhattan, Chebyshev, Minkowski, Canberra, cosine, Mahalanobis, Hamming, weighted Zhuravlyov |
-| normalizers | min–max (training data) | none ✓; z-score, robust, max-abs, decimal scaling, rank, unit length (M7) |
+| metrics | Zhuravlyov on all / I / J | weighted Zhuravlyov, HEOM, Gower; Manhattan, Euclidean, Chebyshev, Minkowski, Canberra, cosine, Mahalanobis on I; Hamming on J ✓ (M7, ADR-050, ADR-051) — HVDM is not offered: it reads class labels |
+| normalizers | min–max (training data) | none, z-score, robust, max-abs, decimal scaling, rank, unit length ✓ (M7, ADR-052) |
 | k strategies | formula (ADR-005/006) | article rule, explicit list, range ✓ (ADR-022) |
 | encoders | formula (5) | — (μ and bit masks are training-side gradations, ADR-021) |
 | weights | ω by (4) | Criterion-1, λ·β (template) |

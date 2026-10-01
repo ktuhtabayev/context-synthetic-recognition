@@ -34,8 +34,8 @@ without its class (Theorem of the article).
 | M4 | Evaluation (LOO re-fit, baselines, metrics, margins, properties), `csr validate` | ✓ |
 | M5 | Exporters: Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures, HTML/PDF report | ✓ |
 | M6 | Desktop GUI (PySide6): dataset, configure, run, results explorer, new object, compare, export | ✓ |
-| M7 | More metrics, normalizers and datasets | next |
-| M8 | Documentation, polish, release build | |
+| M7 | More metrics (HEOM, Gower, Euclidean, Mahalanobis, …) and normalizers (z-score, robust, rank, …) | ✓ |
+| M8 | Documentation, polish, release build | next |
 
 ## Quick start (Windows PowerShell)
 
@@ -88,6 +88,13 @@ workbook with cross-highlighting, classify a new object with a step-by-step expl
 compare runs and export ([Desktop application](docs/gui.md)).
 
 ![The results explorer](docs/images/gui/results-table.png)
+
+The Zhuravlyov metric with the fractional-linear (min–max) transform is the default and
+reproduces the workbook. Other metrics — weighted Zhuravlyov, HEOM, Gower, Manhattan, Euclidean,
+Chebyshev, Minkowski, Canberra, cosine, Mahalanobis, Hamming — and other normalizers — z-score,
+robust, max-abs, decimal scaling, rank, unit length — are chosen in the configuration or on the
+Configure page ([Algorithm reference](docs/algorithm-reference.md#normalizers-and-metrics),
+[Extending](docs/extending.md)). No metric reads a class label.
 
 > [!NOTE]
 > On large datasets the literal k range (k_max = 2·min|Kᵢ| − 3) reaches near-global
