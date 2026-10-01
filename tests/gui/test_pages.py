@@ -386,10 +386,13 @@ def test_cancelling_a_run(window: MainWindow, qtbot: QtBot) -> None:
     assert page.is_running()
     assert page.cancel_button.isEnabled()
     page.start()  # a second start while running is ignored
-    page.cancel()
-    assert page.stage.text() == "Cancelling…"
-    qtbot.waitUntil(lambda: not page.is_running(), timeout=RUN_TIMEOUT)
-    qtbot.waitUntil(lambda: page.stage.text() == "Cancelled.", timeout=5000)
+    # the page's own signal comes after it has handled the end of the thread; checking the
+    # buttons as soon as the thread stops would race with that
+    with qtbot.waitSignal(page.finished, timeout=RUN_TIMEOUT):
+        page.cancel()
+        assert page.stage.text() == "Cancelling…"
+    assert not page.is_running()
+    assert page.stage.text() == "Cancelled."
     assert window.state.view is None
     assert "— cancelled —" in page.console.toPlainText()
     assert page.progress.value() == 0
@@ -408,12 +411,13 @@ def test_a_failed_run_is_reported(
 
     monkeypatch.setattr(run_module, "run_job", fail)
     page = loaded.run_page
-    page.start()
-    qtbot.waitUntil(lambda: page.stage.text().startswith("Failed"), timeout=RUN_TIMEOUT)
+    with qtbot.waitSignal(page.finished, timeout=RUN_TIMEOUT):
+        page.start()
     assert page.stage.text() == "Failed: every synthetic feature is constant"
     assert "✗ every synthetic feature is constant" in page.console.toPlainText()
     assert loaded.state.view is None
-    qtbot.waitUntil(lambda: not page.is_running(), timeout=RUN_TIMEOUT)
+    assert not page.is_running()
+    assert page.run_button.isEnabled()  # the experiment can be started again
 
 
 # ---------------------------------------------------------------- Results
@@ -770,11 +774,13 @@ def test_comparing_two_runs(two_runs: MainWindow, qtbot: QtBot) -> None:
     assert page.message.isVisibleTo(page)
     page.runs.selectRow(1)
     assert page.open_button.isEnabled()
-    with qtbot.waitSignal(page.openRequested, raising=False, timeout=200) as request:
+    # the request repeats the run in the worker thread; wait until the page has handled its end
+    with (
+        qtbot.waitSignal(two_runs.run_page.finished, timeout=RUN_TIMEOUT),
+        qtbot.waitSignal(page.openRequested, timeout=5000),
+    ):
         page.open_button.click()
-    assert request.signal_triggered
-    # the request repeats the run in the worker thread; let it finish
-    qtbot.waitUntil(lambda: not two_runs.run_page.is_running(), timeout=RUN_TIMEOUT)
+    assert two_runs.state.run_folder == page.records[1].folder
 
 
 def test_an_unsaved_result_can_be_compared(evaluated: MainWindow, tmp_path: Path) -> None:

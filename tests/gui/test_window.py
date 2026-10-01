@@ -283,12 +283,9 @@ def test_opening_a_run_folder(
     evaluated.state.set_dataset(None)
     evaluated.configure_page.template_button.click()
     evaluated.run_folder_dialog = lambda: str(folder)
-    action(evaluated, "&File", "Open run folder…").trigger()
-    assert evaluated.current_page() is evaluated.run_page
-    qtbot.waitUntil(
-        lambda: not evaluated.run_page.is_running() and evaluated.state.view is not None,
-        timeout=RUN_TIMEOUT,
-    )
+    with qtbot.waitSignal(evaluated.run_page.finished, timeout=RUN_TIMEOUT):
+        action(evaluated, "&File", "Open run folder…").trigger()
+        assert evaluated.current_page() is evaluated.run_page
     state = evaluated.state
     assert state.run_folder == folder
     assert state.view.run_id == folder.name  # type: ignore[union-attr]
@@ -428,10 +425,10 @@ def test_starting_with_a_run_folder(
     assert folder is not None
     opened = gui_app.create_window(run=folder, store=store(tmp_path))
     qtbot.addWidget(opened)
-    qtbot.waitUntil(
-        lambda: not opened.run_page.is_running() and opened.state.view is not None,
-        timeout=RUN_TIMEOUT,
-    )
+    # the run is being repeated in the worker thread; its signals arrive once events are processed
+    with qtbot.waitSignal(opened.run_page.finished, timeout=RUN_TIMEOUT):
+        assert opened.run_page.is_running()
+    assert opened.state.view is not None
     assert opened.state.run_folder == folder
     opened.close()
 
