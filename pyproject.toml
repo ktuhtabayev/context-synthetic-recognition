@@ -1,6 +1,6 @@
 [project]
 name = "context-synthetic-recognition"
-version = "0.4.0"
+version = "0.5.0"
 description = "Context-synthetic model of recognition algorithms (CS-model): library, CLI and desktop GUI."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -30,6 +30,7 @@ classifiers = [
 
 # Runtime dependencies are added with the milestone that first uses them (ADR-015).
 dependencies = [
+  "matplotlib>=3.8",
   "numpy>=1.26",
   "openpyxl>=3.1",
   "pydantic>=2.7",
@@ -43,6 +44,8 @@ dependencies = [
 parquet = ["pyarrow>=15"]
 # scikit-learn baselines for comparison (ADR-032)
 sklearn = ["scikit-learn>=1.4"]
+# PDF run report (ADR-041)
+pdf = ["reportlab>=4.0"]
 dev = [
   "hypothesis>=6.100",
   "mypy>=1.11",
@@ -50,6 +53,7 @@ dev = [
   "pyarrow>=15",
   "pytest>=8.2",
   "pytest-cov>=5.0",
+  "reportlab>=4.0",
   "ruff>=0.6",
   "scikit-learn>=1.4",
   "types-openpyxl>=3.1",
@@ -78,7 +82,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-context_synthetic_recognition = ["py.typed", "data/datasets/*.csv"]
+context_synthetic_recognition = ["py.typed", "data/datasets/*.csv", "export/excel/*.json"]
 
 # ---------------------------------------------------------------- tests
 [tool.pytest.ini_options]

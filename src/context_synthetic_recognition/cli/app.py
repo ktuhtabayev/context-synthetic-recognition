@@ -1,10 +1,10 @@
 """The ``csr`` command.
 
-Commands: ``config`` (show, init, check), ``data`` (list, info), ``fit`` (the CS-model: Ψ(r), the
-HAG and the meta-dataset), ``classify`` (an object through the meta-algorithm, step by step),
-``run`` (fit and evaluate under every configured protocol, write a run folder) and ``validate``
-(the package against the Excel experiment and the template workbooks); ``export`` follows with
-milestone M5.
+Commands: ``config`` (show, init, check), ``data`` (list, check, info), ``fit`` (the CS-model:
+Ψ(r), the HAG and the meta-dataset), ``classify`` (an object through the meta-algorithm, step by
+step), ``run`` (fit and evaluate under every configured protocol, write a run folder, optionally
+export it), ``export`` (a run folder as Excel mirror, tables, figures and report) and
+``validate`` (the package against the Excel experiment and the template workbooks).
 """
 
 import sys
@@ -40,13 +40,28 @@ from context_synthetic_recognition.data import (
     load_from_config,
 )
 from context_synthetic_recognition.data.catalog import project_catalog, resolve_dataset
-from context_synthetic_recognition.errors import CSRError, DatasetError
+from context_synthetic_recognition.errors import ConfigError, CSRError, DatasetError
+from context_synthetic_recognition.export import (
+    ALL,
+    EXPORTERS,
+    ExportOptions,
+    export_result,
+    resolve_formats,
+)
+from context_synthetic_recognition.export.run import AUTO_SENSITIVITY_OBJECTS
 from context_synthetic_recognition.log import configure_logging
 from context_synthetic_recognition.notation import class_name, subscript, synthetic_name
 from context_synthetic_recognition.services.configs import config_problems
 from context_synthetic_recognition.services.datasets import parse_object, summarize
-from context_synthetic_recognition.services.runner import run_experiment, save_run
-from context_synthetic_recognition.services.sensitivity import switch_sensitivity
+from context_synthetic_recognition.services.runner import (
+    ExperimentResult,
+    RunError,
+    latest_run,
+    load_run,
+    run_experiment,
+    save_run,
+)
+from context_synthetic_recognition.services.sensitivity import SwitchVariant, switch_sensitivity
 from context_synthetic_recognition.services.validation import DEFAULT_TOLERANCE, validate_workbook
 
 EXIT_FAILED = 1
@@ -486,9 +501,22 @@ def run(
     sensitivity: Annotated[
         bool, typer.Option("--sensitivity", help="Also evaluate all four switch settings.")
     ] = False,
+    export: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--export",
+            "-e",
+            help="Export the run into its folder: all, excel, csv, json, markdown, latex, "
+            "figures, html, pdf (repeat the option or separate by commas).",
+        ),
+    ] = None,
 ) -> None:
     """Fit and evaluate the CS-model: every configured protocol, baselines, margins, properties."""
+    if export and not save:
+        typer.echo("error: --export writes into the run folder; remove --no-save", err=True)
+        raise typer.Exit(EXIT_USAGE)
     try:
+        formats = _formats(export) if export else []
         config = _config_or_default(config_path)
         dataset = _dataset_for_run(source, config_path, config)
         typer.echo(f"{dataset.name}: m = {dataset.m}, n = {dataset.n}", err=True)
@@ -499,7 +527,10 @@ def run(
                 typer.echo(f"  {stage}: {done}/{total}", err=True) if done == total else None
             ),
         )
-        variants = switch_sensitivity(dataset, config) if sensitivity else ()
+        # an export of a small sample shows the four switch settings as the workbook does
+        wanted = sensitivity or (bool(formats) and dataset.m <= AUTO_SENSITIVITY_OBJECTS)
+        evaluated = switch_sensitivity(dataset, config) if wanted else None
+        variants = evaluated if sensitivity and evaluated else ()
     except CSRError as error:
         raise _fail(error) from error
     model = result.model
@@ -547,8 +578,165 @@ def run(
             f" AUC {variant.auc_resubstitution:.3f} / {variant.auc_leave_one_out:.3f}"
         )
     if save:
-        folder = save_run(result, runs_dir)
+        folder = save_run(result, runs_dir, sensitivity=evaluated)
         typer.echo(f"  run folder: {folder}")
+        if formats:
+            _export(result, folder, formats, evaluated, ExportOptions(), folder.name)
+
+
+# ---------------------------------------------------------------- csr export
+
+
+def _formats(names: Sequence[str]) -> list[str]:
+    """Canonical export formats, or a usage error that lists them."""
+    try:
+        return resolve_formats(names)
+    except CSRError as error:
+        raise ConfigError(
+            f"{error} Formats: {ALL}, " + ", ".join(i.name for i in EXPORTERS) + "."
+        ) from error
+
+
+def _export(
+    result: ExperimentResult,
+    folder: Path,
+    formats: Sequence[str],
+    sensitivity: Sequence[SwitchVariant] | None,
+    options: ExportOptions,
+    run_id: str,
+    new_object: Sequence[float] | None = None,
+    exclude: int | None = None,
+) -> None:
+    """Write the formats into ``folder`` and report the files."""
+    try:
+        summary = export_result(
+            result,
+            folder,
+            formats,
+            options,
+            sensitivity=sensitivity if sensitivity is not None else False,
+            new_object=new_object,
+            exclude=exclude,
+            run_id=run_id,
+            progress=lambda name: typer.echo(f"  exporting {name} …", err=True),
+        )
+    except CSRError as error:
+        raise _fail(error) from error
+    for name, files in summary.files.items():
+        first = files[0].relative_to(folder).as_posix()
+        where = (
+            first if len(files) == 1 else f"{Path(first).parent.as_posix()}/ ({len(files)} files)"
+        )
+        typer.echo(f"  {name:9s} {where}")
+    for note in summary.notes:
+        typer.echo(f"  note: {note}")
+
+
+@app.command("export")
+def export_run(
+    run: Annotated[
+        Path | None,
+        typer.Argument(help="Run folder (or its name under --runs-dir); default: the latest run."),
+    ] = None,
+    fmt: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--format",
+            "-f",
+            help="all, excel, csv, json, markdown, latex, figures, html, pdf "
+            "(repeat the option or separate by commas); default: all.",
+        ),
+    ] = None,
+    runs_dir: Annotated[
+        Path, typer.Option(help="Folder of the run folders (to find a run by name).")
+    ] = Path("runs"),
+    out: Annotated[
+        Path | None, typer.Option("--out", "-o", help="Where to write; default: the run folder.")
+    ] = None,
+    sensitivity: Annotated[
+        bool | None,
+        typer.Option(
+            "--sensitivity/--no-sensitivity",
+            help="Show all four switch settings (default: as stored with the run, otherwise "
+            f"only for samples of at most {AUTO_SENSITIVITY_OBJECTS} objects).",
+        ),
+    ] = None,
+    values: Annotated[
+        str | None,
+        typer.Option("--values", help="New object for the meta-algorithm sheets: n values."),
+    ] = None,
+    obj: Annotated[
+        int | None,
+        typer.Option(
+            "--object",
+            help="Training object № (1-based) to demonstrate the meta-algorithm on, left out "
+            "of its own context; default: 1.",
+        ),
+    ] = None,
+    decimals: Annotated[
+        int, typer.Option(help="Decimals in Markdown, LaTeX and the report.", min=0, max=15)
+    ] = 4,
+    dpi: Annotated[int, typer.Option(help="Resolution of the PNG figures.", min=50, max=600)] = 200,
+    theme: Annotated[str, typer.Option(help="Figure colours: light or dark.")] = "light",
+) -> None:
+    """Export a run: Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures, HTML/PDF report.
+
+    The run is repeated from its folder (the manifest's configuration on the stored dataset —
+    the computation is deterministic), so every export shows the complete trace.
+    """
+    if values is not None and obj is not None:
+        typer.echo("error: give at most one of --values and --object", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    try:
+        formats = _formats(fmt or [ALL])
+        folder = _run_folder(run, runs_dir)
+        typer.echo(f"{folder.name}: repeating the run from its manifest", err=True)
+        loaded = load_run(
+            folder,
+            progress=lambda stage, done, total: (
+                typer.echo(f"  {stage}: {done}/{total}", err=True) if done == total else None
+            ),
+        )
+        result = loaded.result
+        dataset = result.dataset
+        new_object: Sequence[float] | None = None
+        exclude: int | None = None
+        if values is not None:
+            new_object = parse_object(dataset, values).tolist()
+        elif obj is not None:
+            if not 1 <= obj <= dataset.m:
+                raise DatasetError(f"there is no training object № {obj} (m = {dataset.m})")
+            new_object, exclude = dataset.X[obj - 1].tolist(), obj - 1
+        variants: Sequence[SwitchVariant] | None = loaded.sensitivity
+        if sensitivity is False:
+            variants = None
+        elif variants is None and (
+            sensitivity or (sensitivity is None and dataset.m <= AUTO_SENSITIVITY_OBJECTS)
+        ):
+            typer.echo("  evaluating the four switch settings …", err=True)
+            variants = switch_sensitivity(dataset, result.config)
+    except CSRError as error:
+        raise _fail(error) from error
+    for warning in loaded.warnings:
+        typer.echo(f"  ⚠ the repeated run differs from the stored results — {warning}", err=True)
+    typer.echo(f"{dataset.name} · run {folder.name}")
+    options = ExportOptions(decimals=decimals, dpi=dpi, theme=theme)
+    target = out if out is not None else folder
+    _export(result, target, formats, variants, options, folder.name, new_object, exclude)
+    typer.echo(f"  folder: {target}")
+
+
+def _run_folder(run: Path | None, runs_dir: Path) -> Path:
+    """The run folder named on the command line: a path, a name in ``runs_dir``, or the latest."""
+    if run is None:
+        found = latest_run(runs_dir)
+        if found is None:
+            raise RunError(f"no run folder in {runs_dir} (csr run writes one)")
+        return found
+    for candidate in (run, runs_dir / run):
+        if candidate.is_dir():
+            return candidate
+    raise RunError(f"run folder not found: {run}")
 
 
 # ---------------------------------------------------------------- csr validate
