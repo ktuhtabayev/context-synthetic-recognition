@@ -110,7 +110,13 @@ class RankScaling(Scaling):
 
     def _unify(self, Z: FloatArray) -> FloatArray:
         for j in np.flatnonzero(self.quantitative & ~self.constant):
-            Z[:, j] = np.interp(Z[:, j], self.knots[j], self.levels[j])
+            knots, levels = self.knots[j], self.levels[j]
+            # the training values on either side of each value: the interpolation is kept between
+            # their levels, which its rounding could otherwise overstep by one unit in the last
+            # place — and so reverse the order of a new value and a training value
+            below = np.clip(np.searchsorted(knots, Z[:, j], side="right") - 1, 0, knots.size - 1)
+            above = np.minimum(below + 1, knots.size - 1)
+            Z[:, j] = np.clip(np.interp(Z[:, j], knots, levels), levels[below], levels[above])
         Z[:, self.quantitative & self.constant] = 0.0
         return Z
 

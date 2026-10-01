@@ -171,6 +171,23 @@ def test_rank() -> None:
         scaling.levels[0][0] = 1.0
 
 
+def test_rank_never_puts_a_new_value_past_a_training_value() -> None:
+    # found by the property test below: interpolating between −49.109375 (level 0) and 0
+    # (level 0.4) just below 0 rounds to 0.4000000000000001 — above the level of 0 itself
+    train = np.array([[1.0], [0.0], [1.0], [0.0], [-49.109375], [0.0]])
+    scaling = rank(train, np.ones(1, dtype=bool))
+    assert scaling.knots[0].tolist() == [-49.109375, 0.0, 1.0]
+    assert scaling.levels[0].tolist() == [0.0, 0.4, 0.9]
+    just_below, just_above = -8.23475053e-32, 8.23475053e-32
+    Z = scaling.transform(np.array([[just_below], [0.0], [just_above], [-60.0], [1.0], [7.0]]))
+    assert Z[:, 0].tolist() == [0.4, 0.4, 0.4, 0.0, 0.9, 0.9]
+    assert np.interp(just_below, scaling.knots[0], scaling.levels[0]) > 0.4  # what was returned
+    # between two training values the level stays between theirs
+    inside = scaling.transform(np.linspace(-49.109375, 1.0, 1001)[:, None])[:, 0]
+    assert np.all(np.diff(inside) >= 0.0)
+    assert (inside.min(), inside.max()) == (0.0, 0.9)
+
+
 def test_unit_length() -> None:
     data = np.array([[3.0, 9.0, 4.0], [0.0, 2.0, 0.0], [5.0, 1.0, 12.0]])
     scaling = unit_length(data, QUANT)
