@@ -6,7 +6,7 @@ from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -36,7 +36,7 @@ from context_synthetic_recognition.config import ExperimentConfig, load_config, 
 from context_synthetic_recognition.config.presets import active_deviations, matching_preset
 from context_synthetic_recognition.data import load_from_config
 from context_synthetic_recognition.errors import CSRError
-from context_synthetic_recognition.gui.i18n import tr
+from context_synthetic_recognition.gui.i18n import LANGUAGES, SYSTEM, mark, tr
 from context_synthetic_recognition.gui.pages import (
     ComparePage,
     ConfigurePage,
@@ -64,25 +64,27 @@ from context_synthetic_recognition.gui.theme import (
 from context_synthetic_recognition.services.manifest import MANIFEST_NAME
 
 APP_TITLE = "Context-synthetic recognition"
+SIDEBAR_WIDTH = 184
+"""Width of the workflow sidebar; it grows when a page name needs more."""
 CONFIG_SUFFIXES = {".yaml", ".yml", ".toml", ".json"}
-CONFIG_FILES = "Configurations (*.yaml *.yml *.toml *.json);;All files (*)"
+CONFIG_FILES = mark("Configurations (*.yaml *.yml *.toml *.json);;All files (*)")
 
 SHORTCUTS: tuple[tuple[str, str], ...] = (
-    ("Ctrl+O", "Open a dataset"),
-    ("Ctrl+Shift+O", "Open a configuration"),
-    ("Ctrl+S", "Save the configuration"),
-    ("Ctrl+Shift+R", "Open a run folder"),
-    ("F5", "Run the experiment"),
-    ("Shift+F5", "Cancel the run"),
-    ("Ctrl+E", "Export"),
-    ("Ctrl+Z / Ctrl+Y", "Undo / redo a change of the configuration"),
-    ("Ctrl+1 … Ctrl+7", "Go to a page"),
-    ("Alt+Left / Alt+Right", "Previous / next table or figure of the results"),
-    ("Ctrl+C", "Copy the selected table rows"),
-    ("Ctrl+T", "Switch between the light and the dark theme"),
-    ("Ctrl++ / Ctrl+− / Ctrl+0", "Zoom in / out / reset"),
-    ("F1", "Keyboard shortcuts"),
-    ("Ctrl+Q", "Quit"),
+    ("Ctrl+O", mark("Open a dataset")),
+    ("Ctrl+Shift+O", mark("Open a configuration")),
+    ("Ctrl+S", mark("Save the configuration")),
+    ("Ctrl+Shift+R", mark("Open a run folder")),
+    ("F5", mark("Run the experiment")),
+    ("Shift+F5", mark("Cancel the run")),
+    ("Ctrl+E", mark("Export")),
+    ("Ctrl+Z / Ctrl+Y", mark("Undo / redo a change of the configuration")),
+    ("Ctrl+1 … Ctrl+7", mark("Go to a page")),
+    ("Alt+Left / Alt+Right", mark("Previous / next table or figure of the results")),
+    ("Ctrl+C", mark("Copy the selected table rows")),
+    ("Ctrl+T", mark("Switch between the light and the dark theme")),
+    ("Ctrl++ / Ctrl+− / Ctrl+0", mark("Zoom in / out / reset")),
+    ("F1", mark("Keyboard shortcuts")),
+    ("Ctrl+Q", mark("Quit")),
 )
 """The keyboard shortcuts, as Help → Keyboard shortcuts lists them."""
 
@@ -90,13 +92,34 @@ SHORTCUTS: tuple[tuple[str, str], ...] = (
 class MainWindow(QMainWindow):
     """The application window."""
 
-    def __init__(self, settings: Settings | None = None, parent: QWidget | None = None) -> None:
-        """Build the window and restore what the last session left."""
+    languageChanged = Signal(str)
+    """Another language was chosen (the setting: a language code or ``system``)."""
+
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        parent: QWidget | None = None,
+        *,
+        state: AppState | None = None,
+    ) -> None:
+        """Build the window and restore what the last session left.
+
+        Args:
+            settings: What the application remembers (default: the user's settings).
+            parent: Parent widget.
+            state: The state of a window this one replaces — its dataset, configuration, run
+                and undo history are shown again (the language was changed); a new state by
+                default.
+        """
         super().__init__(parent)
         self.settings = settings or Settings()
-        self.state = AppState(self)
+        inherited = state is not None
+        self.state = state if state is not None else AppState()
+        self.state.setParent(self)
         self.state.theme = self.settings.theme
         self.state.font_scale = self.settings.font_scale
+        self.replaced_on_language_change = False
+        """Whether the application rebuilds the window when another language is chosen."""
         self.setAcceptDrops(True)
         self.resize(1360, 860)
         # dialogs are attributes, so tests can replace them
@@ -124,7 +147,7 @@ class MainWindow(QMainWindow):
 
         self.sidebar = QListWidget()
         self.sidebar.setObjectName("sidebar")
-        self.sidebar.setFixedWidth(184)
+        self.sidebar.setFixedWidth(SIDEBAR_WIDTH)
         self.sidebar.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.stack = QStackedWidget()
         for number, page in enumerate(self.pages, start=1):
@@ -168,6 +191,11 @@ class MainWindow(QMainWindow):
         if geometry is not None:
             self.restoreGeometry(geometry)
         self.apply_appearance()
+        if inherited:  # the pages show what the replaced window was working on
+            self.state.datasetChanged.emit()
+            self.state.configChanged.emit()
+            self.state.resultChanged.emit()
+            self.state.objectSelected.emit(self.state.selected_object)
         self._refresh()
         self.sidebar.setCurrentRow(0)
 
@@ -248,6 +276,19 @@ class MainWindow(QMainWindow):
         zoom_in.setShortcuts([QKeySequence("Ctrl++"), QKeySequence("Ctrl+=")])
         self._action(view_menu, tr("Zoom out"), lambda: self.zoom(-1), "Ctrl+-")
         self._action(view_menu, tr("Actual size"), lambda: self.zoom(0), "Ctrl+0")
+        view_menu.addSeparator()
+        language_menu = view_menu.addMenu(tr("Language"))
+        languages = QActionGroup(self)
+        self.language_actions: dict[str, QAction] = {}
+        # a language is listed under its own name, whatever the language of the interface
+        for code, name in ((SYSTEM, tr("System language")), *LANGUAGES.items()):
+            action = QAction(name, self)
+            action.setCheckable(True)
+            action.setChecked(code == self.settings.language)
+            action.triggered.connect(lambda _checked=False, c=code: self.set_language(c))
+            languages.addAction(action)
+            language_menu.addAction(action)
+            self.language_actions[code] = action
 
         help_menu = bar.addMenu(tr("&Help"))
         self._action(help_menu, tr("Keyboard shortcuts"), self.show_shortcuts, "F1")
@@ -344,6 +385,10 @@ class MainWindow(QMainWindow):
             app.setFont(font)
             app.setPalette(qt_palette(palette(state.theme)))
             app.setStyleSheet(stylesheet(palette(state.theme), state.font_scale))
+        # page names are longer in some languages and at larger zoom: the sidebar fits them
+        self.sidebar.ensurePolished()
+        needed = self.sidebar.sizeHintForColumn(0) + 2 * self.sidebar.frameWidth() + 8
+        self.sidebar.setFixedWidth(max(SIDEBAR_WIDTH, needed))
         for name, action in self.theme_actions.items():
             action.setChecked(name == state.theme)
         self.settings.theme = state.theme
@@ -366,6 +411,60 @@ class MainWindow(QMainWindow):
             current = min(range(len(steps)), key=lambda i: abs(steps[i] - self.state.font_scale))
             scale = steps[min(max(current + direction, 0), len(steps) - 1)]
         self.state.set_appearance(font_scale=scale)
+
+    # ------------------------------------------------------------------ language
+
+    def is_busy(self) -> bool:
+        """Whether a run or an export is in progress."""
+        exporting = self.export_page.task is not None and self.export_page.task.isRunning()
+        return self.run_page.is_running() or exporting
+
+    def set_language(self, code: str) -> bool:
+        """Choose the language of the interface (a code of ``LANGUAGES`` or ``system``).
+
+        The choice is remembered and :attr:`languageChanged` is emitted; the application then
+        replaces the window by one in the new language (:func:`~.app.rebuild_window`). While a
+        run or an export is in progress the language stays as it is.
+
+        Returns:
+            Whether the language was changed.
+        """
+        current = self.settings.language
+        if code == current:
+            return False
+        if self.is_busy():
+            self.language_actions[current].setChecked(True)
+            self.report(
+                tr("Wait for the run or the export to finish before changing the language."),
+                failed=True,
+            )
+            return False
+        self.settings.language = code
+        self.language_actions[code].setChecked(True)
+        if not self.replaced_on_language_change:
+            self.report(tr("The language changes when the application is started again."))
+        self.languageChanged.emit(code)
+        return True
+
+    def release_state(self) -> AppState:
+        """Hand the shared state over to the window that replaces this one.
+
+        The window is remembered (geometry, page), stops listening to the state and gives it up;
+        it must then be closed.
+        """
+        self.settings.save_geometry(self.saveGeometry())
+        self.settings.page = self.stack.currentIndex()
+        state = self.state
+        for signal in (
+            state.datasetChanged,
+            state.configChanged,
+            state.resultChanged,
+            state.objectSelected,
+            state.appearanceChanged,
+        ):
+            signal.disconnect()
+        state.setParent(None)
+        return state
 
     # ------------------------------------------------------------------ files
 

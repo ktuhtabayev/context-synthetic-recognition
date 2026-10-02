@@ -1,8 +1,8 @@
 """What the application remembers between sessions (QSettings).
 
-Window geometry, theme, zoom, the recent datasets, configurations and run folders, the runs
-folder. Tests pass their own ``QSettings`` (an ini file in a temporary folder), so they never
-touch the user's settings.
+Window geometry, theme, zoom, language, the recent datasets, configurations and run folders, the
+runs folder. Tests pass their own ``QSettings`` (an ini file in a temporary folder), so they
+never touch the user's settings.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QSettings
 
+from context_synthetic_recognition.gui.i18n import LANGUAGES, SYSTEM
 from context_synthetic_recognition.gui.theme import FONT_SCALES, PALETTES
 
 ORGANIZATION = "context-synthetic-recognition"
@@ -53,6 +54,16 @@ class Settings:
     @font_scale.setter
     def font_scale(self, scale: float) -> None:
         self.store.setValue("appearance/font_scale", scale)
+
+    @property
+    def language(self) -> str:
+        """The language of the interface: a code of ``i18n.LANGUAGES`` or ``system``."""
+        value = str(self.store.value("appearance/language", SYSTEM))
+        return value if value in LANGUAGES else SYSTEM
+
+    @language.setter
+    def language(self, code: str) -> None:
+        self.store.setValue("appearance/language", code)
 
     # ------------------------------------------------------------------ window
 

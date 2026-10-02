@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 from context_synthetic_recognition.config.presets import active_deviations
 from context_synthetic_recognition.export.tables import run_tables
 from context_synthetic_recognition.export.view import RunView
-from context_synthetic_recognition.gui.i18n import tr
+from context_synthetic_recognition.gui.i18n import mark, tr
 from context_synthetic_recognition.gui.models import style_for
 from context_synthetic_recognition.gui.pages.base import Page
 from context_synthetic_recognition.gui.settings import RECENT_RUNS, Settings
@@ -58,7 +58,7 @@ MAX_LOG_BLOCKS = 5000
 class RunPage(Page):
     """Run the experiment in the background."""
 
-    title = "Run"
+    title = mark("Run")
     finished = Signal()
     """A run ended (successfully or not)."""
 

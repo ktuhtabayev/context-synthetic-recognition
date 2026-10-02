@@ -35,7 +35,7 @@ from context_synthetic_recognition.export.text import format_cell
 from context_synthetic_recognition.export.view import RunView
 from context_synthetic_recognition.export.wording import decision_text, theorem_rows
 from context_synthetic_recognition.gui.canvas import Canvas
-from context_synthetic_recognition.gui.i18n import tr
+from context_synthetic_recognition.gui.i18n import mark, tr
 from context_synthetic_recognition.gui.models import TableStyle, feature_rows, style_for
 from context_synthetic_recognition.gui.pages.base import Page
 from context_synthetic_recognition.gui.settings import Settings
@@ -83,7 +83,7 @@ def neighbour_table(view: RunView, operator: int) -> Table:
 class NewObjectPage(Page):
     """Classify an object typed by the user."""
 
-    title = "New object"
+    title = mark("New object")
     needs_result = True
 
     def __init__(self, state: AppState, settings: Settings, parent: QWidget | None = None) -> None:

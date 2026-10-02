@@ -806,7 +806,7 @@ def gui(
         Path | None, typer.Option("--run", "-r", help="Run folder to repeat and show.")
     ] = None,
 ) -> None:
-    """Start the desktop application (needs the extra [gui])."""
+    """Start the desktop application (needs PySide6: the optional extra "gui")."""
     try:
         from context_synthetic_recognition.gui.app import launch
     except ImportError as error:

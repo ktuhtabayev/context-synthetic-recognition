@@ -24,6 +24,17 @@ def test_no_arguments_shows_help() -> None:
     assert "config" in result.output
 
 
+def test_the_help_of_every_command_is_printed_in_full() -> None:
+    # the help renderer reads [word] as markup and drops it: "(needs the extra )" was printed
+    for arguments in (["--help"], ["gui", "--help"]):
+        words = " ".join(runner.invoke(app, arguments).output.replace("│", " ").split())
+        assert 'Start the desktop application (needs PySide6: the optional extra "gui").' in words
+    for command in app.registered_commands:
+        assert command.callback is not None
+        text = command.callback.__doc__ or ""
+        assert "[" not in text.splitlines()[0], command.name
+
+
 def test_show_prints_the_preset_with_deviation_warnings() -> None:
     template = runner.invoke(app, ["config", "show"])
     assert template.exit_code == 0

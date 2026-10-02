@@ -31,7 +31,7 @@ from context_synthetic_recognition.export import EXPORTERS, ExportOptions, Expor
 from context_synthetic_recognition.export.figures import DPI
 from context_synthetic_recognition.export.text import DEFAULT_DECIMALS
 from context_synthetic_recognition.export.theme import THEMES
-from context_synthetic_recognition.gui.i18n import tr
+from context_synthetic_recognition.gui.i18n import mark, tr
 from context_synthetic_recognition.gui.pages.base import Page
 from context_synthetic_recognition.gui.settings import Settings
 from context_synthetic_recognition.gui.state import AppState
@@ -45,7 +45,7 @@ DEFAULT_FORMATS = ("excel", "csv", "json", "figures", "html")
 class ExportPage(Page):
     """Choose formats and write them."""
 
-    title = "Export"
+    title = mark("Export")
     needs_result = True
     finished = Signal()
 

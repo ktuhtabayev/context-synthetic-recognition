@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
+from context_synthetic_recognition.gui.i18n import tr
 from context_synthetic_recognition.gui.settings import Settings
 from context_synthetic_recognition.gui.state import AppState
 from context_synthetic_recognition.gui.theme import Palette, palette
@@ -14,7 +15,7 @@ class Page(QWidget):
     """A page of the workflow: a title, a one-line hint and its content."""
 
     title = ""
-    """Name in the sidebar and at the top of the page."""
+    """Name in the sidebar and at the top of the page (English; marked for translation)."""
     needs_result = False
     """Whether the page is available only after a run."""
 
@@ -29,7 +30,7 @@ class Page(QWidget):
         outer.setContentsMargins(18, 14, 18, 12)
         outer.setSpacing(8)
         self.header = QHBoxLayout()
-        self.header.addWidget(page_title(self.title))
+        self.header.addWidget(page_title(tr(self.title)))
         self.header.addStretch(1)
         outer.addLayout(self.header)
         outer.addWidget(hint(subtitle))
