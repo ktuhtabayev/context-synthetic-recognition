@@ -1,5 +1,6 @@
 site_name: Context-synthetic recognition
 site_description: Context-synthetic model of recognition algorithms (CS-model)
+site_url: https://ktuhtabayev.github.io/context-synthetic-recognition/
 repo_url: https://github.com/ktuhtabayev/context-synthetic-recognition
 repo_name: ktuhtabayev/context-synthetic-recognition
 docs_dir: docs
@@ -33,6 +34,7 @@ nav:
   - Home: index.md
   - Architecture: architecture.md
   - Algorithm reference: algorithm-reference.md
+  - Reproducing the experiment: reproduction.md
   - Datasets: datasets.md
   - Evaluation: evaluation.md
   - Exporting: exporting.md

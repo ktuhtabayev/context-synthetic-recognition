@@ -14,6 +14,15 @@ exporters write, so the screen, the Excel mirror and the article's tables cannot
 .\.venv\Scripts\csr-gui.exe                               # the same, without a console window
 ```
 
+**Without Python.** Each release has a Windows build, `csr-gui-<version>-windows.zip`
+([Releases](https://github.com/ktuhtabayev/context-synthetic-recognition/releases)): unpack it
+anywhere and start `csr-gui.exe` — nothing is installed. The built-in Heart-Disease datasets are
+included; your own datasets are opened from their files. Two optional extras are not part of the
+build — Parquet files and the scikit-learn baselines — and the application says so when one is
+asked for. `csr-gui.exe --self-test report.txt` checks an installation without showing a window:
+it loads every language, runs the default experiment, draws a table and a figure, exports the
+run and writes what it found to the report (exit code 0 = everything works).
+
 !!! warning "Two template calculations differ from the article"
     The application never lets them out of sight: a ⚠ badge in the status bar (click it to see the
     switches), a warning box at the top of *Configure*, a ⚠ mark beside each switch, the ⚠ rows of
@@ -157,11 +166,29 @@ size.
 - **View → Light theme / Dark theme** (**Ctrl+T**); tables and figures follow.
 - **View → Zoom in / Zoom out / Actual size** (**Ctrl++**, **Ctrl+−**, **Ctrl+0**) scales the
   whole interface.
-- The window size, the theme, the zoom, the runs folder and the recent datasets, configurations
-  and runs (**File → Recent …**) are remembered between sessions.
+- The window size, the theme, the zoom, the language, the runs folder and the recent datasets,
+  configurations and runs (**File → Recent …**) are remembered between sessions.
 - The colours of the classes and of the figures are colour-blind safe. Correct / wrong use the
   workbook's green and red and are never the only cue: the predicted and the true class are both
   written, a refusal is the value 0, and statuses carry ✓ / ✗ / ⚠.
+
+## Language
+
+![The interface in Russian](images/gui/language-ru.png)
+
+**View → Language** offers *System language*, English, Русский and Oʻzbekcha (Latin script). The
+window changes at once and keeps what you are working on — the dataset, the configuration with
+its undo history, the run and the selected object; the choice is remembered. *System language*
+follows the language of Windows and falls back to English. While a run or an export is in
+progress the language stays as it is.
+
+![The interface in Uzbek](images/gui/language-uz.png)
+
+Only the interface is translated — menus, pages, buttons, forms, messages. What the exporters
+produce stays in English, in the application too: the tables and figures of *Results*, the
+explanation on *New object*, and every exported file. The names of plug-ins and their formulas
+(`minmax`, `zhuravlyov`, …) are the names used in configuration files and are not translated
+either (ADR-054).
 
 ## Keyboard shortcuts
 
@@ -195,9 +222,11 @@ The package `gui` is one more interface above the services ([Architecture](archi
   the table and figure panels.
 - `forms` — parameter forms generated from the plug-ins' parameter types.
 - `theme` — one palette per theme for the style sheet, the cell colours and the figures.
-- `i18n` — every string passes through `tr()`; a translation is a `csr_<locale>.qm` file in
-  `gui/translations` (the interface is English; Russian and Uzbek can be added without code
-  changes).
+- `i18n` — every string passes through `tr()`; a constant shown later (a page title) is marked
+  with `mark()`. The translations are `gui/translations/csr_ru.ts` and `csr_uz.ts`, compiled into
+  the `.qm` files the application loads; `scripts\update_translations.py` keeps them in step with
+  the code and the tests fail if a text is missing ([Development](development.md#translations)).
+  Changing the language rebuilds the window on the same `AppState` (`app.rebuild_window`).
 
 The screenshots of this page are made by `scripts\gui_screenshots.py`, which drives the real
 application; the tests (`pytest -m gui`) drive it the same way without a display.
