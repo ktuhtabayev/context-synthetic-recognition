@@ -478,3 +478,48 @@ def test_csr_gui_without_pyside6(monkeypatch: pytest.MonkeyPatch) -> None:
     result = CliRunner().invoke(app, ["gui"])
     assert result.exit_code == EXIT_FAILED
     assert 'pip install "context-synthetic-recognition[gui]"' in result.output
+
+
+def test_the_self_test(
+    qtbot: QtBot, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, settings: Settings
+) -> None:
+    monkeypatch.chdir(tmp_path)  # no project folder here: the built-in default dataset is used
+    report = tmp_path / "self-test.txt"
+    assert gui_app.self_test(report) == 0
+    lines = report.read_text(encoding="utf-8").splitlines()
+    assert lines[0].endswith("— self-test")
+    assert lines[1:4] == [
+        "ok    language English: Run the experiment",
+        "ok    language Русский: Запустить эксперимент",
+        "ok    language Oʻzbekcha: Tajribani ishga tushirish",
+    ]
+    assert "ok    default dataset: Heart-Disease (10, 13, 2)" in lines
+    assert "ok    experiment: TUPLAM = {a₆, a₃, a₁, a₂, a₄}" in lines
+    assert "ok    results: a table and a figure" in lines
+    assert any(line.startswith("ok    export: excel, csv, json") for line in lines)
+    assert lines[-1] == "passed"
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["self-test.txt"]  # nothing else
+    assert settings.language == "system"  # the user's settings are not touched
+
+    # the entry point: csr-gui --self-test REPORT
+    again = tmp_path / "again.txt"
+    with pytest.raises(SystemExit) as exit_info:
+        gui_app.main(["--self-test", str(again)])
+    assert exit_info.value.code == 0
+    assert again.read_text(encoding="utf-8").splitlines()[-1] == "passed"
+
+
+def test_the_self_test_reports_a_failure_instead_of_crashing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def broken(*_: Any, **__: Any) -> MainWindow:
+        raise RuntimeError("no window today")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(gui_app, "create_window", broken)
+    report = tmp_path / "self-test.txt"
+    assert gui_app.self_test(report) == 1
+    text = report.read_text(encoding="utf-8")
+    assert "RuntimeError: no window today" in text
+    assert text.splitlines()[-1] == "FAILED"
+    assert gui_app.self_test() == 1  # without a report: the exit code alone

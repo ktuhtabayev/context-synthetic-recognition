@@ -23,3 +23,5 @@ tests/data/** -text
 *.jpg  binary
 *.jpeg binary
 *.parquet binary
+# Compiled translations of the interface (scripts/update_translations.py)
+*.qm   binary

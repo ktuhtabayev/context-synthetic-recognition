@@ -35,7 +35,16 @@ without its class (Theorem of the article).
 | M5 | Exporters: Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures, HTML/PDF report | ✓ |
 | M6 | Desktop GUI (PySide6): dataset, configure, run, results explorer, new object, compare, export | ✓ |
 | M7 | More metrics (HEOM, Gower, Euclidean, Mahalanobis, …) and normalizers (z-score, robust, rank, …) | ✓ |
-| M8 | Documentation, polish, release build | next |
+| M8 | Reproduction guide, Russian and Uzbek interface, Windows executable, documentation site | ✓ |
+
+Documentation: <https://ktuhtabayev.github.io/context-synthetic-recognition/>
+
+## The desktop application without Python
+
+Download `csr-gui-<version>-windows.zip` from the
+[latest release](https://github.com/ktuhtabayev/context-synthetic-recognition/releases/latest),
+unpack it anywhere and start `csr-gui.exe`. Nothing is installed; the Heart-Disease datasets are
+built in. The interface is available in English, Russian and Uzbek (**View → Language**).
 
 ## Quick start (Windows PowerShell)
 
@@ -49,7 +58,7 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 ```
 
-Commands available now:
+Commands:
 
 ```powershell
 .\.venv\Scripts\csr.exe config show                      # the template preset (default)
@@ -85,7 +94,10 @@ as an HTML/PDF report ([Exporting](docs/exporting.md)).
 `csr gui` starts the desktop application: load a dataset, configure the method (the two ⚠
 switches are always in sight), run in the background, explore every table and figure of the
 workbook with cross-highlighting, classify a new object with a step-by-step explanation,
-compare runs and export ([Desktop application](docs/gui.md)).
+compare runs and export — in English, Russian or Uzbek ([Desktop application](docs/gui.md)).
+
+To repeat the Excel experiment yourself — the workbook checked cell for cell, every result step
+by step, any saved run again — follow [Reproducing the experiment](docs/reproduction.md).
 
 ![The results explorer](docs/images/gui/results-table.png)
 
@@ -152,7 +164,7 @@ tests/              pytest suite; tests/data/templates = copies of the template 
 ## Documentation
 
 - [Architecture](docs/architecture.md) · [Algorithm reference](docs/algorithm-reference.md) ·
-  [Datasets](docs/datasets.md) · [Evaluation](docs/evaluation.md) · [Exporting](docs/exporting.md) ·
+  [Reproducing the experiment](docs/reproduction.md) · [Datasets](docs/datasets.md) · [Evaluation](docs/evaluation.md) · [Exporting](docs/exporting.md) ·
   [Desktop application](docs/gui.md) · [Extending](docs/extending.md) ·
   [Decisions](docs/DECISIONS.md) · [Development](docs/development.md)
 - Specification: `resources/experiments/context-synthetic-model/` and

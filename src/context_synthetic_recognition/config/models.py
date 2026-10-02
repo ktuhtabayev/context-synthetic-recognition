@@ -60,7 +60,7 @@ class CentreMode(StrEnum):
 
 
 class DatasetConfig(ConfigModel):
-    """Where the data comes from and how to read it (loaders arrive in M2)."""
+    """Where the data comes from and how to read it."""
 
     path: str | None = None
     """A dataset file (relative paths: against the configuration file's folder), a dataset of the

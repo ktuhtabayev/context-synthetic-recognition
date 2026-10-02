@@ -1,5 +1,6 @@
 """The ``csr`` command line (configuration commands)."""
 
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -11,6 +12,7 @@ from context_synthetic_recognition.config import config_hash, load_config, prese
 from .conftest import HAG_TEMPLATE, META_TEMPLATE, WORKBOOK
 
 runner = CliRunner()
+ANSI_STYLE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def test_version() -> None:
@@ -22,6 +24,23 @@ def test_version() -> None:
 def test_no_arguments_shows_help() -> None:
     result = runner.invoke(app, [])
     assert "config" in result.output
+
+
+def printed_words(arguments: list[str]) -> str:
+    """What a command prints, without the colours and frames a terminal adds (CI forces colours)."""
+    output = ANSI_STYLE.sub("", runner.invoke(app, arguments).output)
+    return " ".join(output.replace("│", " ").split())
+
+
+def test_the_help_of_every_command_is_printed_in_full() -> None:
+    # the help renderer reads [word] as markup and drops it: "(needs the extra )" was printed
+    for arguments in (["--help"], ["gui", "--help"]):
+        words = printed_words(arguments)
+        assert 'Start the desktop application (needs PySide6: the optional extra "gui").' in words
+    for command in app.registered_commands:
+        assert command.callback is not None
+        text = command.callback.__doc__ or ""
+        assert "[" not in text.splitlines()[0], command.name
 
 
 def test_show_prints_the_preset_with_deviation_warnings() -> None:

@@ -35,7 +35,7 @@ from context_synthetic_recognition.data.catalog import project_catalog, resolve_
 from context_synthetic_recognition.data.schema import FeatureType
 from context_synthetic_recognition.errors import CSRError
 from context_synthetic_recognition.export.text import format_cell
-from context_synthetic_recognition.gui.i18n import tr
+from context_synthetic_recognition.gui.i18n import mark, tr
 from context_synthetic_recognition.gui.models import dataset_table, feature_rows, style_for
 from context_synthetic_recognition.gui.pages.base import Page
 from context_synthetic_recognition.gui.settings import RECENT_DATASETS, Settings
@@ -46,7 +46,7 @@ from context_synthetic_recognition.services.datasets import summarize
 
 PREVIEW_ROWS = 2000
 """Objects shown in the preview grid (the statistics always cover every object)."""
-DATASET_FILES = "Datasets (*.dat *.csv *.xlsx *.xlsm *.txt *.parquet);;All files (*)"
+DATASET_FILES = mark("Datasets (*.dat *.csv *.xlsx *.xlsm *.txt *.parquet);;All files (*)")
 TYPE_COLUMN = 1
 
 
@@ -91,7 +91,7 @@ class ClassBalance(QWidget):
 class DatasetPage(Page):
     """Choose a dataset, preview it, edit the feature types."""
 
-    title = "Dataset"
+    title = mark("Dataset")
 
     def __init__(self, state: AppState, settings: Settings, parent: QWidget | None = None) -> None:
         """Build the page."""

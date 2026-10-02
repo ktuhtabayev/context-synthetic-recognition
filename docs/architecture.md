@@ -123,17 +123,22 @@ types ([Desktop application](gui.md), ADR-044 – ADR-048).
 
 ## Extension points
 
-| Kind | Default | Planned alternatives |
-|---|---|---|
-| metrics | Zhuravlyov on all / I / J | weighted Zhuravlyov, HEOM, Gower; Manhattan, Euclidean, Chebyshev, Minkowski, Canberra, cosine, Mahalanobis on I; Hamming on J ✓ (M7, ADR-050, ADR-051) — HVDM is not offered: it reads class labels |
-| normalizers | min–max (training data) | none, z-score, robust, max-abs, decimal scaling, rank, unit length ✓ (M7, ADR-052) |
-| k strategies | formula (ADR-005/006) | article rule, explicit list, range ✓ (ADR-022) |
-| encoders | formula (5) | — (μ and bit masks are training-side gradations, ADR-021) |
-| weights | ω by (4) | Criterion-1, λ·β (template) |
-| majorizers | logistic sigmoid | tanh, arctan, softsign ✓ (scaled to (0, 1), ADR-026), custom |
-| decision rules | article Step 4 (refusal = 0) ✓ | — |
-| protocols | resubstitution, leave-one-out | stratified k-fold, repeated k-fold, hold-out ✓ (M4); nested CV |
-| baselines | k-NN vote | scikit-learn classifiers ✓ (M4, extra `[sklearn]`) |
+Every exchangeable part is a plug-in chosen by name. The table lists what is built in; the last
+column names what the design leaves room for but does not ship.
+
+| Kind | Default | Also built in | Not built in |
+|---|---|---|---|
+| metrics | Zhuravlyov on all / I / J | weighted Zhuravlyov, HEOM, Gower; Manhattan, Euclidean, Chebyshev, Minkowski, Canberra, cosine, Mahalanobis on I; Hamming on J (ADR-050, ADR-051) | HVDM — it reads class labels (ADR-051) |
+| normalizers | min–max (training data) | none, z-score, robust, max-abs, decimal scaling, rank, unit length (ADR-052) | — |
+| k strategies | formula (ADR-005/006) | article rule, explicit list, range (ADR-022) | — |
+| encoders | formula (5) | — | μ and bit masks are training-side gradations, not encoders (ADR-021) |
+| weights | ω by (4) | — | the template's Criterion-1 and λ·β weights |
+| majorizers | logistic sigmoid | tanh, arctan, softsign, scaled to (0, 1) (ADR-026) | — |
+| decision rules | article Step 4 (refusal = 0) | — | — |
+| protocols | resubstitution, leave-one-out | stratified k-fold, repeated k-fold, hold-out (ADR-032) | nested cross-validation |
+| baselines | k-NN vote | scikit-learn classifiers (extra `[sklearn]`, ADR-032) | — |
+| dataset formats | detected from the file | experiment workbook, extended layout, CSV, Excel, Parquet (ADR-018) | — |
+| export formats | all | Excel mirror, CSV, JSON, Markdown, LaTeX, figures, HTML, PDF (ADR-036 – ADR-043) | — |
 
 Plug-ins register by name in a `Registry`; external packages add them through the entry-point
-group `context_synthetic_recognition.<kind>`.
+group `context_synthetic_recognition.<kind>` ([Extending](extending.md)).

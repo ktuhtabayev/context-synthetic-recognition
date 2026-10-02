@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 
 from context_synthetic_recognition.export.tables import Cell, Table
 from context_synthetic_recognition.export.text import format_cell
-from context_synthetic_recognition.gui.i18n import tr
+from context_synthetic_recognition.gui.i18n import mark, tr
 from context_synthetic_recognition.gui.models import TableStyle
 from context_synthetic_recognition.gui.pages.base import Page
 from context_synthetic_recognition.gui.settings import Settings
@@ -44,7 +44,15 @@ from context_synthetic_recognition.services.runs import (
     run_facts,
 )
 
-COLUMNS = ("Run", "Created (UTC)", "Dataset", "m", "Preset", "TUPLAM", "Accuracy")
+COLUMNS = (
+    mark("Run"),
+    mark("Created (UTC)"),
+    mark("Dataset"),
+    "m",
+    mark("Preset"),
+    "TUPLAM",
+    mark("Accuracy"),
+)
 MAX_COMPARED = 6
 """More columns than this do not fit a screen."""
 
@@ -64,7 +72,7 @@ def difference_style(table: Table) -> TableStyle:
 class ComparePage(Page):
     """Choose runs and compare them."""
 
-    title = "Compare"
+    title = mark("Compare")
     openRequested = Signal(object)
     """The user asked to open a run folder (a :class:`~pathlib.Path`)."""
 

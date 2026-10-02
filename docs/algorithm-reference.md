@@ -1,7 +1,7 @@
 # Algorithm reference
 
 Every element of the article, the workbook sheet that specifies it and the module that implements
-it. Modules marked *planned* arrive with the milestone shown.
+it. The last column names the milestone that added it; everything listed is implemented.
 
 !!! warning "Two template calculations differ from the article"
     - θ and γ are measured from running partial class means instead of the final class means M₁
@@ -13,7 +13,7 @@ it. Modules marked *planned* arrive with the milestone shown.
 
 (S, E) → Ψ_ρ,k(S, E) → D(S, E) → Y(S, E) → R(Y(S, E))
 
-| # | Article element | Formula / step | Workbook sheet | Module | Milestone |
+| # | Article element | Formula / step | Workbook sheet | Module | Added in |
 |---|---|---|---|---|---|
 | 0 | Parameters | — | Parameters | `config.models` | M1 ✓ |
 | 1 | Data E₀, types I/J, classes K1, K2 | problem statement | Dataset, Quantitative, Nominal | `data.schema.Dataset`, `data.loaders.load_dataset` | M2 ✓ |

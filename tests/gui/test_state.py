@@ -11,7 +11,7 @@ from context_synthetic_recognition.config import DatasetConfig, ExperimentConfig
 from context_synthetic_recognition.data import Dataset
 from context_synthetic_recognition.export import RunView
 from context_synthetic_recognition.gui import GUI_EXTRA_HINT
-from context_synthetic_recognition.gui.i18n import TRANSLATIONS, install_translator, tr
+from context_synthetic_recognition.gui.i18n import tr
 from context_synthetic_recognition.gui.settings import (
     MAX_RECENT,
     RECENT_CONFIGS,
@@ -136,10 +136,7 @@ def test_default_settings_belong_to_the_application(qtbot: QtBot) -> None:
 
 def test_the_translation_hook(qtbot: QtBot) -> None:
     assert tr("Dataset") == "Dataset"  # English is the source language
-    app = QCoreApplication.instance()
-    assert app is not None
-    assert install_translator(app, "en_GB") is None
-    assert install_translator(app) is None or TRANSLATIONS.is_dir()
+    assert QCoreApplication.instance() is not None  # the languages: tests/gui/test_i18n.py
     assert "PySide6" in GUI_EXTRA_HINT
     assert "[gui]" in GUI_EXTRA_HINT
 

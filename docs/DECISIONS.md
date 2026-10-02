@@ -742,7 +742,8 @@ results → Classify a new object → Compare runs → Export. ADR-013 chose PyS
   configurations and runs.
 - **Translation.** Every user-visible string passes through `gui.i18n.tr`; a translation is a Qt
   `.qm` file `gui/translations/csr_<locale>.qm`, loaded when the system locale asks for it. The
-  interface is English; no translation ships yet.
+  interface is English; no translation ships yet. *(M8: Russian and Uzbek ship, with a
+  language switch in the application — ADR-054.)*
 
 ## ADR-045 — Colour semantics of the tables on screen
 
@@ -984,3 +985,97 @@ now: ADR-035 stands (Heart-Disease only), nothing was copied into the repository
 10,000-object sample would need (a lean trace, a cap on k, k-fold instead of leave-one-out) is not
 part of M7. Any dataset in the extended layout can still be run from its path
 ([Datasets](datasets.md)).
+
+## ADR-054 — The languages of the interface: English, Russian, Uzbek (author)
+
+*Accepted, 2026-10-02 (M8).*
+
+**Author.** Translate the interface into Russian and Uzbek; Uzbek in Latin script; translate the
+interface only, not the exports; add a language switch to the application.
+
+**Design.**
+
+- English is the source language in the code. A translation is `gui/translations/csr_<code>.ts`
+  (Qt's translation source, the file to edit) compiled into `csr_<code>.qm` (what the application
+  loads); both are committed, so an installation needs no build step. Every text is in the one
+  context `csr`.
+- `scripts/update_translations.py` collects the literal texts of `tr(...)` and `mark(...)` from
+  the `gui` package with Python's own parser — Qt's `lupdate` would file them under class names —
+  merges them into the `.ts` files and runs `pyside6-lrelease`. `mark()` names a constant that is
+  translated where it is shown (page titles, the shortcut list, file filters, column names).
+- The tests keep the files honest: every text translated, none stale, placeholders, menu
+  accelerators and file patterns kept, and the `.qm` files saying what the `.ts` files say.
+- **View → Language**: *System language* (the default — the language of Windows, else English),
+  English, Русский, Oʻzbekcha, each under its own name. The choice is a setting.
+- **Switching rebuilds the window.** The texts of a window are set when it is built, so
+  `app.rebuild_window` builds a new `MainWindow` on the *same* `AppState` — dataset,
+  configuration with its undo history, run, selected object — opens it on the same page and
+  closes the old one. Nothing is computed or loaded again. While a run or an export is in
+  progress the language stays as it is.
+- Qt's own texts (the button of a message box) come from Qt's `qtbase_ru`; Qt has no Uzbek
+  translation, so `csr_uz.ts` carries those few texts itself (context `QPlatformTheme`).
+- **Not translated**, by the author's decision or because they are data: the tables and figures
+  of the results and everything exported (they come from the exporters), the names and summaries
+  of plug-ins (they are what a configuration file says), messages of the core. Uzbek uses ʻ
+  (U+02BB) in oʻ and gʻ and ʼ (U+02BC) for the tutuq belgisi.
+- The sidebar grows with the longest page name, so a language (or a zoom step) cannot cut it.
+
+The Uzbek wording is the author's to review. Terms used: *alomat* for feature (author; not
+*belgi*), *sinf* for class, *oʻrgatuvchi obyekt* for training object, *hisoblash* for a run.
+
+## ADR-055 — The Windows executable of the desktop application (author)
+
+*Accepted, 2026-10-02 (M8).*
+
+**Author.** Build the desktop application with PyInstaller; build it in CI as a workflow
+artifact; publish it with the GitHub Release of v0.8.0.
+
+- `scripts/build_exe.py` freezes `csr-gui` as a **folder** (`dist\csr-gui\`, packed as
+  `csr-gui-<version>-windows.zip`), not as a single file: a one-file program unpacks itself on
+  every start and is more often held back by virus scanners.
+- Contents: Python, numpy, matplotlib, openpyxl, Qt (PySide6-Essentials), reportlab (the PDF
+  report) and the package with its data — the built-in datasets, the template data, the
+  translations. Left out: pyarrow (Parquet) and scikit-learn (the comparison classifiers), which
+  would multiply the size; the application reports the missing extra when one is asked for.
+  Qt's software OpenGL renderer and Qt's translations of other languages are removed (27 MB).
+  The result is about 150 MB unpacked, 70 MB packed.
+- **`csr-gui --self-test [REPORT]`** checks an installation without showing a window: it loads
+  every language, opens the default dataset, runs the experiment in the worker thread, draws a
+  table and a figure and exports every format. A windowed program has no console, so the result
+  is the exit code and the report file. The build script runs it on the frozen application in an
+  empty folder and fails the build if it does not pass — this is what found that matplotlib's
+  SVG and PDF backends and reportlab had to be named for PyInstaller.
+- CI job *Windows executable*: builds, self-tests and uploads `csr-gui-windows` (the zip and the
+  self-test report) on every run. A release takes the artifact of the tag's own CI run, so the
+  published executable is built from exactly the tagged commit.
+- No code signing: Windows SmartScreen will warn about an unknown publisher on first start.
+
+## ADR-056 — The documentation site on GitHub Pages (author)
+
+*Accepted, 2026-10-02 (M8).*
+
+**Author.** Publish the docs site.
+
+- The site is the `mkdocs build --strict` of `main`, deployed by the CI jobs *Docs build* and
+  *Publish the documentation* (GitHub's Pages actions) to
+  <https://ktuhtabayev.github.io/context-synthetic-recognition/>. Branches and tags build the
+  site but do not publish it.
+- **Only what is in the repository is published, and not the handoff material.** `mkdocs.yml`
+  excludes `docs/handoff/`, and the CI job fails if a `handoff` folder appears in the built site.
+  The site is never deployed from a working copy: the author's `docs/handoff` also holds the
+  unpublished article draft and the design transcript (ADR-014).
+
+## ADR-057 — M8 housekeeping
+
+*Accepted, 2026-10-02 (M8).*
+
+- **Reproduction guide** (`docs/reproduction.md`, author): how to check the package against the
+  workbook, obtain each result, repeat a saved run. Its numbers and outputs are those of the
+  commands it shows; its Python example is run as written before a release.
+- **`csr gui` help line** (author): typer's help renderer reads `[gui]` as markup and printed
+  "(needs the extra )". The text no longer uses square brackets, and a test keeps brackets out
+  of the first line of every command's help.
+- **Wording** (author): docstrings that still announced finished milestones were corrected; the
+  extension-points table of the architecture page now lists what is built in and, separately,
+  what is not (the template's Criterion-1 and λ·β weights, nested cross-validation, HVDM).
+- **Development status** (author): the package classifier is *4 - Beta*.

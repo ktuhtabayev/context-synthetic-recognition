@@ -3,14 +3,17 @@ r"""Make the screenshots of the GUI user guide (docs/images/gui).
 Run from the repository root::
 
     .\.venv\Scripts\python.exe scripts\gui_screenshots.py
+    .\.venv\Scripts\python.exe scripts\gui_screenshots.py --target somewhere-else
 
 The application runs the experiment on Heart-Disease (10, 13, 2) for real — the template preset,
-then the article preset — and every page is grabbed at 1360 × 860. Nothing appears on screen: the
-window is laid out by the native Windows platform (for the system fonts) but never mapped.
+then the article preset — and every page is grabbed at 1360 × 860; the window is then rebuilt in
+Russian and in Uzbek for the two language images. Nothing appears on screen: the window is laid
+out by the native Windows platform (for the system fonts) but never mapped.
 """
 
 from __future__ import annotations
 
+import argparse
 import os
 import tempfile
 import time
@@ -21,7 +24,11 @@ os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"  # the same pixels on every screen
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QApplication
 
-from context_synthetic_recognition.gui.app import create_application, create_window
+from context_synthetic_recognition.gui.app import (
+    create_application,
+    create_window,
+    rebuild_window,
+)
 from context_synthetic_recognition.gui.window import MainWindow
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,7 +55,10 @@ def run(app: QApplication, window: MainWindow) -> None:
 
 def main() -> None:
     """Drive the application through the workflow and save one image per page."""
-    TARGET.mkdir(parents=True, exist_ok=True)
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument("--target", type=Path, default=TARGET, help="folder for the images")
+    target = parser.parse_args().target.resolve()
+    target.mkdir(parents=True, exist_ok=True)
     app = create_application([])
     with tempfile.TemporaryDirectory() as scratch:
         work = Path(scratch)
@@ -63,7 +73,7 @@ def main() -> None:
 
         def shot(name: str) -> None:
             pump(app)
-            window.grab().save(str(TARGET / f"{name}.png"))
+            window.grab().save(str(target / f"{name}.png"))
             print("saved", name)  # noqa: T201 - a script
 
         shot("dataset")
@@ -105,6 +115,13 @@ def main() -> None:
         window.go_to(results)
         results.open("table", "hag-candidates")
         shot("dark-results")
+        # the same work in the other languages of the interface (View → Language)
+        window.set_theme("light")
+        for code, page in (("ru", 1), ("uz", 0)):
+            window.settings.language = code
+            window = rebuild_window(window)
+            window.go_to(window.pages[page])
+            shot(f"language-{code}")
         window.close()
         pump(app)
         os.chdir(ROOT)

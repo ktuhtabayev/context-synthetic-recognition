@@ -31,7 +31,7 @@ from context_synthetic_recognition.export.tables import Table, TableSpec, slug, 
 from context_synthetic_recognition.export.text import DEFAULT_DECIMALS
 from context_synthetic_recognition.export.view import RunView
 from context_synthetic_recognition.gui.canvas import Canvas
-from context_synthetic_recognition.gui.i18n import tr
+from context_synthetic_recognition.gui.i18n import mark, tr
 from context_synthetic_recognition.gui.models import style_for
 from context_synthetic_recognition.gui.pages.base import Page
 from context_synthetic_recognition.gui.settings import Settings
@@ -204,7 +204,7 @@ class ContextPanel(QWidget):
 class ResultsPage(Page):
     """Explore every table and figure of a run."""
 
-    title = "Results"
+    title = mark("Results")
     needs_result = True
 
     def __init__(self, state: AppState, settings: Settings, parent: QWidget | None = None) -> None:

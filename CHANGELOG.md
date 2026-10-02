@@ -5,6 +5,40 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-10-02 — M8 release build, languages, documentation
+
+### Added
+
+- The interface in Russian and Uzbek (Latin script), 288 texts each, and **View → Language**
+  with *System language*, English, Русский and Oʻzbekcha. The window changes at once and keeps
+  the dataset, the configuration with its undo history, the run and the selected object; the
+  choice is remembered. Only the interface is translated — the tables, figures and exported
+  files stay in English (ADR-054).
+- `scripts/update_translations.py` keeps the translation files in step with the code and compiles
+  them; the tests fail if a text is missing, stale or lost a placeholder.
+- A Windows executable of the desktop application: `scripts/build_exe.py` (PyInstaller, optional
+  extra `[release]`) builds `csr-gui-<version>-windows.zip`, and the CI job *Windows executable*
+  keeps it as the artifact `csr-gui-windows` of every run (ADR-055).
+- `csr-gui --self-test [REPORT]`: checks an installation without showing a window — every
+  language, the default experiment, a table, a figure and an export of the run.
+- *Reproducing the experiment* (`docs/reproduction.md`): the workbook checked cell for cell,
+  every result step by step, repeating a saved run.
+- The documentation site is published to GitHub Pages from `main` (ADR-056).
+- Development guide: translations, the executable, releasing.
+
+### Changed
+
+- The sidebar grows with the longest page name (other languages, larger zoom).
+- The package's development status is *Beta*.
+- Architecture: the extension-points table lists what is built in and, separately, what is not.
+
+### Fixed
+
+- `csr --help` printed "Start the desktop application (needs the extra )": the help renderer
+  took `[gui]` for markup. The line no longer uses square brackets.
+- The title at the top of a page was not passed through the translation hook.
+- Docstrings that still announced finished milestones.
+
 ## [0.7.0] — 2026-10-02 — M7 metrics and normalizers
 
 ### Added

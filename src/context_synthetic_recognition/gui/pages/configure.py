@@ -55,7 +55,7 @@ from context_synthetic_recognition.core.normalizers import NORMALIZERS
 from context_synthetic_recognition.evaluation.baselines import BASELINES
 from context_synthetic_recognition.evaluation.protocols import PROTOCOLS
 from context_synthetic_recognition.gui.forms import PluginChecklist, PluginEditor, set_invalid
-from context_synthetic_recognition.gui.i18n import tr
+from context_synthetic_recognition.gui.i18n import mark, tr
 from context_synthetic_recognition.gui.pages.base import Page
 from context_synthetic_recognition.gui.settings import Settings
 from context_synthetic_recognition.gui.state import AppState
@@ -221,7 +221,7 @@ class OperatorsEditor(QWidget):
 class ConfigurePage(Page):
     """Edit the configuration."""
 
-    title = "Configure"
+    title = mark("Configure")
 
     def __init__(self, state: AppState, settings: Settings, parent: QWidget | None = None) -> None:
         """Build the page."""
@@ -342,13 +342,13 @@ class ConfigurePage(Page):
         switches = QFormLayout()
         switches.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         switches.addRow(hint(tr("⚠ The two calculations that differ from the article:"), "note"))
-        for deviation, combo, mark in (
+        for deviation, combo, differs in (
             (DEVIATIONS[0], self.centres, self.centres_badge),
             (DEVIATIONS[1], self.passes, self.passes_badge),
         ):
             row = QHBoxLayout()
             row.addWidget(combo, 1)
-            row.addWidget(mark)
+            row.addWidget(differs)
             title = tr("Class centres in θ, γ") if combo is self.centres else tr("STEP 4 passes")
             switches.addRow(title, row)
             switches.addRow(hint(f"{deviation.adr}: {deviation.statement}.", "note"))

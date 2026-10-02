@@ -4,13 +4,22 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QCoreApplication, QSettings
 from pytestqt.qtbot import QtBot
 
+from context_synthetic_recognition.gui.i18n import SOURCE_LANGUAGE, set_language
 from context_synthetic_recognition.gui.settings import Settings
 from context_synthetic_recognition.gui.window import MainWindow
 
 RUN_TIMEOUT = 120_000
+
+
+@pytest.fixture(autouse=True)
+def english_interface(qapp: QCoreApplication) -> Iterator[None]:
+    """Every test starts and ends in English, whatever the language of the machine."""
+    set_language(qapp, SOURCE_LANGUAGE)
+    yield
+    set_language(qapp, SOURCE_LANGUAGE)
 
 
 @pytest.fixture

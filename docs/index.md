@@ -22,6 +22,8 @@ without its class.
 
 - [Architecture](architecture.md) — layers, pipeline, trace objects, extension points
 - [Algorithm reference](algorithm-reference.md) — article element → workbook sheet → module
+- [Reproducing the experiment](reproduction.md) — the workbook checked cell for cell, every result
+  step by step, repeating a saved run
 - [Datasets](datasets.md) — formats, feature types, classes, built-in datasets, `csr data info`
 - [Evaluation](evaluation.md) — protocols, metrics, baselines, run folders, large datasets
 - [Exporting](exporting.md) — the Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures,
