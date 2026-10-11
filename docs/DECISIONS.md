@@ -21,7 +21,7 @@ Status values: *accepted*, *superseded by ADR-n*.
 *Accepted, 2026-09-30.*
 
 - The workbook
-  `resources/experiments/context-synthetic-model/Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx`
+  `resources/Experiments/Context-Synthetic Recognition Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx`
   specifies every computation; its cell formulas define each step and its Validation sheet values
   are acceptance tests (tolerance 1e-9).
   *(The author renamed the workbook on 2026-10-01 and asked for one naming throughout: the file
@@ -29,6 +29,12 @@ Status values: *accepted*, *superseded by ADR-n*.
   cell A3 of the sheet* Template Deviations *— which quotes the file name of the HAG template —
   was changed inside the workbook to the template's current name. Only that text changed: every
   other part of the file is identical and `csr validate` passes on all 11,631 cells.)*
+  *(On 2026-10-11 the author moved the experiment workbooks from
+  `resources/experiments/context-synthetic-model/` to `resources/Experiments/` and renamed the
+  full experiment from "Context-Synthetic Model – Full Experiment …" to "Context-Synthetic
+  Recognition Model – Full Experiment …"; the paths were updated everywhere, the handoff
+  documents included. Both files are byte for byte the previous ones: a copy saved with the
+  article setting of the two switches was set back to the template setting.)*
 - `docs/handoff/CONTEXT_HANDOFF.md` records the agreed decisions; where it and the design chat
   differ, the handoff wins.
 - `docs/handoff/reference-engine` (with `golden_values.json`) is a test oracle, not the
@@ -36,7 +42,7 @@ Status values: *accepted*, *superseded by ADR-n*.
 - The template workbooks of `../hag-regularized-stacking-boosting-meta` (HAG, meta-algorithm) are
   replication targets: SET {x₃, x₆, x₁₃, x₄, x₉} and r₁…r₄ to 1e-12; the meta-algorithm template's
   new object is classified as Class 2 with B1(a₄) = ∅, B2(a₄) = {S₉, S₁₀}.
-- `resources/experiments/`, `docs/handoff/` and the template project are never modified.
+- `resources/Experiments/`, `docs/handoff/` and the template project are never modified.
 
 ## ADR-002 — Switch: class centres in θ and γ (template deviation 1)
 
@@ -175,6 +181,13 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
   on disk): `docs/handoff/article/` (the draft) and `docs/handoff/CHAT_TRANSCRIPT.md`.
 - Protected folders are stored byte for byte (`-text` in `.gitattributes`); other text files use LF.
 - No Git LFS: the binary files total about 4 MB.
+- *Amended 2026-10-11 (author):* `resources/Article/` (the article draft),
+  `resources/Interpretation/` (the step-by-step guides), `resources/from Ignatev bobo/`
+  (N. A. Ignatev's article, program and datasets) and
+  `resources/Experiments/ERDR algorithm [Heart-Disease (7, 13, 2)].xlsx` are committed to the
+  public repository at the author's request. `docs/handoff/article/` and
+  `docs/handoff/CHAT_TRANSCRIPT.md` stay held back. The binary and data files now total about
+  8 MB, still without Git LFS.
 
 ## ADR-015 — Engineering conventions
 

@@ -5,6 +5,21 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+### Added
+
+- The author's resources: `resources/Article/` (the article draft), `resources/Interpretation/`
+  (the step-by-step guides), `resources/from Ignatev bobo/` (N. A. Ignatev's article, program and
+  datasets) and `resources/Experiments/ERDR algorithm [Heart-Disease (7, 13, 2)].xlsx`
+  (ADR-014, amended).
+
+### Changed
+
+- The experiment workbooks moved from `resources/experiments/context-synthetic-model/` to
+  `resources/Experiments/`; the full experiment is now
+  `Context-Synthetic Recognition Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx`.
+  Every path was updated — README, CLAUDE.md, the documentation, the tests and the handoff
+  documents (ADR-001). Both workbooks are byte for byte unchanged.
+
 ## [0.8.0] — 2026-10-02 — M8 release build, languages, documentation
 
 ### Added

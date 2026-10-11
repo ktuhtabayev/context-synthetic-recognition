@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PySide6.QtCore import QMimeData, QPoint, QSettings, Qt, QUrl
+from PySide6.QtCore import QMimeData, QPoint, QPointF, QSettings, Qt, QUrl
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
 from PySide6.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
@@ -335,6 +335,15 @@ def test_recent_files(window: MainWindow, tmp_path: Path) -> None:
     assert window.settings.recent(RECENT_DATASETS) == []
 
 
+def _drag_enter(pos: QPoint, *args: Any) -> QDragEnterEvent:
+    """A drag-enter event: PySide6 6.12 takes a QPointF (the QPoint form is deprecated), 6.11 and
+    earlier only a QPoint."""
+    try:
+        return QDragEnterEvent(QPointF(pos), *args)
+    except TypeError:
+        return QDragEnterEvent(pos, *args)
+
+
 def test_dropping_a_file_onto_the_window(window: MainWindow, tmp_path: Path) -> None:
     data = tmp_path / "data.csv"
     data.write_text("a,b,label\n1,2,x\n3,4,y\n5,6,x\n7,8,y\n", encoding="utf-8")
@@ -345,7 +354,7 @@ def test_dropping_a_file_onto_the_window(window: MainWindow, tmp_path: Path) -> 
         Qt.MouseButton.LeftButton,
         Qt.KeyboardModifier.NoModifier,
     )
-    enter = QDragEnterEvent(QPoint(5, 5), copy, mime, left, none)
+    enter = _drag_enter(QPoint(5, 5), copy, mime, left, none)
     window.dragEnterEvent(enter)
     assert enter.isAccepted()
     window.dropEvent(QDropEvent(QPoint(5, 5), copy, mime, left, none))
@@ -353,7 +362,7 @@ def test_dropping_a_file_onto_the_window(window: MainWindow, tmp_path: Path) -> 
     assert window.state.dataset.name == "data"
     text = QMimeData()
     text.setText("not a file")
-    ignored = QDragEnterEvent(QPoint(5, 5), copy, text, left, none)
+    ignored = _drag_enter(QPoint(5, 5), copy, text, left, none)
     ignored.ignore()
     window.dragEnterEvent(ignored)
     assert not ignored.isAccepted()

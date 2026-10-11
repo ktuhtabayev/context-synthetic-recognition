@@ -34,7 +34,7 @@ The virtual environment stores absolute paths; if the project folder moves, crea
   CI is green; each milestone is tagged `v0.<n>.0` and recorded in `CHANGELOG.md`.
 - **Decisions:** every decision goes into [DECISIONS.md](DECISIONS.md). Anything that changes
   numerical results is agreed with the author first.
-- **Protected material:** `resources/experiments/` and `docs/handoff/` are never modified;
+- **Protected material:** `resources/Experiments/` and `docs/handoff/` are never modified;
   linters and hooks exclude them and Git stores them byte for byte.
 - **Template workbooks:** `tests/data/templates/` holds byte-for-byte copies of the HAG and
   meta-algorithm templates of `../hag-regularized-stacking-boosting-meta` (read-only), so CI can
