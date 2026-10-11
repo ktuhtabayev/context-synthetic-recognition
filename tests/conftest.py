@@ -21,9 +21,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIGS = ROOT / "configs"
-EXPERIMENTS = ROOT / "resources" / "experiments" / "context-synthetic-model"
+EXPERIMENTS = ROOT / "resources" / "Experiments"
 WORKBOOK = EXPERIMENTS / (
-    "Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+    "Context-Synthetic Recognition Model – Full Experiment "
+    "[Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 )
 """The full Excel experiment: the specification and its golden values."""
 KNN_WORKBOOK = (

@@ -21,13 +21,13 @@ py -3.12 -m venv .venv
 ```
 
 The repository contains everything the reproduction needs: the experiment workbook in
-`resources\experiments\context-synthetic-model\`, copies of the two template workbooks in
+`resources\Experiments\`, copies of the two template workbooks in
 `tests\data\templates\`, and the dataset in `datasets\`.
 
 ## 2 · Check the package against the workbook
 
 ```powershell
-.\.venv\Scripts\csr.exe validate --against "resources\experiments\context-synthetic-model\Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+.\.venv\Scripts\csr.exe validate --against "resources\Experiments\Context-Synthetic Recognition Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 ```
 
 The command reads the data, the HAG parameters, both switches and the new object from the
@@ -160,8 +160,8 @@ from context_synthetic_recognition.data import load_dataset
 from context_synthetic_recognition.services.runner import run_experiment
 
 workbook = (
-    "resources/experiments/context-synthetic-model/"
-    "Context-Synthetic Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+    "resources/Experiments/"
+    "Context-Synthetic Recognition Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
 )
 data = load_dataset(workbook)  # the Dataset sheet
 model = fit_model(data)  # Steps 1–11, template preset
