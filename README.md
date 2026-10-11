@@ -4,6 +4,10 @@ Python implementation of the **context-synthetic model of recognition algorithms
 library, `csr` command line and desktop GUI — built on the author's complete Excel experiment
 on Heart-Disease (10, 13, 2), which serves as the executable specification.
 
+> **Windows app, no Python needed:** download `csr-gui-<version>-windows.zip` from the
+> [latest release](https://github.com/ktuhtabayev/context-synthetic-recognition/releases/latest),
+> unpack it and start `csr-gui.exe`.
+
 ```text
 (S, E) → Ψ_ρ,k(S, E) → D(S, E) → Y(S, E) → R(Y(S, E))
 ```
