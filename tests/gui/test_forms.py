@@ -191,6 +191,18 @@ def test_the_plugin_checklist(qtbot: QtBot) -> None:
     assert checklist.specs() == (plugin("resubstitution"),)
 
 
+def test_a_form_is_shown_by_its_parent_never_as_a_window(qtbot: QtBot) -> None:
+    form = ParamForm(params_type(K_STRATEGIES, "formula"))
+    qtbot.addWidget(form)
+    assert not form.isVisible()  # not in a layout yet: shown now, it would open as a window
+    checklist = PluginChecklist(PROTOCOLS)
+    qtbot.addWidget(checklist)
+    assert not any(form.isVisible() for form in checklist.forms.values())
+    checklist.show()
+    assert checklist.forms["hold-out"].isVisible()
+    assert not checklist.forms["leave-one-out"].isVisible()  # no parameters: it takes no room
+
+
 def test_the_checklist_reports_invalid_parameters(qtbot: QtBot) -> None:
     checklist = PluginChecklist(BASELINES)
     qtbot.addWidget(checklist)

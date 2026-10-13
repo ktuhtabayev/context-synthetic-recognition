@@ -197,7 +197,11 @@ class ParamForm(QWidget):
             field = _Field(name, schema, self)
             self._fields[name] = field
             self._layout.addRow(label_for(name), field.widget)
-        self.setVisible(bool(self._fields))
+        visible = bool(self._fields)
+        # a form without inputs takes no room; a form not yet in a layout is left for its parent
+        # to show (shown now, it would open as a window of its own for a moment)
+        if not (visible and self.isWindow()):
+            self.setVisible(visible)
 
     def fields(self) -> list[str]:
         """Names of the parameters."""
