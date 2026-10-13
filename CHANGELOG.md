@@ -20,6 +20,12 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   Every path was updated — README, CLAUDE.md, the documentation, the tests and the handoff
   documents (ADR-001). Both workbooks are byte for byte unchanged.
 
+### Fixed
+
+- Nine small windows flashed on the screen before the main window opened: the parameter forms of
+  the protocols and baselines on the Configure page showed themselves before they were placed on
+  the page. They now appear only within it, as before; nothing else changes.
+
 ## [0.8.0] — 2026-10-02 — M8 release build, languages, documentation
 
 ### Added

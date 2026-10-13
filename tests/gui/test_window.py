@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PySide6.QtCore import QMimeData, QPoint, QPointF, QSettings, Qt, QUrl
+from PySide6.QtCore import QEvent, QMimeData, QObject, QPoint, QPointF, QSettings, Qt, QUrl
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWidget
 from pytestqt.qtbot import QtBot
 from typer.testing import CliRunner
 
@@ -423,6 +423,37 @@ def test_creating_the_window(qtbot: QtBot, tmp_path: Path, monkeypatch: pytest.M
     assert configured.state.dataset is not None
     for created in (plain, named, configured):
         created.close()
+
+
+class ShownWindows(QObject):
+    """Records the windows shown while it filters the application's events."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.shown: list[str] = []
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.Show and isinstance(watched, QWidget) and watched.isWindow():
+            self.shown.append(type(watched).__name__)
+        return False
+
+
+def test_building_the_window_opens_no_other_window(
+    qapp: QApplication, qtbot: QtBot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # a widget shown before it is in a layout is a window of its own: it flashes on the screen
+    monkeypatch.chdir(tmp_path)
+    watch = ShownWindows()
+    qapp.installEventFilter(watch)
+    try:
+        created = gui_app.create_window(store=store(tmp_path))
+        qtbot.addWidget(created)
+        assert watch.shown == []
+        created.show()
+        assert watch.shown == ["MainWindow"]
+    finally:
+        qapp.removeEventFilter(watch)
+    created.close()
 
 
 def test_starting_with_a_run_folder(
