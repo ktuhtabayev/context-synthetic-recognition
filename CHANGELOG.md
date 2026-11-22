@@ -5,6 +5,20 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+### Added
+
+- Tables 7 and 8 of the article: SVM, random forest and k-NN on the article's training and test
+  samples, apart from the CS-model's pipeline (ADR-079). The split files are kept byte for byte
+  in `datasets/splits/` and read by `data.splits.load_split_file`. The package `comparison`,
+  the service `services.comparison`, `csr compare run | check`, `scripts/run_comparison.py`
+  and the desktop application's *Classifiers* page write and check
+  `experiments/comparison/` (CSV, Markdown, LaTeX, `summary.json`, checksums); a test pins
+  every number. No method reaches the majority-class rate of a test sample.
+- The CS-model on the same samples, with settings approved before the run (ADR-080): one operator
+  per metric, min–max on the training sample, odd k = 3 … 41, the zero value, α = 0.1 and 0.2.
+  It is written to a separate `cs-model` table beside Tables 7 and 8, and its rows are added to the
+  results and the summary. Its balanced accuracy stays between 48 % and 57 %.
+
 ## [0.9.0] — 2026-11-22 — rebuild on the article
 
 The project is rebuilt on the author's article (ADR-058): its stages, its names and its defaults.

@@ -37,6 +37,7 @@ nav:
   - Glossary: glossary.md
   - Reproducing the Excel experiment: reproduction.md
   - Computational experiment: experiments.md
+  - Standard classifiers: comparison.md
   - Datasets: datasets.md
   - Evaluation: evaluation.md
   - Exporting: exporting.md

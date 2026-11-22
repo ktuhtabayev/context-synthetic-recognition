@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import tempfile
 import time
 from pathlib import Path
@@ -112,6 +113,16 @@ def main() -> None:
         shot("compare")
         window.go_to(window.export_page)
         shot("export")
+        # Tables 7 and 8, apart from the workflow: the article's split files under relative paths
+        shutil.copytree(ROOT / "datasets" / "splits", work / "datasets" / "splits")
+        classifiers = window.classifiers_page
+        classifiers.splits.setText(str(Path("datasets") / "splits"))
+        classifiers.output.setText(str(Path("experiments") / "comparison"))
+        window.go_to(classifiers)
+        classifiers.start()
+        while classifiers.is_running():
+            pump(app, 0.05)
+        shot("classifiers")
         window.set_theme("dark")
         window.go_to(results)
         results.open("table", "agglomerative-candidates")

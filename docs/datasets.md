@@ -51,13 +51,16 @@ datasets/
     German/
       German (1000, 20, 2).dat, .csv        German (1000, 20, 2), with the author's ReadMe.txt
   synthetic/                                reserved for pre-existing synthetic datasets — not read
+  splits/                                   the article's training and test samples (split files
+    German/, Heart-Disease/                 with a training/test flag) — not read by the catalogue
 ```
 
 The files are the author's, byte for byte (Git stores them unchanged, the hooks leave them alone),
 so their SHA-256 checksums are the same on every machine; German was added in the same way
-(ADR-073). The synthetic-feature datasets this project generates from raw data — normalized
-values, Ψ(r), the meta-description Y — are written to run folders by the exporters, with the
-manifest that says how they were produced.
+(ADR-073), and so were the article's split files in `splits/`, which only the comparison of
+Tables 7 and 8 reads ([Standard classifiers](comparison.md), ADR-079). The synthetic-feature
+datasets this project generates from raw data — normalized values, Ψ(r), the meta-description Y —
+are written to run folders by the exporters, with the manifest that says how they were produced.
 
 ### The extended layout
 

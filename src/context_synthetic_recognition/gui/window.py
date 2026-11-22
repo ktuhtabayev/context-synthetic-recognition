@@ -42,6 +42,7 @@ from context_synthetic_recognition.data import load_from_config
 from context_synthetic_recognition.errors import CSRError
 from context_synthetic_recognition.gui.i18n import LANGUAGES, SYSTEM, mark, tr
 from context_synthetic_recognition.gui.pages import (
+    ClassifiersPage,
     ComparePage,
     ConfigurePage,
     DatasetPage,
@@ -82,7 +83,7 @@ SHORTCUTS: tuple[tuple[str, str], ...] = (
     ("Shift+F5", mark("Cancel the run")),
     ("Ctrl+E", mark("Export")),
     ("Ctrl+Z / Ctrl+Y", mark("Undo / redo a change of the configuration")),
-    ("Ctrl+1 … Ctrl+7", mark("Go to a page")),
+    ("Ctrl+1 … Ctrl+8", mark("Go to a page")),
     ("Alt+Left / Alt+Right", mark("Previous / next table or figure of the results")),
     ("Ctrl+C", mark("Copy the selected table rows")),
     ("Ctrl+T", mark("Switch between the light and the dark theme")),
@@ -139,6 +140,7 @@ class MainWindow(QMainWindow):
         self.new_object_page = NewObjectPage(self.state, self.settings)
         self.compare_page = ComparePage(self.state, self.settings)
         self.export_page = ExportPage(self.state, self.settings)
+        self.classifiers_page = ClassifiersPage(self.state, self.settings)
         self.pages: tuple[Page, ...] = (
             self.dataset_page,
             self.configure_page,
@@ -147,6 +149,7 @@ class MainWindow(QMainWindow):
             self.new_object_page,
             self.compare_page,
             self.export_page,
+            self.classifiers_page,
         )
 
         self.sidebar = QListWidget()
@@ -626,6 +629,7 @@ class MainWindow(QMainWindow):
         self.run_page.cancel()
         self.run_page.wait()
         self.export_page.wait()
+        self.classifiers_page.wait()
         self.run_page.log_bridge.detach()
         self.settings.save_geometry(self.saveGeometry())
         self.settings.page = self.stack.currentIndex()

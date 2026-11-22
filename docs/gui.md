@@ -2,7 +2,8 @@
 
 The desktop application takes an experiment through the whole workflow — **Dataset → Configure →
 Run → Results → New object → Compare → Export** — and shows every table and figure of the
-method for any dataset. It computes nothing itself: a run is the same
+method for any dataset. An eighth page, **Classifiers**, apart from the workflow, gives the
+article's Tables 7 and 8. The application computes nothing itself: a run is the same
 `run_experiment` the command line uses, and the pages show the same tables and figures the
 exporters write, so the screen, the Excel mirror and the article's tables cannot disagree.
 
@@ -177,6 +178,23 @@ figures, the HTML and PDF report ([Exporting](exporting.md)) — into the run fo
 your choice) in the background, and lists what was written and what was left out because of its
 size.
 
+## 8 · Classifiers
+
+![Classifiers page](images/gui/classifiers.png)
+
+Tables 7 and 8 of the article: SVM, random forest and k-NN fitted on the article's training
+samples and scored on its test samples, with the CS-model on the same samples
+([Standard classifiers](comparison.md)). The page is
+apart from the workflow: it needs no dataset and no run. *Run* reads the split files
+(`datasets/splits` of the project) and fits every method in the background (a few seconds).
+The tabs show Table 7, Table 8, the CS-model's table and every split × method. *Write the files* writes them with
+their checksums to the results folder (`experiments/comparison`). *Check the written files*
+compares a results folder with its checksums and a new run, byte for byte. These are the same
+files and checks as `csr compare run` and `csr compare check`.
+
+The page needs scikit-learn, and the split files are in the project's folder. The Windows build
+includes neither, so it shows what is missing.
+
 ## Appearance and what is remembered
 
 ![Dark theme](images/gui/dark-results.png)
@@ -220,7 +238,7 @@ either (ADR-054).
 | Shift+F5 | Cancel the run |
 | Ctrl+E | Export |
 | Ctrl+Z / Ctrl+Y | Undo / redo a change of the configuration |
-| Ctrl+1 … Ctrl+7 | Go to a page |
+| Ctrl+1 … Ctrl+8 | Go to a page |
 | Alt+← / Alt+→ | Previous / next table or figure of the results |
 | Ctrl+C | Copy the selected table rows |
 | Ctrl+T | Switch between the light and the dark theme |

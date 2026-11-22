@@ -8,6 +8,8 @@ Layout (the author's; ADR-035)::
                                        original datasets,
                                        e.g. raw/Heart-Disease/Heart-Disease (270, 13, 2).dat
       synthetic/                       reserved for pre-existing synthetic datasets — not read
+      splits/                          the article's training and test samples — not read here
+                                       (:mod:`.splits`, ADR-079)
 
 Every file is in the extended layout (:func:`~context_synthetic_recognition.data.loaders.
 load_extended_layout`): a first row ``m n c``; m rows of n feature values and the class label; a

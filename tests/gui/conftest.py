@@ -41,6 +41,7 @@ def window(
     created.run_page.cancel()
     created.run_page.wait()
     created.export_page.wait()
+    created.classifiers_page.wait()
     created.run_page.log_bridge.detach()
 
 

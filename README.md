@@ -135,10 +135,13 @@ Tests and checks:
 ```text
 configs/            configuration files: default, alpha-0.1, alpha-0.2, excel-experiment,
                     heart-disease-270-large-data
-datasets/           the author's datasets: default (10, 13, 2), raw/Heart-Disease, raw/German
+datasets/           the author's datasets: default (10, 13, 2), raw/Heart-Disease, raw/German;
+                    splits/ = the article's training and test samples
 docs/               documentation (mkdocs): glossary, algorithm reference, DECISIONS.md, …
-experiments/        the article's computational experiment: results/*.csv, summary.json, checksums
-scripts/            run_experiments.py, build_exe.py, gui_screenshots.py, update_translations.py
+experiments/        the article's computational experiment: results/*.csv, summary.json, checksums;
+                    comparison/ = Tables 7 and 8 (standard classifiers)
+scripts/            run_experiments.py, run_comparison.py, build_exe.py, gui_screenshots.py,
+                    update_translations.py
 src/context_synthetic_recognition/
   core/             pure numerical core (no I/O), one package per stage of the method:
     rips/                 R-IPS: hyperspheres, algorithm, selection
@@ -149,8 +152,9 @@ src/context_synthetic_recognition/
     meta_algorithm/       the meta-algorithm
     model.py, trace.py    the CS-model end to end; trace objects
   evaluation/       protocols, baselines, metrics, ROC, margins
+  comparison/       Tables 7 and 8: standard classifiers on the article's samples
   config/           typed configuration (schema 2), presets, the switches
-  data/             dataset schema, loaders, built-in datasets
+  data/             dataset schema, loaders, built-in datasets, split files
   services/         runner, run folders, validation against the workbooks, switch sensitivity,
                     dataset summaries — shared by the CLI and the GUI
   export/           Excel workbook, tables (CSV, JSON, Markdown, LaTeX), figures, report
@@ -166,7 +170,8 @@ tests/              pytest suite; tests/data/workbooks = the author's Excel work
 
 - [Architecture](docs/architecture.md) · [Algorithm reference](docs/algorithm-reference.md) ·
   [Glossary](docs/glossary.md) · [Reproducing the Excel experiment](docs/reproduction.md) ·
-  [Computational experiment](docs/experiments.md) · [Datasets](docs/datasets.md) ·
+  [Computational experiment](docs/experiments.md) ·
+  [Standard classifiers](docs/comparison.md) · [Datasets](docs/datasets.md) ·
   [Evaluation](docs/evaluation.md) · [Exporting](docs/exporting.md) ·
   [Desktop application](docs/gui.md) · [Extending](docs/extending.md) ·
   [Decisions](docs/DECISIONS.md) · [Development](docs/development.md)

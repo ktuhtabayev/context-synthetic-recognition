@@ -1,11 +1,12 @@
 """The ``csr`` command.
 
-Commands: ``config`` (show, init, check), ``data`` (list, check, info), ``fit`` (the CS-model:
-Ψ(r), the agglomerative algorithm and the meta-dataset), ``classify`` (an object through the
-meta-algorithm, step by step), ``run`` (fit and evaluate under every configured protocol, write a
-run folder, optionally export it), ``export`` (a run folder as Excel mirror, tables, figures and
-report), ``validate`` (the package against the Excel experiment and the check workbooks) and
-``gui`` (the desktop application).
+Commands: ``config`` (show, init, check), ``data`` (list, check, info), ``compare`` (run,
+check: Tables 7 and 8, standard classifiers on the article's training and test samples), ``fit``
+(the CS-model: Ψ(r), the agglomerative algorithm and the meta-dataset), ``classify`` (an object
+through the meta-algorithm, step by step), ``run`` (fit and evaluate under every configured
+protocol, write a run folder, optionally export it), ``export`` (a run folder as Excel mirror,
+tables, figures and report), ``validate`` (the package against the Excel experiment and the check
+workbooks) and ``gui`` (the desktop application).
 """
 
 import sys
@@ -16,6 +17,7 @@ from typing import Annotated
 import typer
 
 from context_synthetic_recognition import __version__
+from context_synthetic_recognition.comparison.tables import DECIMALS as COMPARISON_DECIMALS
 from context_synthetic_recognition.config import (
     ConfigFormat,
     ExperimentConfig,
@@ -50,6 +52,7 @@ from context_synthetic_recognition.export import (
     resolve_formats,
 )
 from context_synthetic_recognition.export.run import AUTO_SENSITIVITY_OBJECTS
+from context_synthetic_recognition.export.text import markdown_table
 from context_synthetic_recognition.gui import GUI_EXTRA_HINT
 from context_synthetic_recognition.log import configure_logging
 from context_synthetic_recognition.notation import (
@@ -57,6 +60,12 @@ from context_synthetic_recognition.notation import (
     class_name,
     subscript,
     synthetic_name,
+)
+from context_synthetic_recognition.services.comparison import (
+    check_comparison,
+    default_output,
+    run_comparison,
+    write_comparison,
 )
 from context_synthetic_recognition.services.configs import config_problems
 from context_synthetic_recognition.services.datasets import parse_object, summarize
@@ -86,8 +95,13 @@ config_app = typer.Typer(
 data_app = typer.Typer(
     help="Inspect datasets: sizes, feature types, classes, admissible k.", no_args_is_help=True
 )
+compare_app = typer.Typer(
+    help="Tables 7 and 8: standard classifiers on the article's training and test samples.",
+    no_args_is_help=True,
+)
 app.add_typer(config_app, name="config")
 app.add_typer(data_app, name="data")
+app.add_typer(compare_app, name="compare")
 
 
 def _fail(error: CSRError) -> typer.Exit:
@@ -836,6 +850,71 @@ def validate(
         typer.echo("validation FAILED", err=True)
         raise typer.Exit(EXIT_FAILED)
     typer.echo("validation passed")
+
+
+# ---------------------------------------------------------------- csr compare
+
+ComparisonFolder = Annotated[
+    Path | None,
+    typer.Option(
+        "--out", "-o", help="Results folder; default: experiments/comparison of the project."
+    ),
+]
+SplitsFolder = Annotated[
+    Path | None,
+    typer.Option("--splits", help="Folder of the split files; default: datasets/splits."),
+]
+
+
+def _progress(line: str) -> None:
+    typer.echo(f"  {line}")
+
+
+@compare_app.command("run")
+def compare_run(out: ComparisonFolder = None, splits: SplitsFolder = None) -> None:
+    """Run SVM, random forest, k-NN and the CS-model on the article's splits; write the tables."""
+    typer.echo("splits:")
+    try:
+        outcome = run_comparison(splits, progress=_progress)
+        folder = out or default_output()
+        written = write_comparison(outcome, folder)
+    except CSRError as error:
+        raise _fail(error) from error
+    versions = ", ".join(f"{name} {version}" for name, version in outcome.versions.items())
+    typer.echo(f"versions: {versions}")
+    for table in outcome.tables[:3]:
+        typer.echo("")
+        typer.echo(table.title)
+        typer.echo(markdown_table(table, COMPARISON_DECIMALS), nl=False)
+    typer.echo("")
+    typer.echo(f"written to {folder}:")
+    for path in written:
+        typer.echo(f"  {path.name}")
+
+
+@compare_app.command("check")
+def compare_check(out: ComparisonFolder = None, splits: SplitsFolder = None) -> None:
+    """Check written results: their checksums, and a new run gives them byte for byte."""
+    try:
+        folder = out or default_output()
+        typer.echo(f"results: {folder}")
+        typer.echo("new run:")
+        check = check_comparison(folder, splits=splits, progress=_progress)
+    except CSRError as error:
+        raise _fail(error) from error
+    for name in check.checked:
+        mark = "✗" if any(p.startswith(f"{name}:") for p in check.problems) else "✓"
+        typer.echo(f"  {mark} {name}")
+    for problem in check.problems:
+        typer.echo(f"  ✗ {problem}")
+    if not check.same_versions:
+        recorded = ", ".join(f"{k} {v}" for k, v in check.recorded_versions.items()) or "—"
+        installed = ", ".join(f"{k} {v}" for k, v in check.installed_versions.items())
+        typer.echo(f"  written with {recorded}; installed: {installed}")
+    if not check.passed:
+        typer.echo("comparison check FAILED", err=True)
+        raise typer.Exit(EXIT_FAILED)
+    typer.echo("comparison check passed")
 
 
 # ---------------------------------------------------------------- csr gui

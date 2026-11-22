@@ -63,13 +63,14 @@ def test_the_window_before_anything_is_loaded(window: MainWindow) -> None:
         "5   New object",
         "6   Compare",
         "7   Export",
+        "8   Classifiers",
     ]
     assert window.current_page() is window.dataset_page
     enabled = [
         bool(window.sidebar.item(i).flags() & Qt.ItemFlag.ItemIsEnabled)
         for i in range(window.sidebar.count())
     ]
-    assert enabled == [True, True, True, False, False, True, False]
+    assert enabled == [True, True, True, False, False, True, False, True]
     assert not window.go_to(window.results_page)  # there is no run to show
     assert window.go_to(window.configure_page)
     assert window.current_page() is window.configure_page

@@ -19,6 +19,7 @@ The virtual environment stores absolute paths; if the project folder moves, crea
 .\.venv\Scripts\python.exe -m pytest -m "not slow"      # skip the long tests
 .\.venv\Scripts\python.exe -m pytest -m gui             # the desktop application (no window appears)
 .\.venv\Scripts\python.exe scripts\run_experiments.py   # the article's computational experiment
+.\.venv\Scripts\python.exe scripts\run_comparison.py    # Tables 7 and 8 (= csr compare run)
 .\.venv\Scripts\python.exe scripts\gui_screenshots.py   # the screenshots of docs/gui.md
 .\.venv\Scripts\ruff.exe check .                         # lint
 .\.venv\Scripts\ruff.exe format .                        # format

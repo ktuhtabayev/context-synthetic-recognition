@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from context_synthetic_recognition.gui.pages.base import Page
+from context_synthetic_recognition.gui.pages.classifiers import ClassifiersPage
 from context_synthetic_recognition.gui.pages.compare import ComparePage
 from context_synthetic_recognition.gui.pages.configure import ConfigurePage
 from context_synthetic_recognition.gui.pages.dataset import DatasetPage
@@ -12,6 +13,7 @@ from context_synthetic_recognition.gui.pages.results import ResultsPage
 from context_synthetic_recognition.gui.pages.run import RunPage
 
 __all__ = [
+    "ClassifiersPage",
     "ComparePage",
     "ConfigurePage",
     "DatasetPage",

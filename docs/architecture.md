@@ -36,11 +36,12 @@ flowchart TB
 |---|---|
 | `core` | The method, one subpackage per stage (below); the model end to end, trace objects, model properties, plug-in registries |
 | `config` | Typed configuration (schema 2), presets, the switches that deviate from the article, YAML/TOML/JSON, hash |
-| `data` | Dataset schema, loaders (experiment workbook, extended layout, CSV/XLSX/Parquet), the dataset folder, built-in datasets, hashing |
+| `data` | Dataset schema, loaders (experiment workbook, extended layout, CSV/XLSX/Parquet), the dataset folder, built-in datasets, split files with a training/test flag, hashing |
 | `evaluation` | Protocols (resubstitution, the R-IPS split, nested cross-validation, leave-one-out, k-fold, hold-out), metrics, AUC/ROC, margins, baselines |
-| `services` | Experiment runner, run folders that can be repeated, validation against the workbooks, switch sensitivity, dataset summaries, configuration checks |
+| `comparison` | Tables 7 and 8: SVM, random forest and k-NN on the article's training and test samples, through the baselines; apart from the CS-model's pipeline (ADR-079) |
+| `services` | Experiment runner, run folders that can be repeated, validation against the workbooks, switch sensitivity, dataset summaries, configuration checks, the comparison's files and their check |
 | `export` | Excel workbook in the layout of the Excel experiment, CSV/JSON, LaTeX/Markdown, figures, report |
-| `cli` | The `csr` command: `fit`, `classify`, `run`, `export`, `validate`, `gui`, `config`, `data` |
+| `cli` | The `csr` command: `fit`, `classify`, `run`, `export`, `validate`, `gui`, `config`, `data`, `compare` |
 | `gui` | Desktop application (PySide6, optional extra `[gui]`) |
 
 ### The core, stage by stage
@@ -126,10 +127,11 @@ flowchart LR
         direction TB
         P1["Dataset"] --- P2["Configure"] --- P3["Run"] --- P4["Results"]
         P5["New object"] --- P6["Compare"] --- P7["Export"]
+        P8["Classifiers"]
     end
     S["AppState<br/>dataset · configuration + undo ·<br/>RunView · selected object"]
-    W["Task (QThread)<br/>run_job · open_job · export_job"]
-    SV["services<br/>runner · runs · datasets · configs"]
+    W["Task (QThread)<br/>run_job · open_job · export_job ·<br/>comparison_job · comparison_check_job"]
+    SV["services<br/>runner · runs · datasets · configs · comparison"]
     EX["export<br/>view · tables · figures"]
     pages <--> S
     pages --> W --> SV
