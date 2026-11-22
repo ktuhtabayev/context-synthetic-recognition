@@ -1,9 +1,9 @@
 # =========================
-# Held back until the article is published (ADR-014)
-# The files stay on disk unchanged; they are only kept out of the public repository.
+# The author's source material stays on disk and out of the repository
+# (the files are not changed; the tests use copies in tests/data/workbooks/)
 # =========================
-docs/handoff/article/
-docs/handoff/CHAT_TRANSCRIPT.md
+resources/
+docs/handoff/
 
 # =========================
 # Python
