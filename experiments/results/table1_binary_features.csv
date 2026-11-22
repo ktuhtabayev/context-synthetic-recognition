@@ -1,0 +1,17 @@
+dataset,reading,metric,synthetic_features,binary_features,article_binary_features
+Heart,literal,zhuravlyov,20,20,30
+Heart,literal,euclidean,20,20,30
+Heart,literal,chebyshev,20,20,30
+Heart,literal,canberra,20,20,29
+Heart,keep-covering,zhuravlyov,20,20,30
+Heart,keep-covering,euclidean,20,20,30
+Heart,keep-covering,chebyshev,20,20,30
+Heart,keep-covering,canberra,20,20,29
+German,literal,zhuravlyov,20,20,21
+German,literal,euclidean,20,20,25
+German,literal,chebyshev,20,20,23
+German,literal,canberra,20,20,27
+German,keep-covering,zhuravlyov,20,20,21
+German,keep-covering,euclidean,20,20,25
+German,keep-covering,chebyshev,20,20,23
+German,keep-covering,canberra,20,20,27
