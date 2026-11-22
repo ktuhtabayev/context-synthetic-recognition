@@ -24,8 +24,116 @@
         <translation>JSON</translation>
     </message>
     <message>
+        <source>Table 7</source>
+        <translation>7-jadval</translation>
+    </message>
+    <message>
+        <source>Table 8</source>
+        <translation>8-jadval</translation>
+    </message>
+    <message>
+        <source>CS-model</source>
+        <translation>CS-model</translation>
+    </message>
+    <message>
+        <source>All results</source>
+        <translation>Barcha natijalar</translation>
+    </message>
+    <message>
+        <source>Check</source>
+        <translation>Tekshirish</translation>
+    </message>
+    <message>
+        <source>Classifiers</source>
+        <translation>Klassifikatorlar</translation>
+    </message>
+    <message>
+        <source>Tables 7 and 8: SVM, random forest and k-NN fitted on the article's training samples and scored on its test samples, with the CS-model on the same samples. Apart from the workflow: no dataset or run is needed.</source>
+        <translation>7- va 8-jadvallar: maqoladagi oʻrgatuvchi tanlanmalarda oʻrgatilgan va uning test tanlanmalarida baholangan SVM, tasodifiy oʻrmon va k-NN, shuningdek oʻsha tanlanmalardagi CS-model. Asosiy ish jarayonidan alohida: maʼlumotlar ham, hisoblash ham kerak emas.</translation>
+    </message>
+    <message>
+        <source>The folder of the split files (datasets/splits)</source>
+        <translation>Boʻlinish fayllari papkasi (datasets/splits)</translation>
+    </message>
+    <message>
+        <source>Where the tables are written (experiments/comparison)</source>
+        <translation>Jadvallar yoziladigan papka (experiments/comparison)</translation>
+    </message>
+    <message>
+        <source>Browse…</source>
+        <translation>Tanlash…</translation>
+    </message>
+    <message>
         <source>Run</source>
         <translation>Hisoblash</translation>
+    </message>
+    <message>
+        <source>Fit every method and the CS-model on the training samples (a few seconds)</source>
+        <translation>Har bir usulni va CS-modelni oʻrgatuvchi tanlanmalarda oʻrgatish (bir necha soniya)</translation>
+    </message>
+    <message>
+        <source>Write the files</source>
+        <translation>Fayllarni yozish</translation>
+    </message>
+    <message>
+        <source>The tables as CSV, Markdown and LaTeX, the results and their checksums</source>
+        <translation>Jadvallar CSV, Markdown va LaTeX koʻrinishida, natijalar va ularning nazorat yigʻindilari</translation>
+    </message>
+    <message>
+        <source>Check the written files</source>
+        <translation>Yozilgan fayllarni tekshirish</translation>
+    </message>
+    <message>
+        <source>Compare the files of the results folder with their checksums and a new run</source>
+        <translation>Natijalar papkasidagi fayllarni ularning nazorat yigʻindilari va yangi hisoblash bilan solishtirish</translation>
+    </message>
+    <message>
+        <source>Open the folder</source>
+        <translation>Papkani ochish</translation>
+    </message>
+    <message>
+        <source>Not run yet.</source>
+        <translation>Hali hisoblanmagan.</translation>
+    </message>
+    <message>
+        <source>Running…</source>
+        <translation>Hisoblanmoqda…</translation>
+    </message>
+    <message>
+        <source>Checking…</source>
+        <translation>Tekshirilmoqda…</translation>
+    </message>
+    <message>
+        <source>Failed.</source>
+        <translation>Amalga oshmadi.</translation>
+    </message>
+    <message>
+        <source>Split files</source>
+        <translation>Boʻlinish fayllari</translation>
+    </message>
+    <message>
+        <source>Results folder</source>
+        <translation>Natijalar papkasi</translation>
+    </message>
+    <message>
+        <source>Done: {n} splits from {folder} ({versions}). Not written yet.</source>
+        <translation>Tayyor: {folder} papkasidan {n} ta boʻlinish ({versions}). Fayllar hali yozilmagan.</translation>
+    </message>
+    <message>
+        <source>{n} files written to {folder}</source>
+        <translation>Yozilgan fayllar soni: {n}; papka: {folder}</translation>
+    </message>
+    <message>
+        <source>Check passed: {folder}</source>
+        <translation>Tekshiruvdan oʻtdi: {folder}</translation>
+    </message>
+    <message>
+        <source>Check failed: {n} problem(s) in {folder}</source>
+        <translation>Tekshiruvdan oʻtmadi: {folder} papkasida {n} ta muammo</translation>
+    </message>
+    <message>
+        <source>Split {stage}…</source>
+        <translation>Boʻlinish {stage}…</translation>
     </message>
     <message>
         <source>Created (UTC)</source>
@@ -50,10 +158,6 @@
     <message>
         <source>Tick two or more runs to see them side by side. Differences are marked; the second tab lists the settings that differ.</source>
         <translation>Yonma-yon koʻrish uchun ikki yoki undan ortiq hisoblashni belgilang. Farqlar ajratib koʻrsatilgan; ikkinchi varaqda farq qiluvchi sozlamalar keltirilgan.</translation>
-    </message>
-    <message>
-        <source>Browse…</source>
-        <translation>Tanlash…</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -608,10 +712,6 @@
         <translation>Rasmlar ranglari</translation>
     </message>
     <message>
-        <source>Open the folder</source>
-        <translation>Papkani ochish</translation>
-    </message>
-    <message>
         <source>Export folder</source>
         <translation>Eksport papkasi</translation>
     </message>
@@ -650,10 +750,6 @@
     <message>
         <source>note: {note}</source>
         <translation>izoh: {note}</translation>
-    </message>
-    <message>
-        <source>{n} files written to {folder}</source>
-        <translation>Yozilgan fayllar soni: {n}; papka: {folder}</translation>
     </message>
     <message>
         <source>Export failed: {message}</source>

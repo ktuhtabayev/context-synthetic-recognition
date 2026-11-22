@@ -1,4 +1,4 @@
-"""Data layer: dataset schema, loaders for every supported format, built-in datasets."""
+"""Data layer: dataset schema, loaders of every supported format, built-in datasets, split files."""
 
 from context_synthetic_recognition.data.builtin import DATASETS, BuiltinDataset, load_builtin
 from context_synthetic_recognition.data.loaders import (
@@ -10,6 +10,7 @@ from context_synthetic_recognition.data.loaders import (
     table_to_dataset,
 )
 from context_synthetic_recognition.data.schema import Dataset, FeatureType, Label
+from context_synthetic_recognition.data.splits import FixedSplit, load_split_file
 
 __all__ = [
     "DATASETS",
@@ -17,11 +18,13 @@ __all__ = [
     "BuiltinDataset",
     "Dataset",
     "FeatureType",
+    "FixedSplit",
     "Label",
     "LoadOptions",
     "detect_format",
     "load_builtin",
     "load_dataset",
     "load_from_config",
+    "load_split_file",
     "table_to_dataset",
 ]

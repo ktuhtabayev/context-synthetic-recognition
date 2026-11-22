@@ -7,7 +7,7 @@ import sys
 import tempfile
 import time
 import traceback
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -15,11 +15,13 @@ from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QApplication
 
 from context_synthetic_recognition import __version__
+from context_synthetic_recognition.errors import CSRError
 from context_synthetic_recognition.export.run import EXPORTERS
 from context_synthetic_recognition.gui.i18n import LANGUAGES, SOURCE_LANGUAGE, set_language, tr
 from context_synthetic_recognition.gui.settings import APPLICATION, ORGANIZATION, Settings
 from context_synthetic_recognition.gui.window import APP_TITLE, MainWindow
-from context_synthetic_recognition.gui.workers import export_job
+from context_synthetic_recognition.gui.workers import comparison_job, export_job
+from context_synthetic_recognition.services.comparison import splits_folder
 
 
 def create_application(argv: Sequence[str] | None = None) -> QApplication:
@@ -109,6 +111,28 @@ SELF_TEST_SECONDS = 300.0
 """How long the self-test waits for the experiment."""
 
 
+def _check_comparison(check: Callable[[str, bool], None]) -> None:
+    """Tables 7 and 8 on the split files (ADR-081).
+
+    The Windows build carries the split files and scikit-learn, so there the comparison must
+    run; an installation from source finds the split files only in the project.
+    """
+    frozen = bool(getattr(sys, "frozen", False))
+    try:
+        folder = splits_folder()
+    except CSRError as error:
+        check(f"comparison: not checked here — {error}", not frozen)
+        return
+    try:
+        outcome = comparison_job(folder)
+    except CSRError as error:
+        check(f"comparison: {error}", False)
+        return
+    method, *values = outcome.tables[0].rows[0]
+    shown = " / ".join(f"{v:.2f}" if isinstance(v, float) else str(v) for v in values)
+    check(f"comparison: {len(outcome.results)} splits, {method} {shown}", bool(values))
+
+
 def _self_test(app: QApplication, lines: list[str]) -> bool:
     """The checks of :func:`self_test`; appends what it found to ``lines``."""
     passed = True
@@ -158,6 +182,7 @@ def _self_test(app: QApplication, lines: list[str]) -> bool:
             )
             missing = [f for f in formats if not written.files.get(f)]
             check(f"export: {', '.join(formats)} ({written.count} files)", not missing)
+        _check_comparison(check)
         window.close()
         app.processEvents()
     return passed
@@ -167,9 +192,9 @@ def self_test(report: Path | None = None) -> int:
     """Check an installation of the application without showing it.
 
     The window is built by the platform but never mapped on screen: every language is loaded,
-    the default dataset is opened, the experiment is run in the worker thread and a table and a
-    figure of the results are drawn. The user's settings are not touched and nothing is written
-    besides the report.
+    the default dataset is opened, the experiment is run in the worker thread, a table and a
+    figure of the results are drawn, the run is exported and Tables 7 and 8 are computed. The
+    user's settings are not touched and nothing is written besides the report.
 
     Args:
         report: A file to write what was checked to (a windowed program has no console).

@@ -1,0 +1,3 @@
+Method,"336 (196, 140) — Zhuravlyov split","341 (173, 168) — Euclidean split","367 (190, 177) — Chebyshev split"
+SVM,74.85,50.68,61.14
+Random Forest,74.25,56.45,59.87

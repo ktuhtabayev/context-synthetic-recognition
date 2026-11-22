@@ -2,8 +2,9 @@
 
 A :class:`Task` runs one function in a worker thread and reports through signals (which Qt
 delivers in the interface's thread): progress, log lines, the result or the error. The functions
-themselves — :func:`run_job`, :func:`open_job`, :func:`export_job` — are plain Python on top of the
-services, so they are tested without a thread.
+themselves — :func:`run_job`, :func:`open_job`, :func:`export_job`, :func:`comparison_job`,
+:func:`comparison_check_job` — are plain Python on top of the services, so they are tested
+without a thread.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from typing import Any, Literal
 
 from PySide6.QtCore import QObject, QThread, Signal
 
+from context_synthetic_recognition.comparison import SPLITS
 from context_synthetic_recognition.config import ExperimentConfig
 from context_synthetic_recognition.data import Dataset
 from context_synthetic_recognition.errors import CSRError
@@ -29,6 +31,12 @@ from context_synthetic_recognition.export import (
 )
 from context_synthetic_recognition.export.run import AUTO_SENSITIVITY_OBJECTS
 from context_synthetic_recognition.log import PACKAGE_LOGGER
+from context_synthetic_recognition.services.comparison import (
+    ComparisonCheck,
+    ComparisonOutcome,
+    check_comparison,
+    run_comparison,
+)
 from context_synthetic_recognition.services.runner import load_run, run_experiment, save_run
 from context_synthetic_recognition.services.sensitivity import SwitchVariant, switch_sensitivity
 
@@ -110,6 +118,48 @@ def export_job(
     if progress is not None:
         progress("done", len(names), len(names))
     return summary
+
+
+def _split_progress(progress: Progress | None) -> Callable[[str], None] | None:
+    """The service's line of progress as (stage, done, total) — one step per split."""
+    if progress is None:
+        return None
+    done = [0]
+
+    def report(line: str) -> None:
+        progress(line, done[0], len(SPLITS))
+        done[0] += 1
+
+    return report
+
+
+def comparison_job(
+    splits: Path | None, *, progress: Progress | None = None, cancelled: Cancelled | None = None
+) -> ComparisonOutcome:
+    """Tables 7 and 8 on the split files of ``splits`` (the project's by default); not written.
+
+    A run takes a few seconds and is not interrupted (``cancelled`` is not polled).
+    """
+    del cancelled
+    outcome = run_comparison(splits, progress=_split_progress(progress))
+    if progress is not None:
+        progress("done", len(SPLITS), len(SPLITS))
+    return outcome
+
+
+def comparison_check_job(
+    folder: Path,
+    splits: Path | None,
+    *,
+    progress: Progress | None = None,
+    cancelled: Cancelled | None = None,
+) -> ComparisonCheck:
+    """Check the comparison written to ``folder`` against its checksums and a new run."""
+    del cancelled
+    check = check_comparison(folder, splits=splits, progress=_split_progress(progress))
+    if progress is not None:
+        progress("done", len(SPLITS), len(SPLITS))
+    return check
 
 
 class _SignalHandler(logging.Handler):

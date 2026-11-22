@@ -24,8 +24,116 @@
         <translation>JSON</translation>
     </message>
     <message>
+        <source>Table 7</source>
+        <translation>Таблица 7</translation>
+    </message>
+    <message>
+        <source>Table 8</source>
+        <translation>Таблица 8</translation>
+    </message>
+    <message>
+        <source>CS-model</source>
+        <translation>CS-модель</translation>
+    </message>
+    <message>
+        <source>All results</source>
+        <translation>Все результаты</translation>
+    </message>
+    <message>
+        <source>Check</source>
+        <translation>Проверка</translation>
+    </message>
+    <message>
+        <source>Classifiers</source>
+        <translation>Классификаторы</translation>
+    </message>
+    <message>
+        <source>Tables 7 and 8: SVM, random forest and k-NN fitted on the article's training samples and scored on its test samples, with the CS-model on the same samples. Apart from the workflow: no dataset or run is needed.</source>
+        <translation>Таблицы 7 и 8: SVM, случайный лес и k-NN, обученные на обучающих выборках статьи и оценённые на её тестовых выборках, и CS-модель на тех же выборках. Отдельно от основного процесса: набор данных и запуск не нужны.</translation>
+    </message>
+    <message>
+        <source>The folder of the split files (datasets/splits)</source>
+        <translation>Папка файлов разбиений (datasets/splits)</translation>
+    </message>
+    <message>
+        <source>Where the tables are written (experiments/comparison)</source>
+        <translation>Куда записываются таблицы (experiments/comparison)</translation>
+    </message>
+    <message>
+        <source>Browse…</source>
+        <translation>Обзор…</translation>
+    </message>
+    <message>
         <source>Run</source>
         <translation>Запуск</translation>
+    </message>
+    <message>
+        <source>Fit every method and the CS-model on the training samples (a few seconds)</source>
+        <translation>Обучить каждый метод и CS-модель на обучающих выборках (несколько секунд)</translation>
+    </message>
+    <message>
+        <source>Write the files</source>
+        <translation>Записать файлы</translation>
+    </message>
+    <message>
+        <source>The tables as CSV, Markdown and LaTeX, the results and their checksums</source>
+        <translation>Таблицы в форматах CSV, Markdown и LaTeX, результаты и их контрольные суммы</translation>
+    </message>
+    <message>
+        <source>Check the written files</source>
+        <translation>Проверить записанные файлы</translation>
+    </message>
+    <message>
+        <source>Compare the files of the results folder with their checksums and a new run</source>
+        <translation>Сравнить файлы папки результатов с их контрольными суммами и с новым запуском</translation>
+    </message>
+    <message>
+        <source>Open the folder</source>
+        <translation>Открыть папку</translation>
+    </message>
+    <message>
+        <source>Not run yet.</source>
+        <translation>Ещё не запускалось.</translation>
+    </message>
+    <message>
+        <source>Running…</source>
+        <translation>Выполняется…</translation>
+    </message>
+    <message>
+        <source>Checking…</source>
+        <translation>Проверка…</translation>
+    </message>
+    <message>
+        <source>Failed.</source>
+        <translation>Не удалось.</translation>
+    </message>
+    <message>
+        <source>Split files</source>
+        <translation>Файлы разбиений</translation>
+    </message>
+    <message>
+        <source>Results folder</source>
+        <translation>Папка результатов</translation>
+    </message>
+    <message>
+        <source>Done: {n} splits from {folder} ({versions}). Not written yet.</source>
+        <translation>Готово: разбиений {n} из {folder} ({versions}). Файлы ещё не записаны.</translation>
+    </message>
+    <message>
+        <source>{n} files written to {folder}</source>
+        <translation>Записано файлов: {n}; папка: {folder}</translation>
+    </message>
+    <message>
+        <source>Check passed: {folder}</source>
+        <translation>Проверка пройдена: {folder}</translation>
+    </message>
+    <message>
+        <source>Check failed: {n} problem(s) in {folder}</source>
+        <translation>Проверка не пройдена: проблем {n} в {folder}</translation>
+    </message>
+    <message>
+        <source>Split {stage}…</source>
+        <translation>Разбиение {stage}…</translation>
     </message>
     <message>
         <source>Created (UTC)</source>
@@ -50,10 +158,6 @@
     <message>
         <source>Tick two or more runs to see them side by side. Differences are marked; the second tab lists the settings that differ.</source>
         <translation>Отметьте два или более запусков, чтобы увидеть их рядом. Различия выделены; на второй вкладке перечислены отличающиеся настройки.</translation>
-    </message>
-    <message>
-        <source>Browse…</source>
-        <translation>Обзор…</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -608,10 +712,6 @@
         <translation>Цвета рисунков</translation>
     </message>
     <message>
-        <source>Open the folder</source>
-        <translation>Открыть папку</translation>
-    </message>
-    <message>
         <source>Export folder</source>
         <translation>Папка экспорта</translation>
     </message>
@@ -650,10 +750,6 @@
     <message>
         <source>note: {note}</source>
         <translation>примечание: {note}</translation>
-    </message>
-    <message>
-        <source>{n} files written to {folder}</source>
-        <translation>Записано файлов: {n}; папка: {folder}</translation>
     </message>
     <message>
         <source>Export failed: {message}</source>

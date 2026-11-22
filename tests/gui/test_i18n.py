@@ -193,6 +193,7 @@ def test_a_window_built_in_russian(
         "Новый объект",
         "Сравнение",
         "Экспорт",
+        "Классификаторы",
     ]
     assert "Открыть набор данных" in window.shortcuts_text()
     assert "Контекстно-синтетическая модель" in window.about_text()

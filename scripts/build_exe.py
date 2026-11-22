@@ -2,28 +2,31 @@ r"""Build the Windows executable of the desktop application with PyInstaller.
 
 Run from the repository root::
 
-    .\.venv\Scripts\python.exe -m pip install -e ".[gui,pdf,release]"
+    .\.venv\Scripts\python.exe -m pip install -e ".[gui,pdf,release,sklearn]"
     .\.venv\Scripts\python.exe scripts\build_exe.py
 
 The result is ``dist\csr-gui\`` — a folder with ``csr-gui.exe`` and everything it needs, to be
 copied as a whole — and ``dist\csr-gui-<version>-windows.zip``, the same folder packed. The
 script then runs ``csr-gui.exe --self-test``: the frozen application loads every language, opens
-the default dataset, runs the experiment, draws a table and a figure and exports the run; the
-report is ``dist\self-test.txt`` (``--no-test`` skips this).
+the default dataset, runs the experiment, draws a table and a figure, exports the run and
+computes Tables 7 and 8; the report is ``dist\self-test.txt`` (``--no-test`` skips this).
 
-The executable contains Python, numpy, matplotlib, Qt and the package with its datasets and
-translations. The optional extras for Parquet files and the scikit-learn baselines are left out;
-the application says so when one of them is asked for.
+The executable contains Python, numpy, matplotlib, Qt, scikit-learn and the package with its
+datasets, translations and a copy of the article's split files (``datasets/splits``), so the
+*Classifiers* page works there (ADR-081). The optional extra for Parquet files is left out; the
+application says so when it is asked for.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
 from importlib.metadata import version
+from importlib.util import find_spec
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,10 +36,8 @@ NAME = "csr-gui"
 PACKAGE = "context_synthetic_recognition"
 DISTRIBUTION = "context-synthetic-recognition"
 EXCLUDED = (
-    # optional extras that would multiply the size, and tools of the development environment
+    # an optional extra that would multiply the size, and tools of the development environment
     "pyarrow",
-    "sklearn",
-    "scipy",
     "pytest",
     "hypothesis",
     "IPython",
@@ -48,9 +49,21 @@ HIDDEN = (
     "matplotlib.backends.backend_agg",
     "matplotlib.backends.backend_svg",
     "matplotlib.backends.backend_pdf",
+    # the scikit-learn baselines import their estimators by name at run time (ADR-081)
+    "sklearn.linear_model",
+    "sklearn.ensemble",
+    "sklearn.svm",
+    "sklearn.tree",
+    "sklearn.naive_bayes",
 )
 COLLECTED = ("reportlab",)
 """Packages imported by name at run time (the PDF report): taken whole, with their data."""
+SPLITS = ROOT / "datasets" / "splits"
+"""The article's split files, carried in the package's data (ADR-081)."""
+BUNDLED_SPLITS = f"{PACKAGE}/data/split_files"
+"""Where the build puts them (``services.comparison.BUNDLED_DIR``)."""
+REQUIRED = ("sklearn",)
+"""Optional extras the build must contain (the Classifiers page, ADR-081)."""
 LANGUAGES = ("en", "ru", "uz")
 """The languages of the interface: Qt's own translations are kept for these."""
 
@@ -64,6 +77,12 @@ def build() -> Path:
     """Freeze the application; returns the folder with the executable."""
     import PyInstaller.__main__
 
+    missing = [module for module in REQUIRED if find_spec(module) is None]
+    if missing or not SPLITS.is_dir():
+        raise SystemExit(
+            f"the build needs {', '.join(missing) or SPLITS}: "
+            'pip install -e ".[gui,pdf,release,sklearn]" in the project folder'
+        )
     arguments = [
         str(ROOT / "scripts" / "csr_gui_launcher.py"),
         "--name",
@@ -77,6 +96,8 @@ def build() -> Path:
         PACKAGE,
         "--copy-metadata",
         DISTRIBUTION,
+        "--add-data",
+        f"{SPLITS}{os.pathsep}{BUNDLED_SPLITS}",
         "--distpath",
         str(DIST),
         "--workpath",

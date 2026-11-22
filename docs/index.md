@@ -34,6 +34,8 @@ represented and classified without its class.
   result step by step, repeating a saved run
 - [Computational experiment](experiments.md) — the article's Tables 1–6 and the k-NN comparison
   rebuilt from real runs
+- [Standard classifiers](comparison.md) — Tables 7 and 8: SVM, random forest and k-NN on the
+  article's training and test samples, and the CS-model on the same samples; `csr compare`
 - [Datasets](datasets.md) — formats, feature types, classes, the dataset folder, `csr data info`
 - [Evaluation](evaluation.md) — protocols (R-IPS split, nested cross-validation, leave-one-out, …),
   metrics, baselines, run folders, large datasets

@@ -1446,6 +1446,97 @@ blocked objects keep covering, but differ in single objects. The gap is reported
 - The additional features are named d₁ … d_p wherever they are shown (CLI, run results, Excel
   mirror, validation report); the earlier r₁ … r_p are gone.
 
+## ADR-079 — Standard classifiers on the article's training and test samples: Tables 7 and 8 (author)
+
+*Accepted, 2026-11-22.*
+
+- The article's training and test samples (split files: features, class and a flag, 0 =
+  training, 1 = test) are copied byte for byte to `datasets/splits/<family>/` under neutral names:
+  German split with the Zhuravlyov metric (all 20 features, 336 training objects), with the
+  Euclidean metric (the 7 quantitative features, raw values, 341) and with the Chebyshev metric
+  (the same 7 features, 367), and Heart-Disease with the Zhuravlyov metric (76). Heart's split can
+  be read but is not used in the tables. A test pins their checksums; the dataset catalogue does
+  not read the folder. `data.splits.load_split_file` reads the layout (decimal commas, any
+  whitespace, LF or CRLF, extra values after the types ignored) into a `FixedSplit`.
+- The comparison is kept apart from the CS-model's pipeline: the package `comparison` (pure
+  computation), the service `services.comparison`, `csr compare run | check`,
+  `scripts/run_comparison.py` and the *Classifiers* page of the desktop application (the eighth
+  page, after *Export*, so that Ctrl+1 … Ctrl+7 keep their pages). It uses the `svm`,
+  `random-forest` and `knn-vote` baselines, the metric registry and the table model with explicit
+  options and changes none of them; no default was changed.
+- Settings, fixed before any run (*author*); nothing is tuned or chosen on the test samples:
+  - SVM `SVC(kernel="rbf", C=1.0, gamma="scale")`; random forest
+    `RandomForestClassifier(n_estimators=200, random_state=42)`. Both use every feature of the
+    file: the quantitative ones min–max fitted on the training sample, the nominal ones one-hot
+    encoded with the training sample's categories (an unseen category encodes as all zeros).
+  - k-NN majority vote with k = 3 and k = 5 on the 7 quantitative features, min–max fitted on the
+    training sample, with the Euclidean, Chebyshev and Canberra metrics. Distances are rounded to
+    10 decimals, and ties go to the smaller training index. An extra row, not printed in the
+    tables, uses the Zhuravlyov metric on all 20 features of the 336 split.
+  - Reported per split and method: accuracy on the test sample (the tables' cells), balanced
+    accuracy (the mean recall of the two classes), the majority-class rate of the test sample,
+    and the sample sizes. The accuracy on the training sample is resubstitution as in Definition
+    2: a k-NN training object is not its own neighbour (*author*, after the first run).
+- Table 7 has rows SVM and random forest; Table 8 has rows Euclidean, Chebyshev and Canberra, with
+  each cell "k = 3 / k = 5". The draft prints Table 8 as a second "Table 7"; it is numbered 8
+  here. Both have the three German splits as columns, and their notes give the majority-class
+  rates and the settings. They are written as CSV, Markdown and LaTeX, with `results.csv|md`,
+  `summary.json` and `checksums.sha256`, to `experiments/comparison/`.
+- `summary.json` records the versions of numpy and scikit-learn (the random forest depends on
+  them), not the package version, so a version bump changes no file. The byte-for-byte test of
+  a new run is skipped when the installed versions differ from the recorded ones; the pinned
+  numbers are checked in any case.
+- An independent run of the same settings on the same files (scikit-learn 1.9.1, numpy 2.5.3)
+  gives the same value for all 55 numbers: 26 test accuracies, 26 balanced accuracies and 3
+  majority-class rates.
+- No method reaches the majority-class rate of a test sample (75.90 %, 79.97 %, 80.57 %); the
+  best is SVM on the Zhuravlyov split, at 74.85 %. The CS-model is run on these splits under
+  ADR-080.
+
+## ADR-080 — The CS-model on the article's training and test samples (author)
+
+*Accepted, 2026-11-22.*
+
+- The CS-model runs on the same three German splits as Tables 7 and 8, fitted on the training
+  sample, with the test objects classified without their class (the Theorem). The author approved
+  the settings before the first run; nothing is tuned or chosen on the test samples:
+  - one base operator per metric, as in the k-NN rows: Euclidean, Chebyshev and Canberra on the
+    quantitative features of every split, and Zhuravlyov on all 20 features of the 336 split
+    only. Every operator is min–max scaled on the training sample (*author*: the same distances
+    as Table 8's k-NN; raw values would keep the 336 file's scaling over all 1000 objects, test
+    objects included);
+  - odd k = 3 … 41 and the zero value of the article's experiments (Table 1), α = 0.1 and 0.2,
+    as in ADR-070; otherwise the article's defaults (final class means, one majorizing pass, no ⚠
+    switch).
+- Reported: accuracy on the test sample with refusals as errors (Definition 3), accuracy on the
+  answered objects, refusals, balanced accuracy, accuracy on the training sample (Definition 2),
+  r, the features left out for the zero value, and TUPLAM.
+- The results go into a separate table, `cs-model` (CSV, Markdown, LaTeX), beside Tables 7 and 8.
+  Its rows are the metrics and each cell is "α = 0.1 / α = 0.2". The rows are also added to
+  `results.csv|md` and `summary.json`, and the table is shown on the *Classifiers* page. Tables 7
+  and 8 keep the article's layout.
+- Result: r = 20 on every split, and no synthetic feature takes 0 on a training object (as in
+  ADR-070). No setting reaches the majority-class rate of a test sample. Each model assigns most
+  test objects to one class, and which one depends on the metric and α. Test accuracies therefore
+  range from 21.33 % to 78.36 %, while the balanced accuracy stays between 48 % and 57 %, near
+  chance; SVM reaches 70.63 % on the 336 split.
+
+## ADR-081 — The Windows build carries scikit-learn and the article's split files (author)
+
+*Accepted, 2026-11-22. Amends ADR-055.*
+
+- So that the *Classifiers* page (ADR-079, ADR-080) works in `csr-gui.exe`, the build no longer
+  leaves out scikit-learn and scipy. It also carries a copy of `datasets/splits` in the
+  package's data (`data/split_files`). Only pyarrow (Parquet) stays out.
+- The comparison reads the project's `datasets/splits` when there is one and the bundled copy
+  otherwise. Without a project folder its default results folder is `experiments\comparison`
+  under the folder the application runs in.
+- `scripts/build_exe.py` stops when scikit-learn is not installed, and CI installs the
+  `[sklearn]` extra for the executable, so a build cannot silently lack it.
+- The frozen application's self-test also computes Tables 7 and 8 and fails when scikit-learn
+  or the split files are missing. Run from source, it checks them only where the project's split
+  files are found.
+
 ## Open questions for the author
 
 *Open, 2026-11-22.* Each is flagged where it is used; none is decided silently.
