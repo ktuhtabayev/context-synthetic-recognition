@@ -10,7 +10,8 @@ from typing import Any
 
 import numpy as np
 
-from context_synthetic_recognition.core.meta import K1_DECISION
+from context_synthetic_recognition.config.presets import deviation
+from context_synthetic_recognition.core.meta_algorithm.algorithm import K1_DECISION
 from context_synthetic_recognition.evaluation.margins import Margin
 from context_synthetic_recognition.evaluation.protocols import (
     CS_MODEL,
@@ -26,7 +27,6 @@ from context_synthetic_recognition.export.excel.common import (
     SENSITIVITY,
     Book,
 )
-from context_synthetic_recognition.export.excel.template_data import template_variants
 from context_synthetic_recognition.export.excel.writer import column_letter, reference
 from context_synthetic_recognition.export.view import LEAVE_ONE_OUT, RunView
 from context_synthetic_recognition.export.wording import (
@@ -34,7 +34,7 @@ from context_synthetic_recognition.export.wording import (
     protocol_title,
     tuple_text,
 )
-from context_synthetic_recognition.notation import DASH, join_values, latent_name
+from context_synthetic_recognition.notation import DASH, additional_name, join_values
 
 META_ALGORITHM = "Meta-algorithm"
 """How the workbook names the CS-model's decisions in the evaluation tables."""
@@ -68,7 +68,7 @@ def _opposite(view: RunView) -> tuple[Any, Any]:
 
 
 def margins(book: Book) -> None:
-    """Sheet *Margin Analysis*: every latent feature's margin with and without the majorizer."""
+    """Sheet *Margin Analysis*: the margin of every additional feature, with and without φ."""
     view = book.view
     trace = view.trace
     m = trace.m
@@ -80,8 +80,8 @@ def margins(book: Book) -> None:
         sheet.widths({1 + 6 * j: 17, (2 + 6 * j, 6 + 6 * j): 11})
     width = max(6 * slots, 6)
     sheet.title_bar(
-        "Margin Analysis — margins of the latent (additional) training features with and without "
-        "majorizer functions",
+        "Margin Analysis — margins of the additional (latent) training features with and without "
+        "the majorizing function",
         width,
     )
     k1, k2 = classes
@@ -107,8 +107,8 @@ def margins(book: Book) -> None:
             sheet.row(
                 top + 1,
                 left,
-                ["№", f"{latent_name(j)}{suffix}", "Class", "margin mᵢ", "ŷ"],
-                ["header", "latent_header", "header", "header", "header"],
+                ["№", f"{additional_name(j)}{suffix}", "Class", "margin mᵢ", "ŷ"],
+                ["header", "additional_header", "header", "header", "header"],
             )
             margin = found[j] if j < len(found) else None
             for t in range(m):
@@ -122,7 +122,10 @@ def margins(book: Book) -> None:
                         decision_label(int(margin.predictions[t]), classes),
                     ]
                 sheet.row(
-                    top + 2 + t, left, values, ["label", "latent_num", "class_", "num", "integer"]
+                    top + 2 + t,
+                    left,
+                    values,
+                    ["label", "additional_num", "class_", "num", "integer"],
                 )
             foot = top + m + 3
             summary: list[tuple[str, Any, Any]] = [
@@ -149,17 +152,17 @@ def margins(book: Book) -> None:
     with_top, without_top = 8, m + 17
     table(
         with_top,
-        analysis.with_majorizer,
-        "Margin with majorizer functions — latent features r_j of Step 9 "
+        analysis.with_majorizing_function,
+        "Margin with the majorizing function — additional features d_j of Step 9 "
         "(Dataset for Meta-algorithm)",
         "",
     )
     table(
         without_top,
-        analysis.without_majorizer,
-        "Margin without majorizer functions — generalized estimate R(Sₜ) = Σ ηᵤ(a_tu) over the "
+        analysis.without_majorizing_function,
+        "Margin without the majorizing function — generalized estimate R(Sₜ) = Σ ηᵤ(a_tu) over the "
         "same TUPLAM features, no majorizing function",
-        " (no ϕ)",
+        " (no φ)",
     )
     for top in (with_top, without_top):
         for j in range(slots):
@@ -170,26 +173,27 @@ def margins(book: Book) -> None:
             )
 
     top = 2 * m + 26
-    sheet.bar(top, 1, slots + 1, "Comparing margin widths with and without majorizer")
+    sheet.bar(top, 1, slots + 1, "Comparing margin widths with and without majorizing function")
     sheet.put(top + 1, 1, "", "header")
-    sheet.row(top + 1, 2, [latent_name(j) for j in range(slots)], "latent_header")
+    sheet.row(top + 1, 2, [additional_name(j) for j in range(slots)], "additional_header")
 
     def widths_of(found: tuple[Margin, ...]) -> list[Any]:
         return [found[j].width if j < len(found) else DASH for j in range(slots)]
 
     gains = [analysis.gains[j] if j < len(analysis.gains) else DASH for j in range(slots)]
     sheet.put(top + 2, 1, "With", "caption")
-    sheet.row(top + 2, 2, widths_of(analysis.with_majorizer), "value_num")
+    sheet.row(top + 2, 2, widths_of(analysis.with_majorizing_function), "value_num")
     sheet.put(top + 3, 1, "Without", "caption")
-    sheet.row(top + 3, 2, widths_of(analysis.without_majorizer), "value_num")
+    sheet.row(top + 3, 2, widths_of(analysis.without_majorizing_function), "value_num")
     sheet.put(top + 4, 1, "Gain (with − without)", "caption")
     sheet.row(top + 4, 2, gains, "good_num")
     sheet.notes(
         top + 6,
         [
             (
-                "The majorizer pushes K1 objects up and K2 objects down by α·σ(−b), so a positive "
-                "gain means the regularisation widened the margin of that latent feature."
+                "The majorizing function pushes K1 objects up and K2 objects down by α·σ(−b), so a "
+                "positive gain means the majorizing function widened the margin of that additional "
+                "feature."
             )
         ],
     )
@@ -496,8 +500,8 @@ def folds(book: Book, protocol: ProtocolResult) -> None:
         3,
         1,
         12,
-        "CS-model: each fold re-computes scaling, k range, Ψ(r), ω, η, HAG and the "
-        f"meta-algorithm on {part} (values computed by the package)",
+        "CS-model: each fold re-computes scaling, k range, Ψ(r), ω, η, agglomerative algorithm and "
+        f"the meta-algorithm on {part} (values computed by the package)",
     )
     if baselines:
         knn = all(b.method.startswith(KNN_PREFIX) for b in baselines)
@@ -517,7 +521,7 @@ def folds(book: Book, protocol: ProtocolResult) -> None:
             "True class",
             "|K1| in fold",
             "|K2| in fold",
-            "Permitted k",
+            "Admissible k",
             "r = |Ψ(r)|",
             "TUPLAM (operator·k)",
             "(a₀, …, a_p) of the held-out",
@@ -560,7 +564,7 @@ def folds(book: Book, protocol: ProtocolResult) -> None:
                     ids[int(i)],
                     classes[int(trace.class_index[int(i)])],
                     *sizes,
-                    join_values(fold.permitted_k) if fold.permitted_k else DASH,
+                    join_values(fold.admissible_k) if fold.admissible_k else DASH,
                     fold.r if fold.r is not None else DASH,
                     "{" + ", ".join(fold.tuplam_names or ()) + "}",
                     description,
@@ -592,17 +596,17 @@ def folds(book: Book, protocol: ProtocolResult) -> None:
             "fold(s)); the held-out objects are classified without their class."
         ),
         (
-            "The class sizes of a fold decide its permitted k (k_max = 2·min|Kᵢ| − 3 of the fold): "
-            "the formula-based k range adapts per fold."
+            "The class sizes of a fold decide its admissible k (k_max from the class sizes of "
+            "the fold): the k range adapts per fold."
         ),
         (
             "Predicted 0 = refusal (equal scores). Red cells = wrong or refused. Baselines use the "
-            "same scaling and tie rule; they are not bound to the permitted-k rule."
+            "same scaling and tie rule; they are not bound to the admissible-k rule."
         ),
     ]
     if undefined:
         notes.append(
-            f"⚠ {undefined} fold(s) left the model undefined (no permitted k or no informative "
+            f"⚠ {undefined} fold(s) left the model undefined (no admissible k or no informative "
             "feature): their objects are refused (ADR-005)."
         )
     sheet.notes(row + 1, notes)
@@ -612,53 +616,33 @@ def folds(book: Book, protocol: ProtocolResult) -> None:
 
 
 def sensitivity(book: Book) -> None:
-    """Sheet *Sensitivity (Switches)*: the four settings of the two template/article switches."""
+    """Sheet *Switch Sensitivity*: the four settings of the agglomerative algorithm's switches."""
     view = book.view
     variants = view.sensitivity or ()
     sheet = book.sheet(SENSITIVITY, "evaluation")
     sheet.widths({(1, 2): 14, 3: 26, 4: 30, 5: 36, (6, 9): 14})
     sheet.title_bar(
-        "Sensitivity — the two calculation switches (template cells vs article) and their effect "
+        "Switch Sensitivity — the two switches of the agglomerative algorithm and their effect "
         "on the results",
         9,
     )
-    sheet.bar(
-        3,
-        1,
-        9,
-        "⚠ Two template calculations differ from the article and from the template’s own formula "
-        "boxes",
-    )
-    sheet.merge(
-        4,
-        1,
-        9,
-        "1.  θ and γ are measured from running partial class means instead of the final class "
-        "means M₁ and M₂ (template cells: |bₜ − M| uses the partial mean up to row t).",
-        "warn_text",
-    )
-    sheet.merge(
-        5,
-        1,
-        9,
-        "2.  In STEP 4 the majorizer is applied twice instead of once (the template applies it "
-        "again to the already-majorized bₜ of STEP 3).",
-        "warn_text",
-    )
+    sheet.bar(3, 1, 9, "⚠ Two settings deviate from the article when switched on")
+    sheet.merge(4, 1, 9, f"1.  {deviation('class_means').statement}.", "warn_text")
+    sheet.merge(5, 1, 9, f"2.  {deviation('majorizing_passes').statement}.", "warn_text")
     sheet.put(
         6,
         1,
-        "Both are switches of the configuration, shown on the Parameters sheet (class centres "
-        "1/2, STEP 4 passes 2/1). The default reproduces the templates; the table shows all four "
-        "combinations, each a complete fit and evaluation by the package.",
+        "Both are switches of the configuration, shown on the Parameters sheet (class means "
+        "1 = running / 2 = final, majorizing passes 2 / 1). The table shows all four "
+        "combinations, each a complete fit and evaluation; “article” is the default.",
         "note",
     )
     sheet.row(
         8,
         1,
         [
-            "Class centres",
-            "STEP 4 passes",
+            "Class means",
+            "majorizing passes",
             "Setting",
             "TUPLAM",
             "crit per iteration",
@@ -670,13 +654,13 @@ def sensitivity(book: Book) -> None:
         "header",
     )
     for offset, v in enumerate(variants):
-        template = offset == 0
+        article = v.label == "article"
         sheet.row(
             9 + offset,
             1,
             [
-                f"{1 if v.centres.value == 'running' else 2} · {v.centres.value}",
-                v.step4_passes,
+                f"{1 if v.class_means.value == 'running' else 2} · {v.class_means.value}",
+                v.majorizing_passes,
                 v.label,
                 v.tuplam,
                 ", ".join(f"{c:.4f}" for c in v.crit),
@@ -685,50 +669,9 @@ def sensitivity(book: Book) -> None:
                 v.auc_resubstitution,
                 v.auc_leave_one_out,
             ],
-            ["value", "value", "good" if template else "value_left", "value_left", "value_left"]
+            ["value", "value", "good" if article else "value_left", "value_left", "value_left"]
             + ["num"] * 4,
         )
-
-    top = 14
-    sheet.bar(
-        top,
-        1,
-        9,
-        "Replication of the templates by the package (the same data as the template workbooks)",
-    )
-    sheet.row(
-        top + 1,
-        1,
-        [
-            "Class centres",
-            "STEP 4 passes",
-            "Setting",
-            "SET / TUPLAM (template features)",
-            "max |r − template r|",
-        ],
-        "header",
-    )
-    for offset, t in enumerate(template_variants()):
-        sheet.row(
-            top + 2 + offset,
-            1,
-            [
-                f"{1 if t.centres.value == 'running' else 2} · {t.centres.value}",
-                t.step4_passes,
-                t.label,
-                t.selected,
-                t.difference_text,
-            ],
-            ["value", "value", "good" if offset == 0 else "value_left", "value_left", "value_left"],
-        )
-    sheet.merge(
-        top + 6,
-        1,
-        9,
-        "Meta-algorithm template: the package reproduces its decision for the template's new "
-        "object — B1(a₄) = ∅, B2(a₄) = {S₉, S₁₀}  ⇒  Class 2  (template: Class 2)",
-        "value_left",
-    )
 
 
 __all__ = [

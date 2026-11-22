@@ -1,7 +1,7 @@
 """Checks of a whole configuration before a run: every plug-in of every layer.
 
 :func:`~context_synthetic_recognition.core.plugins.plugin_problems` covers the core's plug-ins
-(normalizer, metrics, k strategy, encoder, weights, majorizer, decision rule);
+(normalizer, metrics, k strategy, encoder, weights, majorizing function, decision rule);
 :func:`config_problems` adds the evaluation's protocols and baselines, which live above the core.
 """
 

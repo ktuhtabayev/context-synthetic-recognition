@@ -21,7 +21,11 @@ import numpy as np
 import numpy.typing as npt
 
 from context_synthetic_recognition.core.arrays import IntArray, freeze_fields
-from context_synthetic_recognition.core.meta import K1_DECISION, K2_DECISION, REFUSAL
+from context_synthetic_recognition.core.meta_algorithm.algorithm import (
+    K1_DECISION,
+    K2_DECISION,
+    REFUSAL,
+)
 
 CODES = (K1_DECISION, K2_DECISION)
 """The two class codes, in class order."""

@@ -7,10 +7,12 @@ from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QLineEdit, QSpinBox
 from pytestqt.qtbot import QtBot
 
 from context_synthetic_recognition.config import PluginSpec, plugin
-from context_synthetic_recognition.core.k_strategies import K_STRATEGIES
-from context_synthetic_recognition.core.majorizers import MAJORIZERS
-from context_synthetic_recognition.core.metrics import METRICS
-from context_synthetic_recognition.core.normalizers import NORMALIZERS
+from context_synthetic_recognition.core.additional_features.majorizing_functions import (
+    MAJORIZING_FUNCTIONS,
+)
+from context_synthetic_recognition.core.local_context.admissible_k import K_STRATEGIES
+from context_synthetic_recognition.core.local_context.metrics import METRICS
+from context_synthetic_recognition.core.local_context.normalizers import NORMALIZERS
 from context_synthetic_recognition.evaluation.baselines import BASELINES
 from context_synthetic_recognition.evaluation.protocols import PROTOCOLS
 from context_synthetic_recognition.gui.forms import (
@@ -33,7 +35,7 @@ def params_type(registry: Any, name: str) -> type:
 
 def test_schema_properties() -> None:
     assert schema_properties(None) == {}
-    fields = schema_properties(params_type(K_STRATEGIES, "formula"))
+    fields = schema_properties(params_type(K_STRATEGIES, "twice-min-class"))
     assert list(fields) == ["k_max_cap", "step"]
     assert fields["step"]["default"] == 2
     assert fields["step"]["required"] is False
@@ -42,7 +44,7 @@ def test_schema_properties() -> None:
 
 
 def test_a_form_reports_only_what_differs_from_the_defaults(qtbot: QtBot) -> None:
-    form = ParamForm(params_type(K_STRATEGIES, "formula"))
+    form = ParamForm(params_type(K_STRATEGIES, "twice-min-class"))
     qtbot.addWidget(form)
     assert form.fields() == ["k_max_cap", "step"]
     assert form.values() == {}
@@ -126,8 +128,11 @@ def test_the_plugin_editor(qtbot: QtBot) -> None:
     editor = PluginEditor(K_STRATEGIES)
     qtbot.addWidget(editor)
     assert [editor.combo.itemText(i) for i in range(editor.combo.count())] == K_STRATEGIES.names()
-    assert editor.spec() == plugin("formula")
-    assert editor.summary.text() == K_STRATEGIES.info("formula").summary
+    assert editor.spec() == plugin("min-class")  # the article's rule comes first
+    assert editor.summary.text() == K_STRATEGIES.info("min-class").summary
+    assert not editor.has_unset
+    assert not editor.is_unset()
+    assert editor.optional_spec() == plugin("min-class")
     assert editor.combo.itemData(0, 3) == editor.summary.text()  # the tooltip of the item
     with qtbot.assertNotEmitted(editor.changed):
         editor.set_spec(plugin("range", stop=9))
@@ -153,15 +158,44 @@ def test_the_plugin_editor(qtbot: QtBot) -> None:
 
 
 def test_the_editor_keeps_an_unknown_plugin_visible(qtbot: QtBot) -> None:
-    editor = PluginEditor(MAJORIZERS)
+    editor = PluginEditor(MAJORIZING_FUNCTIONS)
     qtbot.addWidget(editor)
     editor.set_spec(PluginSpec(name="logistic"))  # an alias: shown under its canonical name
     assert editor.spec() == plugin("sigmoid")
-    editor.set_spec(PluginSpec(name="my-majorizer", params={"k": 2}))
-    assert editor.combo.currentText() == "my-majorizer (unknown)"
-    assert editor.spec().name == "my-majorizer"
-    assert "Unknown majorizers 'my-majorizer'" in editor.problem.text()
+    editor.set_spec(PluginSpec(name="my-majorizing-function", params={"k": 2}))
+    assert editor.combo.currentText() == "my-majorizing-function (unknown)"
+    assert editor.spec().name == "my-majorizing-function"
+    assert "Unknown majorizing functions 'my-majorizing-function'" in editor.problem.text()
     assert editor.form.fields() == []
+
+
+def test_an_editor_that_may_choose_no_plugin(qtbot: QtBot) -> None:
+    # an operator's own normalization: none chosen means the local contexts' normalizer
+    editor = PluginEditor(NORMALIZERS, unset="as the local contexts")
+    qtbot.addWidget(editor)
+    assert editor.has_unset
+    assert editor.combo.count() == len(NORMALIZERS) + 1
+    assert editor.combo.itemText(0) == "as the local contexts"
+    assert editor.is_unset()
+    assert editor.optional_spec() is None
+    assert editor.form.fields() == []
+    assert editor.validate() == ""
+    with qtbot.assertNotEmitted(editor.changed):
+        editor.set_optional_spec(plugin("z-score", ddof=0))
+    assert editor.optional_spec() == plugin("z-score", ddof=0)
+    assert editor.form.fields() == ["ddof"]
+    with qtbot.waitSignal(editor.changed):
+        editor.combo.setCurrentIndex(0)
+    assert editor.optional_spec() is None
+    assert editor.summary.text() == ""
+    editor.set_optional_spec(plugin("none"))
+    editor.set_optional_spec(None)
+    assert editor.is_unset()
+    assert not editor.problem.isVisibleTo(editor)
+    plain = PluginEditor(NORMALIZERS)
+    qtbot.addWidget(plain)
+    with pytest.raises(ValueError, match="no entry for choosing no plug-in"):
+        plain.set_optional_spec(None)
 
 
 def test_the_plugin_checklist(qtbot: QtBot) -> None:
@@ -192,7 +226,7 @@ def test_the_plugin_checklist(qtbot: QtBot) -> None:
 
 
 def test_a_form_is_shown_by_its_parent_never_as_a_window(qtbot: QtBot) -> None:
-    form = ParamForm(params_type(K_STRATEGIES, "formula"))
+    form = ParamForm(params_type(K_STRATEGIES, "twice-min-class"))
     qtbot.addWidget(form)
     assert not form.isVisible()  # not in a layout yet: shown now, it would open as a window
     checklist = PluginChecklist(PROTOCOLS)

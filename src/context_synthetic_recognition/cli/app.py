@@ -1,11 +1,11 @@
 """The ``csr`` command.
 
 Commands: ``config`` (show, init, check), ``data`` (list, check, info), ``fit`` (the CS-model:
-Ψ(r), the HAG and the meta-dataset), ``classify`` (an object through the meta-algorithm, step by
-step), ``run`` (fit and evaluate under every configured protocol, write a run folder, optionally
-export it), ``export`` (a run folder as Excel mirror, tables, figures and report),
-``validate`` (the package against the Excel experiment and the template workbooks) and ``gui``
-(the desktop application).
+Ψ(r), the agglomerative algorithm and the meta-dataset), ``classify`` (an object through the
+meta-algorithm, step by step), ``run`` (fit and evaluate under every configured protocol, write a
+run folder, optionally export it), ``export`` (a run folder as Excel mirror, tables, figures and
+report), ``validate`` (the package against the Excel experiment and the check workbooks) and
+``gui`` (the desktop application).
 """
 
 import sys
@@ -29,8 +29,8 @@ from context_synthetic_recognition.config import (
     save_config,
 )
 from context_synthetic_recognition.core.arrays import IntArray
-from context_synthetic_recognition.core.k_strategies import PermittedK
-from context_synthetic_recognition.core.meta import REFUSAL
+from context_synthetic_recognition.core.local_context.admissible_k import AdmissibleK
+from context_synthetic_recognition.core.meta_algorithm.algorithm import REFUSAL
 from context_synthetic_recognition.core.model import Classification, CSModel, fit_model
 from context_synthetic_recognition.data import (
     DATASETS,
@@ -52,7 +52,12 @@ from context_synthetic_recognition.export import (
 from context_synthetic_recognition.export.run import AUTO_SENSITIVITY_OBJECTS
 from context_synthetic_recognition.gui import GUI_EXTRA_HINT
 from context_synthetic_recognition.log import configure_logging
-from context_synthetic_recognition.notation import class_name, subscript, synthetic_name
+from context_synthetic_recognition.notation import (
+    additional_name,
+    class_name,
+    subscript,
+    synthetic_name,
+)
 from context_synthetic_recognition.services.configs import config_problems
 from context_synthetic_recognition.services.datasets import parse_object, summarize
 from context_synthetic_recognition.services.runner import (
@@ -79,7 +84,7 @@ config_app = typer.Typer(
     help="Create, show and check experiment configurations.", no_args_is_help=True
 )
 data_app = typer.Typer(
-    help="Inspect datasets: sizes, feature types, classes, permitted k.", no_args_is_help=True
+    help="Inspect datasets: sizes, feature types, classes, admissible k.", no_args_is_help=True
 )
 app.add_typer(config_app, name="config")
 app.add_typer(data_app, name="data")
@@ -120,7 +125,7 @@ def main_options(
 def config_show(
     name: Annotated[
         PresetName, typer.Option("--preset", "-p", help="Preset to print.")
-    ] = PresetName.TEMPLATE,
+    ] = PresetName.DEFAULT,
     fmt: Annotated[
         ConfigFormat, typer.Option("--format", "-f", help="Output format.")
     ] = ConfigFormat.YAML,
@@ -134,7 +139,7 @@ def config_init(
     path: Annotated[Path, typer.Argument(help="File to create (.yaml, .yml, .toml or .json).")],
     name: Annotated[
         PresetName, typer.Option("--preset", "-p", help="Preset to start from.")
-    ] = PresetName.TEMPLATE,
+    ] = PresetName.DEFAULT,
     force: Annotated[bool, typer.Option("--force", help="Overwrite an existing file.")] = False,
 ) -> None:
     """Write a new configuration file from a preset."""
@@ -160,7 +165,7 @@ def config_check(
     typer.echo(f"  hash:   {config_hash(config)}")
     typer.echo(f"  preset: {matched.value if matched else 'custom'}")
     for deviation in active_deviations(config):
-        typer.echo(f"  ⚠ template calculation ({deviation.adr}): {deviation.statement}")
+        typer.echo(f"  ⚠ deviates from the article ({deviation.adr}): {deviation.statement}")
     problems = config_problems(config)
     for problem in problems:
         typer.echo(f"  error: {problem}", err=True)
@@ -175,11 +180,13 @@ def _config_or_default(path: Path | None) -> ExperimentConfig:
 # ---------------------------------------------------------------- csr data
 
 
-def _k_text(ks: PermittedK) -> str:
+def _k_text(ks: AdmissibleK) -> str:
     shown = ks.label if ks.count <= 8 else f"{ks.ks[0]}, {ks.ks[1]}, {ks.ks[2]}, …, {ks.ks[-1]}"
     details = [f"{ks.count} value" + ("s" if ks.count > 1 else "")]
-    if ks.k_max is not None:
+    if ks.k_max is not None and ks.rule == "twice-min-class":
         details.append(f"k_max = 2·{ks.min_class_size} − 3 = {ks.k_max}")
+    elif ks.k_max is not None and ks.rule == "min-class":
+        details.append(f"k ≤ min|Kᵢ| = {ks.k_max}")
     if ks.note:
         details.append(ks.note)
     return f"{shown}  ({'; '.join(details)})"
@@ -191,16 +198,41 @@ def _load_source(
     sheet: str | None,
     class_column: str | None,
     id_column: str | None,
+    config: ExperimentConfig | None = None,
+    config_path: Path | None = None,
 ) -> tuple[Dataset, str]:
-    """Load ``source``: a file, a dataset of the ``datasets`` folder, a built-in, or the default."""
-    path = Path(source) if source is not None else None
-    if path is None or (not path.is_file() and not path.suffix and fmt == "auto"):
-        dataset = resolve_dataset(source)
-        where = dataset.source or f"built-in dataset '{source or 'heart-disease-10'}'"
-        return dataset, f"{where}" + ("" if source else " (the default dataset)")
+    """Load the dataset of a command and say where it came from.
+
+    Without ``source`` the configuration's ``dataset`` section decides: its path (relative to the
+    configuration file) or, with none, the default dataset. With ``source`` — a file, a dataset of
+    the ``datasets`` folder or a built-in — the command line names the data, and the
+    configuration's reading options fill in what the command line leaves out. The configuration's
+    ``feature_types`` apply in both cases.
+    """
+    section = config.dataset if config is not None else ExperimentConfig().dataset
+    if source is None:
+        base = config_path.parent if config_path is not None else None
+        dataset = load_from_config(section, base)
+        if section.path is not None:
+            return dataset, f"{dataset.source or section.path} (dataset.path of the configuration)"
+        where = dataset.source or "built-in dataset 'heart-disease-10'"
+        return dataset, f"{where} (the default dataset)"
+    fmt = section.format if fmt == "auto" else fmt
+    sheet = section.sheet if sheet is None else sheet
+    class_column = section.class_column if class_column is None else class_column
+    id_column = section.id_column if id_column is None else id_column
+    path = Path(source)
+    if not path.is_file() and not path.suffix and fmt == "auto":
+        dataset = resolve_dataset(source).with_feature_types(section.feature_types or {})
+        return dataset, dataset.source or f"built-in dataset '{source}'"
     chosen = detect_format(path, sheet) if fmt == "auto" and path.is_file() else fmt
     dataset = load_dataset(
-        path, chosen, sheet=sheet, class_column=class_column, id_column=id_column
+        path,
+        chosen,
+        sheet=sheet,
+        class_column=class_column,
+        id_column=id_column,
+        feature_types=section.feature_types,
     )
     return dataset, f"{path} ({chosen})"
 
@@ -262,7 +294,7 @@ def data_info(
     source: Annotated[
         str | None,
         typer.Argument(
-            help="Dataset file, dataset id or name (csr data list); default: the default dataset."
+            help="Dataset file, id or name (csr data list); default: the configuration's dataset."
         ),
     ] = None,
     fmt: Annotated[
@@ -273,13 +305,15 @@ def data_info(
     id_column: Annotated[str | None, typer.Option(help="Object-id column of a table.")] = None,
     config_path: Annotated[
         Path | None,
-        typer.Option("--config", "-c", help="Configuration (k strategy, operators); template."),
+        typer.Option("--config", "-c", help="Configuration (k strategy, operators); the default."),
     ] = None,
 ) -> None:
-    """Show a dataset: objects, feature types I/J, classes, permitted k and synthetic features."""
+    """Show a dataset: objects, feature types I/J, classes, admissible k and synthetic features."""
     try:
         config = _config_or_default(config_path)
-        dataset, where = _load_source(source, fmt, sheet, class_column, id_column)
+        dataset, where = _load_source(
+            source, fmt, sheet, class_column, id_column, config, config_path
+        )
     except CSRError as error:
         raise _fail(error) from error
     summary = summarize(dataset, config)
@@ -298,14 +332,18 @@ def data_info(
     typer.echo(f"    J (nominal)      {len(nominal)}: {', '.join(nominal) or '—'}")
     typer.echo(f"  classes:   {classes}")
     typer.echo(f"  hash:      {dataset.content_hash()}")
-    if summary.permitted_k is not None:
-        typer.echo(f"  k ({config.k.name}): {_k_text(summary.permitted_k)}")
+    if summary.admissible_k is not None:
+        typer.echo(f"  k ({config.admissible_k.name}): {_k_text(summary.admissible_k)}")
     operators = ", ".join(f"{op.label} ({len(op.features)} features)" for op in summary.operators)
     typer.echo(f"  operators: {operators or '—'}")
     for skipped in summary.skipped_operators:
         typer.echo(f"    skipped {skipped.label}: {skipped.reason} (ADR-007)")
     if summary.r is not None:
-        at_most = " at most (constant ones are skipped)" if config.synthetic.skip_constant else ""
+        at_most = (
+            " at most (constant ones are skipped)"
+            if config.synthetic_features.skip_constant
+            else ""
+        )
         typer.echo(f"  r = |Ψ(r)| = {summary.r} synthetic features{at_most}")
     for problem in summary.problems:
         typer.echo(f"  ⚠ {problem}")
@@ -317,7 +355,7 @@ def data_info(
 SourceArgument = Annotated[
     str | None,
     typer.Argument(
-        help="Dataset file, dataset id or name (csr data list); default: the default dataset."
+        help="Dataset file, id or name (csr data list); default: the configuration's dataset."
     ),
 ]
 FormatOption = Annotated[
@@ -327,7 +365,7 @@ SheetOption = Annotated[str | None, typer.Option(help="Excel sheet.")]
 ClassOption = Annotated[str | None, typer.Option(help="Class column of a table.")]
 IdOption = Annotated[str | None, typer.Option(help="Object-id column of a table.")]
 ConfigOption = Annotated[
-    Path | None, typer.Option("--config", "-c", help="Configuration; the template preset.")
+    Path | None, typer.Option("--config", "-c", help="Configuration; the default preset.")
 ]
 
 
@@ -340,7 +378,7 @@ def _fitted(
     config_path: Path | None,
 ) -> tuple[Dataset, ExperimentConfig, CSModel]:
     config = _config_or_default(config_path)
-    dataset, _ = _load_source(source, fmt, sheet, class_column, id_column)
+    dataset, _ = _load_source(source, fmt, sheet, class_column, id_column, config, config_path)
     return dataset, config, fit_model(dataset, config)
 
 
@@ -358,38 +396,41 @@ def fit(
     id_column: IdOption = None,
     config_path: ConfigOption = None,
 ) -> None:
-    """Fit the CS-model: permitted k, Ψ(r), the HAG (TUPLAM, crit, latent features)."""
+    """Fit the CS-model: admissible k, Ψ(r), TUPLAM, crit and the additional features."""
     try:
         dataset, config, model = _fitted(source, fmt, sheet, class_column, id_column, config_path)
     except CSRError as error:
         raise _fail(error) from error
-    trace, grouping = model.trace, model.hag
+    trace, grouping = model.trace, model.agglomerative
     settings = grouping.settings
     typer.echo(dataset.name)
     typer.echo(
         f"  objects m = {dataset.m}; |K1| = {trace.class_sizes[0]}, |K2| = {trace.class_sizes[1]}"
     )
-    typer.echo(f"  k ({config.k.name}): {_k_text(trace.permitted_k)}")
+    typer.echo(f"  k ({config.admissible_k.name}): {_k_text(trace.admissible_k)}")
     typer.echo(f"  r = |Ψ(r)| = {trace.r} synthetic features")
     typer.echo(
-        f"  HAG: α = {settings.alpha:g}, δ = {settings.delta:g}, ϰ = {settings.kappa}, "
-        f"cr1₀ = {settings.cr1:g}, ϕ = {settings.majorizer}, centres = {settings.centres.value}, "
-        f"STEP 4 passes = {settings.step4_passes}"
+        f"  agglomerative algorithm: α = {settings.alpha:g}, δ = {settings.delta:g}, ϰ = "
+        f"{settings.kappa}, cr1₀ = {settings.cr1:g}, φ = {settings.majorizing_function}, class "
+        f"means = {settings.class_means.value}, majorizing passes = {settings.majorizing_passes}"
     )
     for deviation in active_deviations(config):
-        typer.echo(f"    ⚠ template calculation ({deviation.adr}): {deviation.statement}")
+        typer.echo(f"    ⚠ deviates from the article ({deviation.adr}): {deviation.statement}")
     first = grouping.first
-    typer.echo(f"    STEP 2: u = {synthetic_name(first)} (weight {grouping.weights[first]:.6g})")
+    typer.echo(
+        f"    Step 2: u = {synthetic_name(first)} (ω = {grouping.informativeness[first]:.6g})"
+    )
     for it in grouping.iterations:
         if it.q is None:
             typer.echo(f"    iteration {it.number}: no θ/γ < cr1₀ among {it.candidates.size}")
         else:
             typer.echo(
                 f"    iteration {it.number}: q = {synthetic_name(it.q)}, "
-                f"crit = θ/γ = {it.crit:.12g} (of {it.candidates.size} candidates)"
+                f"crit = θ/γ = {it.crit:.12g} (of {it.candidates.size} "
+                f"candidate{'' if it.candidates.size == 1 else 's'})"
             )
     typer.echo(f"    stop: {grouping.stop.text}")
-    typer.echo(f"  TUPLAM = {grouping.label}; p = {grouping.p} latent features")
+    typer.echo(f"  TUPLAM = {grouping.label}; p = {grouping.p} additional features")
     training = model.classify_training()
     truth = dataset.y.tolist()
     correct = sum(label == true for label, true in zip(training.labels, truth, strict=True))
@@ -402,7 +443,7 @@ def fit(
 def _explain(dataset: Dataset, model: CSModel, result: Classification) -> None:
     steps = result.meta.steps(0)
     description = result.meta.queries[0]
-    typer.echo(f"  TUPLAM = {model.hag.label} → positions a₀ … a{subscript(model.p)}")
+    typer.echo(f"  TUPLAM = {model.agglomerative.label} → positions a₀ … a{subscript(model.p)}")
     typer.echo(f"  description (a₀, …, a_p) = ({', '.join(str(int(v)) for v in description)})")
     for j in range(model.p + 1):
         step = "Step 1" if j == 0 else "Step 2"
@@ -478,20 +519,13 @@ def _percent(value: float | None) -> str:
     return "—" if value is None or value != value else f"{100 * value:5.1f} %"
 
 
-def _dataset_for_run(
-    source: str | None, config_path: Path | None, config: ExperimentConfig
-) -> Dataset:
-    if source is not None:
-        return _load_source(source, "auto", None, None, None)[0]
-    base = config_path.parent if config_path is not None else None
-    return load_from_config(config.dataset, base)
-
-
 @app.command("run")
 def run(
     source: Annotated[
         str | None,
-        typer.Argument(help="Dataset file or built-in name; default: dataset.path of the config."),
+        typer.Argument(
+            help="Dataset file, id or name; default: dataset.path of the configuration."
+        ),
     ] = None,
     config_path: ConfigOption = None,
     save: Annotated[
@@ -520,7 +554,7 @@ def run(
     try:
         formats = _formats(export) if export else []
         config = _config_or_default(config_path)
-        dataset = _dataset_for_run(source, config_path, config)
+        dataset, _ = _load_source(source, "auto", None, None, None, config, config_path)
         typer.echo(f"{dataset.name}: m = {dataset.m}, n = {dataset.n}", err=True)
         result = run_experiment(
             dataset,
@@ -537,10 +571,16 @@ def run(
         raise _fail(error) from error
     model = result.model
     typer.echo(dataset.name)
-    typer.echo(f"  k ({config.k.name}): {_k_text(model.trace.permitted_k)}; r = {model.trace.r}")
-    typer.echo(f"  TUPLAM = {model.hag.label}; p = {model.p}; stop: {model.hag.stop.text}")
+    typer.echo(
+        f"  k ({config.admissible_k.name}): {_k_text(model.trace.admissible_k)}; r = "
+        f"{model.trace.r}"
+    )
+    typer.echo(
+        f"  TUPLAM = {model.agglomerative.label}; p = {model.p}; stop: "
+        f"{model.agglomerative.stop.text}"
+    )
     for deviation in active_deviations(config):
-        typer.echo(f"  ⚠ template calculation ({deviation.adr}): {deviation.statement}")
+        typer.echo(f"  ⚠ deviates from the article ({deviation.adr}): {deviation.statement}")
     positive = model.classes[result.positive - 1]
     typer.echo(f"  positive class: {positive}")
     for protocol in result.protocols:
@@ -560,14 +600,18 @@ def run(
                 f" {_percent(metrics.coverage):>9s} {metrics.refusals:8d}"
                 f" {_percent(metrics.macro_f1):>9s} {'—' if auc != auc else f'{auc:.3f}':>6s}"
             )
-    if result.margins.with_majorizer:
+    if result.margins.with_majorizing_function:
         widths = ", ".join(
-            f"r{j + 1} {a.width:.4f} ({b.width:.4f})"
+            f"{additional_name(j)} {a.width:.4f} ({b.width:.4f})"
             for j, (a, b) in enumerate(
-                zip(result.margins.with_majorizer, result.margins.without_majorizer, strict=True)
+                zip(
+                    result.margins.with_majorizing_function,
+                    result.margins.without_majorizing_function,
+                    strict=True,
+                )
             )
         )
-        typer.echo(f"  margin widths with majorizer (without): {widths}")
+        typer.echo(f"  margin widths with majorizing function (without): {widths}")
     properties = result.properties
     typer.echo(
         f"  Definition 1: {'defined' if properties.determinacy.defined else 'NOT defined'};"
@@ -748,23 +792,25 @@ def _run_folder(run: Path | None, runs_dir: Path) -> Path:
 def validate(
     against: Annotated[
         Path,
-        typer.Option(
-            "--against", "-a", help="The Excel experiment workbook or a template workbook."
-        ),
+        typer.Option("--against", "-a", help="The Excel experiment workbook or a check workbook."),
     ],
     tolerance: Annotated[
         float, typer.Option(help="Largest accepted absolute difference of numbers.")
     ] = DEFAULT_TOLERANCE,
     config_path: Annotated[
-        Path | None, typer.Option("--config", "-c", help="Configuration; the template preset.")
+        Path | None,
+        typer.Option(
+            "--config", "-c", help="Configuration; the workbook's own settings by default."
+        ),
     ] = None,
     details: Annotated[
         bool, typer.Option("--details", help="List every check, not only failed ones.")
     ] = False,
 ) -> None:
-    """Compare the package with the cached cells of the experiment or a template workbook."""
+    """Compare the package with the cached cells of the experiment or a check workbook."""
     try:
-        report = validate_workbook(against, _config_or_default(config_path), tolerance=tolerance)
+        config = load_config(config_path) if config_path is not None else None
+        report = validate_workbook(against, config, tolerance=tolerance)
     except CSRError as error:
         raise _fail(error) from error
     typer.echo(f"{against.name}  [{report.kind}]")
@@ -784,7 +830,7 @@ def validate(
     if report.kind == "experiment":
         typer.echo(
             "  (not compared: Overview, the input sheets Dataset, Quantitative, Nominal, and the "
-            "template-data tables — validate the template workbooks for those)"
+            "worked examples on the check workbooks' data — validate the check workbooks for those)"
         )
     if not report.passed:
         typer.echo("validation FAILED", err=True)

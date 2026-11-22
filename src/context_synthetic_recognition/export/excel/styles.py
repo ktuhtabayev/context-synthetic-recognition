@@ -4,8 +4,8 @@ Every cell style of the author's workbook has a name here (``title``, ``bar``, `
 ``label``, ``class_``, ``synthetic``, ``latent_num``, ``warn1_num``, …), so the mirror uses the same
 colour semantics: dark blue title bars, grey-blue column headers, grey object labels, blue
 quantitative and yellow nominal values, red class labels, green synthetic features, the orange
-⚠1 and pink ⚠2 columns of the two template deviations, and so on (see the workbook's *Overview*,
-"Colour legend").
+⚠1 and pink ⚠2 columns of the two switches that deviate from the article, and so on (see the
+workbook's *Overview*, "Colour legend").
 
 Colours are RGB hex without alpha; the font is Calibri, 12 pt unless stated.
 """
@@ -26,7 +26,7 @@ NUMBER = "0.0000"
 """Real numbers show four decimals (the stored value keeps every digit)."""
 PERCENT = "0.0%"
 K_HEADER = '"k = "0'
-"""A permitted k as a column header: ``k = 3``."""
+"""A admissible k as a column header: ``k = 3``."""
 YES_NO = '"Yes";"Yes";"No"'
 EXECUTED = '"executed";"executed";"not executed"'
 RANK_OR_DASH = '[=999]"—";0'
@@ -105,9 +105,9 @@ NOMINAL = "FFF2CC"
 CLASS = "F4CCCC"
 CLASS_INK = "9C0006"
 SYNTHETIC = "E2EFDA"
-LATENT_HEADER = "FFE699"
+ADDITIONAL_HEADER = "FFE699"
 INITIAL = "DFF3EA"
-LATENT = "B7DEA8"
+ADDITIONAL = "B7DEA8"
 GOOD = "C6EFCE"
 GOOD_INK = "006100"
 BAD = "FFC7CE"
@@ -147,10 +147,12 @@ STYLES: dict[str, Style] = {
     "legend_nominal": _centred(fill=NOMINAL, size=11, bold=True),
     "legend_class": _centred(fill=CLASS, size=11, bold=True, color=CLASS_INK),
     "legend_synthetic": _centred(fill=SYNTHETIC, size=11, bold=True),
-    "legend_latent_header": _centred(fill=LATENT_HEADER, size=11, bold=True, color=DARK_BLUE),
+    "legend_additional_header": _centred(
+        fill=ADDITIONAL_HEADER, size=11, bold=True, color=DARK_BLUE
+    ),
     "legend_good": _centred(fill=GOOD, size=11, bold=True, color=GOOD_INK),
     "legend_initial": _centred(fill=INITIAL, size=11, bold=True),
-    "legend_latent": _centred(fill=LATENT, size=11, bold=True),
+    "legend_additional": _centred(fill=ADDITIONAL, size=11, bold=True),
     "legend_key": _centred(fill=KEY, size=11, bold=True, color="3F3151"),
     "legend_input": _centred(fill=WHITE, size=11, bold=True, color="0000CC"),
     "legend_warn1": _centred(fill=WARN1, size=11, bold=True, color=WARN1_INK),
@@ -169,7 +171,7 @@ STYLES: dict[str, Style] = {
     "header_left": _left(fill=HEADER, bold=True, italic=True),
     "header_k": _centred(fill=HEADER, bold=True, italic=True, fmt=K_HEADER),
     "executed": _centred(fill=HEADER, size=11, bold=True, italic=True, fmt=EXECUTED),
-    "latent_header": _centred(fill=LATENT_HEADER, bold=True, italic=True, color=DARK_BLUE),
+    "additional_header": _centred(fill=ADDITIONAL_HEADER, bold=True, italic=True, color=DARK_BLUE),
     # ------------------------------------------------------------ labels and captions
     "label": _centred(fill=LABEL, bold=True, italic=True),
     "caption": _left(fill=LABEL, bold=True, italic=True),
@@ -212,10 +214,10 @@ STYLES: dict[str, Style] = {
     "synthetic": _centred(fill=SYNTHETIC, bold=True),
     "synthetic_num": _centred(fill=SYNTHETIC, bold=True, fmt=NUMBER),
     "initial_num": _centred(fill=INITIAL, fmt=NUMBER),
-    "latent_num": _centred(fill=LATENT, fmt=NUMBER),
+    "additional_num": _centred(fill=ADDITIONAL, fmt=NUMBER),
     "good": _centred(fill=GOOD, bold=True, color=GOOD_INK),
     "good_num": _centred(fill=GOOD, bold=True, color=GOOD_INK, fmt=NUMBER),
-    # ------------------------------------------------------------ ⚠ the two template deviations
+    # ------------------------------------------------------------ ⚠ the switches
     "warn_note": _left(fill=WARN1, size=11, bold=True, color=WARN1_INK, wrap=True),
     "warn_text": _left(fill=WARN1, bold=True, color=WARN1_INK, wrap=True),
     "warn1_key": _left(fill=WARN1, bold=True, italic=True, color=WARN1_INK),
@@ -241,7 +243,7 @@ STYLES: dict[str, Style] = {
         fill=WARN2_STRONG, size=11, bold=True, italic=True, color=WARN2_INK, wrap=True
     ),
     "warn2_num": _centred(fill=WARN2, bold=True, color=WARN2_INK, fmt=NUMBER),
-    "warn2_latent": _centred(fill=WARN2_STRONG, bold=True, color=WARN2_INK, fmt=NUMBER),
+    "warn2_additional": _centred(fill=WARN2_STRONG, bold=True, color=WARN2_INK, fmt=NUMBER),
     "warn2_box": Style(
         fill=WARN2,
         size=11,
@@ -267,10 +269,10 @@ STYLES: dict[str, Style] = {
 HIGHLIGHTS: dict[str, tuple[str, str]] = {
     "good": (GOOD, GOOD_INK),
     "bad": (BAD, BAD_INK),
-    "neighbourhood": (LATENT_HEADER, DARK_BLUE),
+    "neighbourhood": (ADDITIONAL_HEADER, DARK_BLUE),
 }
 """Conditional highlights (fill, bold font colour): selected / same class / correct; wrong or
-refused; the nested neighbourhoods of the permitted k."""
+refused; the nested neighbourhoods of the admissible k."""
 
 TAB_COLORS = {
     "info": "404040",
@@ -280,7 +282,7 @@ TAB_COLORS = {
     "nominal": "BF8F00",
     "context": "7030A0",
     "synthetic": "C55A11",
-    "hag": "548235",
+    "additional_features": "548235",
     "meta": "2E75B6",
     "evaluation": "BF8F00",
     "checks": "7F7F7F",
@@ -293,7 +295,7 @@ class StyleBook:
 
     Setting font, fill, border and alignment on every cell costs four style look-ups per cell;
     copying a cell's resolved style record is an order of magnitude faster, which matters for the
-    large sheets (neighbour blocks, HAG candidate blocks).
+    large sheets (neighbour blocks, hierarchical agglomerative algorithm candidate blocks).
     """
 
     def __init__(self, workbook: Workbook) -> None:

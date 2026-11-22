@@ -72,7 +72,7 @@ def _header(config: ExperimentConfig) -> list[str]:
         f"preset: {name.value if name else 'custom'}",
     ]
     for deviation in active_deviations(config):
-        lines.append(f"⚠ template calculation ({deviation.adr}): {deviation.statement}")
+        lines.append(f"⚠ deviates from the article ({deviation.adr}): {deviation.statement}")
     return lines
 
 

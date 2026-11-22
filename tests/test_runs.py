@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-from context_synthetic_recognition.config import preset
 from context_synthetic_recognition.data import Dataset
 from context_synthetic_recognition.errors import ConfigError
 from context_synthetic_recognition.services.runner import (
@@ -25,17 +24,19 @@ from context_synthetic_recognition.services.runs import (
     run_facts,
 )
 
+from .conftest import article_switches
+
 
 @pytest.fixture(scope="module")
 def article_result(experiment: Dataset) -> ExperimentResult:
-    return run_experiment(experiment, preset("article"))
+    return run_experiment(experiment, article_switches())
 
 
 @pytest.fixture
 def runs(
     experiment_result: ExperimentResult, article_result: ExperimentResult, tmp_path: Path
 ) -> Path:
-    """A runs folder with the template run and the article run of the experiment."""
+    """A runs folder with the workbook's run and the run with the article's switches."""
     folder = tmp_path / "runs"
     save_run(experiment_result, folder)
     save_run(article_result, folder)
@@ -47,14 +48,16 @@ def test_reading_a_run(runs: Path, experiment_result: ExperimentResult) -> None:
     assert problems == []
     assert len(records) == 2
     assert [r.run_id for r in records] == sorted((r.run_id for r in records), reverse=True)
-    template = next(r for r in records if r.manifest.config.hag.step4_passes == 2)
-    assert template.folder is not None
-    assert read_run(template.folder).run_id == template.run_id
-    assert template.dataset == experiment_result.dataset.name
-    assert template.protocols == ("resubstitution", "leave-one-out")
-    assert template.accuracy("leave-one-out") == 0.2
-    assert template.accuracy("hold-out") is None
-    assert template.created == template.manifest.created
+    workbook_run = next(
+        r for r in records if r.manifest.config.additional_features.majorizing_passes == 2
+    )
+    assert workbook_run.folder is not None
+    assert read_run(workbook_run.folder).run_id == workbook_run.run_id
+    assert workbook_run.dataset == experiment_result.dataset.name
+    assert workbook_run.protocols == ("resubstitution", "leave-one-out")
+    assert workbook_run.accuracy("leave-one-out") == 0.2
+    assert workbook_run.accuracy("hold-out") is None
+    assert workbook_run.created == workbook_run.manifest.created
 
 
 def test_folders_that_are_not_runs(runs: Path, tmp_path: Path) -> None:
@@ -90,12 +93,12 @@ def test_the_facts_of_a_run(experiment_result: ExperimentResult) -> None:
     facts = dict(run_facts(record))
     assert facts["Dataset"] == experiment_result.dataset.name
     assert facts["Objects m"] == 10
-    assert facts["Preset"] == "template"
-    assert facts["⚠ Class centres in θ, γ"] == "running"
-    assert facts["⚠ STEP 4 passes"] == 2
-    assert facts["Permitted k"] == "3, 5"
+    assert facts["Preset"] == "excel-experiment"
+    assert facts["⚠ Class means in θ, γ"] == "running"
+    assert facts["⚠ majorizing passes"] == 2
+    assert facts["Admissible k"] == "3, 5"
     assert facts["TUPLAM"] == "{a₆, a₃, a₁, a₂, a₄}"
-    assert facts["Latent features p"] == 4
+    assert facts["Additional features p"] == 4
     assert facts["Accuracy · leave-one-out"] == 0.2
     assert facts["Refusals · leave-one-out"] == 4
     assert facts["AUC · leave-one-out"] == pytest.approx(0.2708333333333333)
@@ -112,22 +115,25 @@ def test_runs_side_by_side(runs: Path) -> None:
     table = comparison(records)
     assert table.columns == ("Fact", *(r.run_id for r in records))
     rows = {row[0]: row[1:] for row in table.rows}
-    assert set(rows["Preset"]) == {"template", "article"}
-    assert set(rows["⚠ STEP 4 passes"]) == {1, 2}
+    assert set(rows["Preset"]) == {"excel-experiment", "custom"}
+    assert set(rows["⚠ majorizing passes"]) == {1, 2}
     assert len(set(rows["Dataset"])) == 1
     different = {table.rows[r][0] for r in differing_rows(table)}
     assert {
         "Preset",
-        "⚠ Class centres in θ, γ",
-        "⚠ STEP 4 passes",
+        "⚠ Class means in θ, γ",
+        "⚠ majorizing passes",
         "Configuration SHA-256",
     } <= different
     assert "Dataset" not in different
     assert "Objects m" not in different
     settings = config_differences(records)
     names = [row[0] for row in settings.rows]
-    assert names == ["name", "hag.centres", "hag.step4_passes"]
-    assert set(settings.rows[1][1:]) == {"running", "final"}
+    assert names == [
+        "additional_features.class_means",
+        "additional_features.majorizing_passes",
+    ]
+    assert set(settings.rows[0][1:]) == {"running", "final"}
     same = config_differences([records[0], records[0]])
     assert same.rows == ()
     assert differing_rows(comparison([records[0], records[0]])) == set()

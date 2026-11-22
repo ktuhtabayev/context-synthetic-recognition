@@ -2,7 +2,7 @@
 
 The object is represented relative to the training sample without its class (Theorem of the
 article): the form has no class input. Taking a training object and leaving it out of its own
-context repeats the workbook's check that the new-object path reproduces the training row.
+context checks that the new-object path reproduces the training row.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ def neighbour_table(view: RunView, operator: int) -> Table:
     assert representation is not None
     context = representation.context
     distances, order = context.distances[operator][0], context.orders[operator][0]
-    ks = set(trace.permitted_k.ks)
+    ks = set(trace.admissible_k.ks)
     rows: list[tuple[Cell, ...]] = []
     for rank, index in enumerate(order.tolist(), start=1):
         rows.append(
@@ -72,7 +72,7 @@ def neighbour_table(view: RunView, operator: int) -> Table:
     return Table(
         f"new-object-neighbours-{operator}",
         tr("Neighbours of S under {label}, nearest first").format(label=label),
-        ("Rank", "Neighbour", "Distance", "Class", "Permitted k"),
+        ("Rank", "Neighbour", "Distance", "Class", "Admissible k"),
         tuple(rows),
         "Step 11 · Preparation",
         tr("Equal distances go to the smaller original index; χ₁ counts the K1 rows up to rank k."),
@@ -107,9 +107,7 @@ class NewObjectPage(Page):
         self.exclude.setChecked(True)
         # only a training object can be left out of its own context
         self.source.currentIndexChanged.connect(lambda row: self.exclude.setEnabled(row > 0))
-        self.exclude.setToolTip(
-            tr("The object is not its own neighbour: the Theorem check of the workbook")
-        )
+        self.exclude.setToolTip(tr("The object is not its own neighbour: the check of the Theorem"))
         self.paste = QLineEdit()
         self.paste.setPlaceholderText(
             tr("Paste a row: n values separated by commas, semicolons, spaces or tabs")
@@ -192,7 +190,7 @@ class NewObjectPage(Page):
         values_layout = QVBoxLayout(values_tab)
         values_layout.setContentsMargins(8, 8, 8, 8)
         values_layout.addWidget(self.values)
-        self.tabs.addTab(values_tab, tr("Unified values"))
+        self.tabs.addTab(values_tab, tr("Normalized values"))
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
@@ -387,7 +385,7 @@ class NewObjectPage(Page):
             return
         table = neighbour_table(view, o)
         base = style_for(table, view)
-        ks = set(view.trace.permitted_k.ks)
+        ks = set(view.trace.admissible_k.ks)
 
         def cell(row: int, column: int, value: Cell) -> CellRole | None:
             if column == 4 and table.rows[row][0] in ks:

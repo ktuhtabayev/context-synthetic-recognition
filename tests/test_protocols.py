@@ -7,8 +7,15 @@ from typing import Any
 import numpy as np
 import pytest
 
-from context_synthetic_recognition.config import ExperimentConfig, plugin, preset
-from context_synthetic_recognition.data import Dataset, FeatureType
+from context_synthetic_recognition.config import (
+    DatasetConfig,
+    ExperimentConfig,
+    PluginSpec,
+    RIPSConfig,
+    plugin,
+)
+from context_synthetic_recognition.core.rips.selection import select_precedents
+from context_synthetic_recognition.data import Dataset, FeatureType, load_from_config
 from context_synthetic_recognition.errors import ConfigError, ModelUndefinedError
 from context_synthetic_recognition.evaluation import baselines as baselines_module
 from context_synthetic_recognition.evaluation.baselines import (
@@ -23,7 +30,7 @@ from context_synthetic_recognition.evaluation.protocols import (
     run_protocol,
 )
 
-from .conftest import GOLDEN_VALUES
+from .conftest import GOLDEN_VALUES, ROOT, excel_experiment, workbook_config
 
 Y = np.array([0] * 6 + [1] * 9)
 
@@ -35,8 +42,11 @@ def test_the_registry() -> None:
         "stratified-k-fold",
         "repeated-k-fold",
         "hold-out",
+        "rips",
+        "nested-cross-validation",
     ]
     assert PROTOCOLS.info("loo").name == "leave-one-out"
+    assert PROTOCOLS.info("definition-3").name == "rips"
 
 
 def test_leave_one_out_splits() -> None:
@@ -88,10 +98,12 @@ def test_repeated_and_hold_out_splits() -> None:
 def test_leave_one_out_of_the_experiment(experiment: Dataset) -> None:
     with GOLDEN_VALUES.open(encoding="utf-8") as handle:
         golden = json.load(handle)
-    result = run_protocol(experiment, None, "leave-one-out", baselines=[plugin("knn-vote")])
+    result = run_protocol(
+        experiment, excel_experiment(), "leave-one-out", baselines=[plugin("knn-vote")]
+    )
     assert result.protocol == "leave-one-out"
     assert result.predictions.by_object().tolist() == [f["cls"] for f in golden["loo"]]
-    assert [f.permitted_k for f in result.folds] == [tuple(f["ks"]) for f in golden["loo"]]
+    assert [f.admissible_k for f in result.folds] == [tuple(f["ks"]) for f in golden["loo"]]
     assert result.folds[0].tuplam_names == ("ρ·3", "ρ_J·5", "ρ_I·5", "ρ·5", "ρ_J·3")
     assert result.undefined_folds == ()
     keys = ["Z3", "Z5", "I3", "I5", "J3", "J5"]
@@ -110,21 +122,23 @@ def test_leave_one_out_of_the_experiment(experiment: Dataset) -> None:
 
 
 def test_resubstitution_equals_classify_training(experiment: Dataset) -> None:
-    result = run_protocol(experiment, None, "resubstitution")
+    result = run_protocol(experiment, excel_experiment(), "resubstitution")
     assert result.predictions.decisions.tolist() == [1, 2, 2, 1, 1, 2, 2, 2, 2, 2]
     assert result.folds[0].descriptions is not None
 
 
 def test_repeated_k_fold_metrics(experiment: Dataset) -> None:
     spec = plugin("repeated-k-fold", folds=2, repeats=3)
-    result = run_protocol(experiment, None, spec, baselines=[plugin("knn-vote", ks=[3])])
+    result = run_protocol(
+        experiment, excel_experiment(), spec, baselines=[plugin("knn-vote", ks=[3])]
+    )
     assert result.predictions.objects.size == 3 * experiment.m
     assert len(result.predictions.repeat_metrics()) == 3
     assert len(result.baselines) == 3  # three operators, one k
 
 
 def _small_classes() -> Dataset:
-    # |K1| = 2: holding out a K1 object leaves one — no permitted k (ADR-005)
+    # |K1| = 2: holding out a K1 object leaves one — no admissible k (ADR-005)
     X = np.array([[0.0], [0.1], [0.9], [1.0], [0.8], [0.7], [0.95]])
     return Dataset(
         X=X, y=np.array([1, 1, 2, 2, 2, 2, 2]), feature_types=(FeatureType.QUANTITATIVE,)
@@ -132,9 +146,9 @@ def _small_classes() -> Dataset:
 
 
 def test_undefined_folds_refuse_and_are_flagged() -> None:
-    config = ExperimentConfig(
-        context=preset("template").context.model_copy(
-            update={"operators": preset("template").context.operators[:1]}
+    config = workbook_config(
+        local_context=excel_experiment().local_context.model_copy(
+            update={"operators": excel_experiment().local_context.operators[:1]}
         )
     )
     result = run_protocol(
@@ -142,7 +156,7 @@ def test_undefined_folds_refuse_and_are_flagged() -> None:
     )
     undefined = result.undefined_folds
     assert [f.number for f in undefined] == [0, 1]
-    assert "no k is permitted" in (undefined[0].undefined or "")
+    assert "no k is admissible" in (undefined[0].undefined or "")
     assert result.predictions.decisions[:2].tolist() == [0, 0]
     assert undefined[0].descriptions is None
     assert result.baselines[0].decisions.size == 7
@@ -151,7 +165,9 @@ def test_undefined_folds_refuse_and_are_flagged() -> None:
 def test_a_single_class_training_part_refuses_the_baselines() -> None:
     X = np.array([[0.0], [0.1], [0.2], [0.9]])
     dataset = Dataset(X=X, y=np.array([1, 1, 1, 2]), feature_types=(FeatureType.QUANTITATIVE,))
-    result = run_protocol(dataset, None, "leave-one-out", baselines=[plugin("knn-vote", ks=[1])])
+    result = run_protocol(
+        dataset, excel_experiment(), "leave-one-out", baselines=[plugin("knn-vote", ks=[1])]
+    )
     assert result.predictions.decisions[3] == 0  # the fold without K2
     assert result.baselines[0].decisions[3] == 0
 
@@ -164,7 +180,7 @@ def test_progress_and_cancellation(experiment: Dataset) -> None:
     assert seen[-1] == (10, 10)
     calls = iter([False, False, True])
     with pytest.raises(EvaluationCancelledError, match="after 2 of 10"):
-        run_protocol(experiment, None, "leave-one-out", cancelled=lambda: next(calls))
+        run_protocol(experiment, excel_experiment(), "leave-one-out", cancelled=lambda: next(calls))
 
 
 # ---------------------------------------------------------------- baselines
@@ -174,7 +190,7 @@ def test_knn_vote_parameters_and_refusal(experiment: Dataset) -> None:
     with pytest.raises(ConfigError, match="odd"):
         BASELINES.make_params("knn-vote", {"ks": [4]})
     params = BASELINES.make_params("knn-vote", {"ks": [3, 11], "operators": ["ρ_I"]})
-    data = BaselineInput(experiment, experiment.X[:2], None, ExperimentConfig())
+    data = BaselineInput(experiment, experiment.X[:2], None, excel_experiment())
     outputs = knn_vote(data, params)
     assert [o.method for o in outputs] == ["k-NN vote ρ_I, k = 3", "k-NN vote ρ_I, k = 11"]
     assert outputs[1].decisions.tolist() == [0, 0]  # 11 > the 10 training objects
@@ -189,7 +205,7 @@ def test_knn_vote_parameters_and_refusal(experiment: Dataset) -> None:
 def test_sklearn_baselines(experiment: Dataset, name: str) -> None:
     pytest.importorskip("sklearn")
     result = run_protocol(
-        experiment, ExperimentConfig(seed=3), "leave-one-out", baselines=[plugin(name)]
+        experiment, workbook_config(seed=3), "leave-one-out", baselines=[plugin(name)]
     )
     (baseline,) = result.baselines
     assert baseline.method.endswith("(scikit-learn)")
@@ -202,7 +218,9 @@ def test_sklearn_options_and_missing_package(
 ) -> None:
     pytest.importorskip("sklearn")
     spec = plugin("logistic-regression", options={"C": 0.5})
-    assert run_protocol(experiment, None, "resubstitution", baselines=[spec]).baselines
+    assert run_protocol(
+        experiment, excel_experiment(), "resubstitution", baselines=[spec]
+    ).baselines
     real = importlib.import_module
 
     def missing(name: str, *args: Any) -> Any:
@@ -212,11 +230,11 @@ def test_sklearn_options_and_missing_package(
 
     monkeypatch.setattr(baselines_module.importlib, "import_module", missing)
     with pytest.raises(ConfigError, match=r"\[sklearn\]"):
-        run_protocol(experiment, None, "resubstitution", baselines=[plugin("svm")])
+        run_protocol(experiment, excel_experiment(), "resubstitution", baselines=[plugin("svm")])
 
 
 def test_one_hot_encoding(experiment: Dataset) -> None:
-    from context_synthetic_recognition.core.normalizers import minmax
+    from context_synthetic_recognition.core.local_context.normalizers import minmax
 
     scaling = minmax(experiment.X, experiment.quantitative)
     train, target = encode_features(experiment, experiment.X[:1], scaling)
@@ -226,3 +244,56 @@ def test_one_hot_encoding(experiment: Dataset) -> None:
     )
     assert train.shape[1] == int(experiment.quantitative.sum()) + nominal
     assert np.array_equal(target[0], train[0])
+
+
+# ---------------------------------------------------------------- Definition 3 by R-IPS
+
+
+def heart_seven_quantitative() -> Dataset:
+    """Heart-Disease with the slope quantitative: the article's 7 quantitative features."""
+    return load_from_config(
+        DatasetConfig(path="heart-disease-270", feature_types={"x₁₁": "quantitative"}), ROOT
+    )
+
+
+def test_the_rips_protocol_trains_on_the_rips_training_sample() -> None:
+    dataset = heart_seven_quantitative()
+    config = ExperimentConfig(rips=RIPSConfig(keep_blocked_cover=True))
+    result = run_protocol(dataset, config, "rips", baselines=[plugin("knn-vote")])
+    (fold,) = result.folds
+    selection = select_precedents(dataset, config.rips)
+    assert np.array_equal(fold.split.train, selection.training)
+    assert np.array_equal(fold.split.test, selection.test)
+    assert (fold.split.train.size, fold.split.test.size) == (73, 197)
+    assert fold.class_sizes == (36, 37)
+    metrics = result.predictions.metrics()
+    assert metrics.n == 197
+    assert (metrics.correct, metrics.refusals) == (RIPS_CORRECT, RIPS_REFUSALS)
+    assert result.baselines[0].method == "k-NN vote ρ, k = 3"
+
+
+RIPS_CORRECT, RIPS_REFUSALS = 148, 20
+"""The default model on the R-IPS test sample of Heart (7 quantitative, blocked objects keep
+covering): 148 of 197 correct (75.1 %), 20 refusals — a real run, pinned."""
+
+
+def test_nested_cross_validation_chooses_alpha_inside_every_fold() -> None:
+    dataset = heart_seven_quantitative()
+    config = ExperimentConfig(rips=RIPSConfig(keep_blocked_cover=True))
+    spec = PluginSpec(name="nested-cross-validation", params={"folds": 5})
+    result = run_protocol(dataset, config, spec)
+    assert len(result.folds) == 5
+    for fold in result.folds:
+        assert fold.split.config is not None
+        assert fold.split.config.additional_features.alpha in (0.1, 0.2)
+        assert fold.split.note.startswith("additional_features.alpha = ")
+        assert not set(fold.split.train.tolist()) & set(fold.split.test.tolist())
+    assert sorted(np.concatenate([f.split.test for f in result.folds]).tolist()) == list(
+        range(dataset.m)
+    )
+    with pytest.raises(ConfigError, match="invalid grid"):
+        run_protocol(
+            dataset,
+            config,
+            PluginSpec(name="nested-cross-validation", params={"grid": {"nothing.x": [1]}}),
+        )

@@ -5,11 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from context_synthetic_recognition.core.additional_features.agglomerative import AgglomerativeResult
 from context_synthetic_recognition.core.arrays import FloatArray
-from context_synthetic_recognition.core.hag import HAGResult
 from context_synthetic_recognition.core.model import Classification, CSModel
 from context_synthetic_recognition.core.properties import ModelProperties
-from context_synthetic_recognition.core.trace import ContextTrace
+from context_synthetic_recognition.core.trace import PsiTrace
 from context_synthetic_recognition.evaluation.margins import MarginAnalysis
 from context_synthetic_recognition.evaluation.protocols import ProtocolResult
 from context_synthetic_recognition.services.sensitivity import SwitchVariant
@@ -56,14 +56,14 @@ class ExperimentSubject:
     """Leave-one-out, baselines, margins, properties and the switch sensitivity."""
 
     @property
-    def trace(self) -> ContextTrace:
+    def trace(self) -> PsiTrace:
         """The Step 1–8 trace."""
         return self.model.trace
 
     @property
-    def hag(self) -> HAGResult:
-        """The HAG of the fit."""
-        return self.model.hag
+    def agglomerative(self) -> AgglomerativeResult:
+        """The hierarchical agglomerative algorithm of the fit."""
+        return self.model.agglomerative
 
 
 ExperimentCheck = Check[ExperimentSubject]

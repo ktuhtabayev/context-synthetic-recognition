@@ -1,9 +1,9 @@
 """Validation of the experiment workbook, Steps 1–12.
 
-The inputs come from the workbook itself: the data from its *Dataset* sheet, the HAG parameters
-and the two template/article switches from its *Parameters* sheet, and the new object typed on
-*Brace for Meta-algorithm*. The package fits the CS-model, classifies the new object and every
-training object, and the map (:func:`workbook_checks`) compares every computed cell with the
+The inputs come from the workbook itself: the data from its *Dataset* sheet, the parameters
+of the agglomerative algorithm and its two switches from the *Parameters* sheet, and the new
+object typed on the new-object sheet. The package fits the CS-model, classifies the new object and
+every training object, and the map (:func:`workbook_checks`) compares every computed cell with the
 workbook's cached values.
 """
 
@@ -14,23 +14,25 @@ from pathlib import Path
 from typing import Any
 
 from context_synthetic_recognition.config.models import (
-    CentreMode,
+    AdditionalFeaturesConfig,
+    ClassMeans,
     ExperimentConfig,
-    HAGConfig,
     plugin,
 )
-from context_synthetic_recognition.config.presets import active_deviations
+from context_synthetic_recognition.config.presets import PresetName, active_deviations, preset
 from context_synthetic_recognition.core.model import CSModel, fit_model
 from context_synthetic_recognition.core.properties import model_properties
-from context_synthetic_recognition.core.trace import ContextTrace
+from context_synthetic_recognition.core.trace import PsiTrace
 from context_synthetic_recognition.data.loaders import load_dataset
 from context_synthetic_recognition.evaluation.margins import margin_analysis
 from context_synthetic_recognition.evaluation.protocols import run_protocol
 from context_synthetic_recognition.services.sensitivity import switch_sensitivity
+from context_synthetic_recognition.services.validation import sheets
 from context_synthetic_recognition.services.validation.checks import (
     Check,
     ValidationError,
     ValidationReport,
+    find_sheet,
     read_numbers,
     run_checks,
 )
@@ -52,7 +54,7 @@ from context_synthetic_recognition.services.validation.subject import (
 )
 
 PARAMETERS = "Parameters"
-NEW_OBJECT = "Brace for Meta-algorithm"
+NEW_OBJECT = sheets.NEW_OBJECT
 
 
 @dataclass(frozen=True)
@@ -61,18 +63,20 @@ class _Cell:
     what: str
 
 
-_HAG_CELLS = {
+_AGGLOMERATIVE_CELLS = {
     "alpha": _Cell("B19", "α"),
     "delta": _Cell("B20", "δ"),
     "kappa": _Cell("B21", "ϰ"),
     "cr1": _Cell("B22", "cr1"),
-    "centres": _Cell("B24", "⚠1 class centres (1 = running, 2 = final)"),
-    "step4_passes": _Cell("B25", "⚠2 majorizer passes in STEP 4 (2 = template, 1 = article)"),
+    "class_means": _Cell("B24", "⚠1 class means (1 = running, 2 = final)"),
+    "majorizing_passes": _Cell(
+        "B25", "⚠2 majorizing passes in Step 4 (1 = the article, 2 = twice)"
+    ),
 }
-_CENTRES = {1: CentreMode.RUNNING, 2: CentreMode.FINAL}
+_CENTRES = {1: ClassMeans.RUNNING, 2: ClassMeans.FINAL}
 
 
-def _trace(subject: ExperimentSubject) -> ContextTrace:
+def _trace(subject: ExperimentSubject) -> PsiTrace:
     return subject.trace
 
 
@@ -85,34 +89,35 @@ def workbook_checks() -> list[Check[ExperimentSubject]]:
     ]
 
 
-def read_hag_parameters(workbook: Any) -> dict[str, Any]:
+def read_agglomerative_parameters(workbook: Any) -> dict[str, Any]:
     """α, δ, ϰ, cr1 and the two switches as typed on the *Parameters* sheet.
 
     Raises:
         ValidationError: A value is missing or not allowed.
     """
-    sheet = workbook[PARAMETERS]
+    sheet = workbook[find_sheet(workbook.sheetnames, PARAMETERS) or PARAMETERS]
     values: dict[str, Any] = {}
-    for key, where in _HAG_CELLS.items():
+    for key, where in _AGGLOMERATIVE_CELLS.items():
         value = sheet[where.ref].value
         if isinstance(value, bool) or not isinstance(value, int | float):
             raise ValidationError(f"{PARAMETERS}!{where.ref} ({where.what}): {value!r}")
         values[key] = value
-    if values["centres"] not in _CENTRES or values["step4_passes"] not in (1, 2):
+    if values["class_means"] not in _CENTRES or values["majorizing_passes"] not in (1, 2):
         raise ValidationError(
             f"{PARAMETERS}!B24:B25: the switches must be 1 or 2, got "
-            f"{values['centres']!r} and {values['step4_passes']!r}"
+            f"{values['class_means']!r} and {values['majorizing_passes']!r}"
         )
-    values["centres"] = _CENTRES[int(values["centres"])]
-    values["step4_passes"] = int(values["step4_passes"])
+    values["class_means"] = _CENTRES[int(values["class_means"])]
+    values["majorizing_passes"] = int(values["majorizing_passes"])
     values["kappa"] = int(values["kappa"])
     return values
 
 
-def _hag_text(hag: HAGConfig) -> str:
+def _agglomerative_text(agglomerative: AdditionalFeaturesConfig) -> str:
     return (
-        f"α = {hag.alpha:g}, δ = {hag.delta:g}, ϰ = {hag.kappa}, cr1₀ = {hag.cr1:g}, "
-        f"centres = {hag.centres.value}, STEP 4 passes = {hag.step4_passes}"
+        f"α = {agglomerative.alpha:g}, δ = {agglomerative.delta:g}, ϰ = {agglomerative.kappa}, "
+        f"cr1₀ = {agglomerative.cr1:g}, class means = {agglomerative.class_means.value}, "
+        f"majorizing passes = {agglomerative.majorizing_passes}"
     )
 
 
@@ -121,25 +126,35 @@ def experiment_config(
 ) -> tuple[ExperimentConfig, list[str]]:
     """The configuration to validate with, and notes for the report.
 
-    Without ``config`` the template preset is used with the workbook's own HAG parameters (the
-    cached values were calculated with them). A given ``config`` is used as it is; a note warns
-    if its HAG settings differ from the workbook's.
+    Without ``config`` the ``excel-experiment`` preset is used with the workbook's own parameters
+    of the agglomerative algorithm (its cached values were calculated with them). A given
+    ``config`` is used as it is; a note warns if its settings of the agglomerative algorithm differ
+    from the workbook's.
     """
-    params = read_hag_parameters(workbook)
-    base = config or ExperimentConfig()
-    workbook_hag = HAGConfig.model_validate({**base.hag.model_dump(), **params})
-    notes = [f"HAG settings of the workbook (Parameters sheet): {_hag_text(workbook_hag)}"]
+    params = read_agglomerative_parameters(workbook)
+    base = config or preset(PresetName.EXCEL_EXPERIMENT)
+    workbook_agglomerative = AdditionalFeaturesConfig.model_validate(
+        {**base.additional_features.model_dump(), **params}
+    )
+    notes = [
+        (
+            "agglomerative algorithm settings of the workbook (Parameters sheet): "
+            f"{_agglomerative_text(workbook_agglomerative)}"
+        )
+    ]
     if config is None:
-        chosen = base.model_copy(update={"hag": workbook_hag})
+        chosen = base.model_copy(update={"additional_features": workbook_agglomerative})
     else:
         chosen = config
-        if config.hag != workbook_hag:
+        if config.additional_features != workbook_agglomerative:
             notes.append(
-                "⚠ the configuration's HAG settings differ from the workbook's: "
-                f"{_hag_text(config.hag)}"
+                "⚠ the configuration's agglomerative algorithm settings differ from the "
+                f"workbook's: {_agglomerative_text(config.additional_features)}"
             )
-    notes += [f"⚠ template calculation ({d.adr}): {d.statement}" for d in active_deviations(chosen)]
-    if chosen.synthetic.skip_constant:
+    notes += [
+        f"⚠ deviates from the article ({d.adr}): {d.statement}" for d in active_deviations(chosen)
+    ]
+    if chosen.synthetic_features.skip_constant:
         notes.append(
             "⚠ synthetic.skip_constant is on: the workbook keeps constant synthetic features "
             "(ADR-030), so leave-one-out folds can differ"
@@ -148,7 +163,7 @@ def experiment_config(
 
 
 def read_new_object(workbook: Any, n: int, m: int) -> tuple[Any, int | None]:
-    """The new object typed on *Brace for Meta-algorithm* and the training object it excludes.
+    """The new object typed on the workbook's new-object sheet and the training object it excludes.
 
     Returns:
         The n feature values (row "x (input)") and the 0-based training index left out of the
@@ -157,7 +172,7 @@ def read_new_object(workbook: Any, n: int, m: int) -> tuple[Any, int | None]:
     Raises:
         ValidationError: A value is missing, or the excluded object does not exist.
     """
-    sheet = workbook[NEW_OBJECT]
+    sheet = workbook[find_sheet(workbook.sheetnames, NEW_OBJECT) or NEW_OBJECT]
     last = chr(ord("A") + n)
     values = read_numbers(sheet, f"B31:{last}31", "new object")[0]
     exclude = sheet["B35"].value
@@ -177,9 +192,9 @@ def layout_problems(model: CSModel) -> list[str]:
         problems.append(f"{trace.m} objects (the layout has {WORKBOOK_OBJECTS})")
     if labels != WORKBOOK_OPERATORS:
         problems.append(f"operators {labels} (the layout has {WORKBOOK_OPERATORS})")
-    if trace.permitted_k.count != WORKBOOK_KS:
+    if trace.admissible_k.count != WORKBOOK_KS:
         problems.append(
-            f"{trace.permitted_k.count} permitted k (the layout has a column for {WORKBOOK_KS})"
+            f"{trace.admissible_k.count} admissible k (the layout has a column for {WORKBOOK_KS})"
         )
     return problems or model_layout_problems(model)
 
@@ -197,7 +212,7 @@ def experiment_subject(
         DatasetError: The *Dataset* sheet cannot be read.
     """
     for sheet in (PARAMETERS, NEW_OBJECT):
-        if sheet not in workbook.sheetnames:
+        if find_sheet(workbook.sheetnames, sheet) is None:
             raise ValidationError(f"{file.name}: sheet '{sheet}' is missing")
     dataset = load_dataset(file, "cs-workbook")
     chosen, notes = experiment_config(workbook, config)

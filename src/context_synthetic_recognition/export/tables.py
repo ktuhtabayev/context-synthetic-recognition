@@ -7,7 +7,7 @@ names and rows of plain values (``None`` = undefined, the workbook's "—"); the
 :mod:`.text` decide how numbers are written.
 
 Names follow the article and the workbook: objects S₁ …, features x₁ …, synthetic features a₁ …,
-latent features r₁ … (1-based, ADR-017).
+additional features d₁ … (1-based, ADR-017).
 """
 
 from __future__ import annotations
@@ -20,10 +20,12 @@ from typing import Any
 import numpy as np
 
 from context_synthetic_recognition.config.presets import active_deviations
-from context_synthetic_recognition.core.contributions import weight_ranks
-from context_synthetic_recognition.core.meta import REFUSAL
-from context_synthetic_recognition.core.normalizers import NORMALIZERS, Scaling
-from context_synthetic_recognition.core.trace import OperatorContext
+from context_synthetic_recognition.core.local_context.normalizers import NORMALIZERS, Scaling
+from context_synthetic_recognition.core.meta_algorithm.algorithm import REFUSAL
+from context_synthetic_recognition.core.synthetic_features.contributions import (
+    informativeness_ranks,
+)
+from context_synthetic_recognition.core.trace import LocalContext
 from context_synthetic_recognition.evaluation.protocols import MethodPredictions, ProtocolResult
 from context_synthetic_recognition.export.view import RunView
 from context_synthetic_recognition.export.wording import (
@@ -35,7 +37,7 @@ from context_synthetic_recognition.export.wording import (
     tuplam_text,
     tuple_text,
 )
-from context_synthetic_recognition.notation import latent_name, subscript, synthetic_name
+from context_synthetic_recognition.notation import additional_name, subscript, synthetic_name
 
 Cell = str | int | float | None
 """A table value: text, a number, or ``None`` for an undefined value (the workbook's "—")."""
@@ -43,19 +45,20 @@ Cell = str | int | float | None
 DEFAULT_MAX_CELLS = 2_000_000
 """Tables with more cells are left out (and reported) unless the limit is raised."""
 
-GROUP_INPUT = "1 · Input data"
-GROUP_SCALE = "Step 1 · Scale unification"
-GROUP_DISTANCES = "Step 2 · Distances"
-GROUP_NEIGHBOURS = "Step 3 · Sorting"
-GROUP_MU = "Step 4 · Same-class counts μ"
-GROUP_PSI = "Step 5 · Ψ(r) — formula (5)"
-GROUP_MEMBERSHIP = "Step 6 · Formulas (1), (2)"
-GROUP_OMEGA = "Step 7 · Formulas (3), (4)"
-GROUP_ETA = "Step 8 · Formula (6)"
-GROUP_HAG = "Step 9 · Hierarchical agglomerative grouping"
-GROUP_META_DATASET = "Step 10 · Meta-dataset"
-GROUP_BRACE = "Step 11 · Preparation"
-GROUP_META = "Step 12 · Classification"
+# The groups follow the stages of the method (the Excel mirror keeps the workbook's Steps 1–12)
+GROUP_INPUT = "Input data"
+GROUP_SCALE = "Local contexts · normalization"
+GROUP_DISTANCES = "Local contexts · distances"
+GROUP_NEIGHBOURS = "Local contexts · sorted neighbours"
+GROUP_MU = "Synthetic features · same-class counts μ"
+GROUP_PSI = "Synthetic features · Ψ(r), formula (5)"
+GROUP_MEMBERSHIP = "Synthetic features · membership (1), stability (2)"
+GROUP_OMEGA = "Synthetic features · boundary (3), informativeness (4)"
+GROUP_ETA = "Synthetic features · contributions (6)"
+GROUP_AGGLOMERATIVE = "Additional features · hierarchical agglomerative algorithm"
+GROUP_META_DATASET = "Meta-algorithm · meta-description"
+GROUP_BRACE = "Meta-algorithm · training description and new object"
+GROUP_META = "Meta-algorithm · classification"
 GROUP_EVALUATION = "Evaluation"
 GROUP_CHECKS = "Checks"
 GROUP_SUMMARY = "Summary"
@@ -239,10 +242,10 @@ def _features(view: RunView) -> Table:
         title = "Features: type, training minimum and maximum, distinct values"
         note = "min and max are taken over the training objects (quantitative features only)."
     else:
-        title = "Features: type, training statistics of the scale unification, distinct values"
+        title = "Features: type, training statistics of the normalization, distinct values"
         note = (
             f"{', '.join(keys)} are taken over the training objects (quantitative features "
-            f"only); scale unification “{scaling.normalizer}”."
+            f"only); normalization “{scaling.normalizer}”."
         )
     return Table(
         "features",
@@ -263,7 +266,7 @@ def _normalized(view: RunView) -> Table:
         note = "x′ = (x − min)/(max − min) for j ∈ I with the training min and max (Step 1)."
     else:
         title = (
-            f"Normalized dataset: scale unification “{scaling.normalizer}” of the quantitative "
+            f"Normalized dataset: normalization “{scaling.normalizer}” of the quantitative "
             "features, nominal features unchanged"
         )
         note = f"{NORMALIZERS.info(scaling.normalizer).summary} (Step 1)."
@@ -279,7 +282,7 @@ def _normalized(view: RunView) -> Table:
     )
 
 
-def _distances(view: RunView, operator: OperatorContext) -> Table:
+def _distances(view: RunView, operator: LocalContext) -> Table:
     ids = view.trace.object_ids
     rows = tuple((ids[i], *(plain(v) for v in operator.distances[i])) for i in range(view.trace.m))
     return Table(
@@ -294,11 +297,11 @@ def _distances(view: RunView, operator: OperatorContext) -> Table:
 
 
 def neighbour_depth(view: RunView) -> int:
-    """Ranks listed in the neighbour tables: up to the largest permitted k and one beyond."""
-    return int(min(view.trace.m - 1, max(view.trace.permitted_k.ks) + 1))
+    """Ranks listed in the neighbour tables: up to the largest admissible k and one beyond."""
+    return int(min(view.trace.m - 1, max(view.trace.admissible_k.ks) + 1))
 
 
-def _neighbours(view: RunView, operator: OperatorContext) -> Table:
+def _neighbours(view: RunView, operator: LocalContext) -> Table:
     trace = view.trace
     depth = neighbour_depth(view)
     ids, labels, y = trace.object_ids, view.labels, trace.class_index
@@ -338,7 +341,7 @@ def _neighbours(view: RunView, operator: OperatorContext) -> Table:
         rows,
         GROUP_NEIGHBOURS,
         "Order by (distance, original index): equal distances go to the smaller index. Ranks up "
-        f"to {depth} (the largest permitted k and one beyond).",
+        f"to {depth} (the largest admissible k and one beyond).",
         labels=2,
     )
 
@@ -429,9 +432,59 @@ def _membership(view: RunView) -> Table:
     )
 
 
+def _metaobject(view: RunView) -> Table:
+    trace = view.trace
+    ks = trace.admissible_k.ks
+    by_feature = {(f.operator_label, f.k): f.stability for f in trace.features}
+    rows = tuple(
+        (
+            operator.label,
+            *(
+                number(by_feature[(operator.label, k)])
+                if (operator.label, k) in by_feature
+                else None
+                for k in ks
+            ),
+        )
+        for operator in trace.operators
+    )
+    return Table(
+        "metaobject",
+        "Metaobject: the stability g_k — formula (2), β = k — of every operator and admissible k",
+        ("Operator", *(f"k = {k}" for k in ks)),
+        rows,
+        GROUP_MEMBERSHIP,
+        "The vector of the stabilities over k describes the training sample as a metaobject "
+        "(section 1.4); empty where the feature was left out.",
+        labels=1,
+    )
+
+
+def _class_sequences(view: RunView) -> Table:
+    sequences = view.trace.class_sequences
+    ks = sorted({k for s in sequences for k in s.ks})
+    rows = tuple(
+        (
+            s.operator_label,
+            *(number(s.stabilities[s.ks.index(k)]) if k in s.ks else None for k in ks),
+        )
+        for s in sequences
+    )
+    return Table(
+        "class-sequence-masks",
+        "Task 2: stability g — formula (2), β = 2^k − 1 — of the class-sequence bit masks",
+        ("Operator", *(f"k = {k}" for k in ks)),
+        rows,
+        GROUP_MEMBERSHIP,
+        "Section 1.2: bit j of an object is 1 when its j-th nearest neighbour is in K1 (the "
+        "nearest the most significant bit); masks are formed for k ≤ 62.",
+        labels=1,
+    )
+
+
 def _synthetic_features(view: RunView) -> Table:
     trace = view.trace
-    ranks = weight_ranks(trace.weights)
+    ranks = informativeness_ranks(trace.informativeness)
     rows = tuple(
         (
             f.name,
@@ -443,14 +496,14 @@ def _synthetic_features(view: RunView) -> Table:
             number(f.boundary.G),
             int(np.count_nonzero(f.correct)),
             number(f.omega),
-            number(f.weight),
+            number(f.informativeness),
             int(ranks[u]),
-            int(f.alpha[0, 0]),
-            int(f.alpha[0, 1]),
-            int(f.alpha[1, 0]),
-            int(f.alpha[1, 1]),
-            number(f.eta[0]),
-            number(f.eta[1]),
+            f.alpha_at(1, 0),
+            f.alpha_at(1, 1),
+            f.alpha_at(2, 0),
+            f.alpha_at(2, 1),
+            number(f.eta_at(1)),
+            number(f.eta_at(2)),
         )
         for u, f in enumerate(trace.features)
     )
@@ -510,7 +563,7 @@ def _contributions(view: RunView) -> Table:
     return _object_table(
         view,
         "contributions",
-        "Ψ(r) with contribution values ηᵤ(a_tu) — the input of the HAG",
+        "Ψ(r) with contribution values ηᵤ(a_tu) — the input of the agglomerative algorithm",
         GROUP_ETA,
         _feature_headers(view),
         view.trace.contributions,
@@ -518,43 +571,43 @@ def _contributions(view: RunView) -> Table:
     )
 
 
-def _bit_masks(view: RunView) -> Table:
-    masks = view.trace.bit_masks
+def _majority_chains(view: RunView) -> Table:
+    masks = view.trace.majority_chains
     headers = tuple(f"{b.operator_label} · mask" for b in masks)
     matrix = np.column_stack([b.masks for b in masks])
     return _object_table(
         view,
-        "bit-masks",
+        "majority-chains",
         "Task 2: bit representations by the majority rule, read as a binary number",
         GROUP_MEMBERSHIP,
         headers,
         matrix,
-        "Bit = 1 if μ > k/2, one bit per permitted k, the first permitted k most significant.",
+        "Bit = 1 if μ > k/2, one bit per admissible k, the first admissible k most significant.",
     )
 
 
 # ---------------------------------------------------------------- Step 9
 
 
-def _hag_iterations(view: RunView) -> Table:
-    hag = view.hag
+def _agglomerative_iterations(view: RunView) -> Table:
+    agglomerative = view.agglomerative
     rows: list[tuple[Cell, ...]] = [
         (
             0,
-            "STEP 2 · u = argmax ω",
-            synthetic_name(hag.first),
+            "Step 2 · u = argmax ω",
+            synthetic_name(agglomerative.first),
             None,
             None,
             1,
-            tuplam_text((hag.first,)),
+            tuplam_text((agglomerative.first,)),
             "",
         )
     ]
-    for it in hag.iterations:
+    for it in agglomerative.iterations:
         rows.append(
             (
                 it.number,
-                f"STEP 3–4 · iteration {it.number}",
+                f"Step 3–4 · iteration {it.number}",
                 None if it.q is None else synthetic_name(it.q),
                 number(it.cr1),
                 number(it.crit),
@@ -564,8 +617,8 @@ def _hag_iterations(view: RunView) -> Table:
             )
         )
     return Table(
-        "hag-iterations",
-        "Hierarchical agglomerative grouping: the feature added in every iteration",
+        "agglomerative-iterations",
+        "Hierarchical agglomerative algorithm: the feature added in every iteration",
         (
             "Iteration",
             "Step",
@@ -574,20 +627,20 @@ def _hag_iterations(view: RunView) -> Table:
             "crit",
             "|TUPLAM|",
             "TUPLAM",
-            "STEP 5",
+            "Step 5",
         ),
         tuple(rows),
-        GROUP_HAG,
-        "STEP 5 continues while |TUPLAM| < ϰ, crit > δ and P ≠ ∅; the latent feature r_j is R "
+        GROUP_AGGLOMERATIVE,
+        "Step 5 continues while |TUPLAM| < ϰ, crit > δ and P ≠ ∅; the additional feature d_j is R "
         "after iteration j.",
         labels=2,
     )
 
 
-def _hag_candidates(view: RunView) -> Table:
+def _agglomerative_candidates(view: RunView) -> Table:
     features = view.trace.features
     rows: list[tuple[Cell, ...]] = []
-    for it in view.hag.iterations:
+    for it in view.agglomerative.iterations:
         for position, u in enumerate(it.candidates):
             f = features[int(u)]
             rows.append(
@@ -603,24 +656,24 @@ def _hag_candidates(view: RunView) -> Table:
                 )
             )
     return Table(
-        "hag-candidates",
-        "HAG STEP 3: θ, γ and θ/γ of every candidate in every iteration",
+        "agglomerative-candidates",
+        "Agglomerative algorithm, Step 3: θ, γ and θ/γ of every candidate in every iteration",
         ("Iteration", "Candidate", "Operator", "k", "θ", "γ", "θ/γ", "Chosen q"),
         tuple(rows),
-        GROUP_HAG,
+        GROUP_AGGLOMERATIVE,
         "θ = Σ |bₜ − M(own class)|, γ = Σ |bₜ − M(other class)|; q = argmin θ/γ (first on ties).",
         labels=4,
     )
 
 
-def _hag_chosen_blocks(view: RunView) -> Table:
-    hag, ids, labels = view.hag, view.trace.object_ids, view.labels
+def _agglomerative_chosen_blocks(view: RunView) -> Table:
+    agglomerative, ids, labels = view.agglomerative, view.trace.object_ids, view.labels
     rows: list[tuple[Cell, ...]] = []
-    for index, it in enumerate(hag.iterations):
-        if it.q is None or it.latent is None:
+    for index, it in enumerate(agglomerative.iterations):
+        if it.q is None or it.additional is None:
             continue
-        scan = hag.scan(index, it.q)
-        for t in range(hag.m):
+        scan = agglomerative.scan(index, it.q)
+        for t in range(agglomerative.m):
             rows.append(
                 (
                     it.number,
@@ -637,12 +690,12 @@ def _hag_chosen_blocks(view: RunView) -> Table:
                     number(scan.centre2[t]),
                     number(scan.to_own[t]),
                     number(scan.to_other[t]),
-                    number(it.latent[t]),
+                    number(it.additional[t]),
                 )
             )
     return Table(
-        "hag-chosen-blocks",
-        "HAG STEP 3–4: the block of the chosen feature q in every iteration",
+        "agglomerative-chosen-blocks",
+        "Agglomerative algorithm, Steps 3–4: the block of the chosen feature q in every iteration",
         (
             "Iteration",
             "q",
@@ -658,12 +711,12 @@ def _hag_chosen_blocks(view: RunView) -> Table:
             "M₂ used",
             "|b − M own|",
             "|b − M other|",
-            "r_j = R(Sₜ) new",
+            "d_j = R(Sₜ) new",
         ),
         tuple(rows),
-        GROUP_HAG,
-        "⚠ The class centres (running or final) and the number of majorizer passes in STEP 4 are "
-        "the two template/article switches.",
+        GROUP_AGGLOMERATIVE,
+        "⚠ The class means (final or running) and the number of majorizing passes in Step 4 are "
+        "the two switches of the agglomerative algorithm.",
         labels=4,
     )
 
@@ -672,15 +725,16 @@ def _hag_chosen_blocks(view: RunView) -> Table:
 
 
 def _meta_dataset(view: RunView) -> Table:
-    data = view.model.meta_dataset
+    data = view.model.meta_table
     return _object_table(
         view,
         "meta-dataset",
-        "Dataset for the meta-algorithm: Y = (y₀, …, y_p, r₁, …, r_p)",
+        "Dataset for the meta-algorithm: Y = (y₀, …, y_p, d₁, …, d_p)",
         GROUP_META_DATASET,
         data.columns,
         data.Y,
-        "y_j: contribution values of the TUPLAM features in TUPLAM order; r_j: latent features.",
+        "y_j: contribution values of the TUPLAM features in TUPLAM order; d_j: additional "
+        "features.",
     )
 
 
@@ -689,13 +743,13 @@ def _description(view: RunView) -> Table:
     description = model.description
     headers = (
         *(f"aᵢ{subscript(j)} ({synthetic_name(u)})" for j, u in enumerate(model.tuplam)),
-        *(f"dᵢ{subscript(j + 1)} ({latent_name(j)})" for j in range(model.p)),
+        *(f"dᵢ{subscript(j + 1)} ({additional_name(j)})" for j in range(model.p)),
     )
-    matrix = np.hstack([description.gradations.astype(np.float64), description.latent])
+    matrix = np.hstack([description.gradations.astype(np.float64), description.additional])
     return _object_table(
         view,
         "training-description",
-        "Training description of the meta-algorithm: gradations aᵢⱼ and latent features dᵢⱼ",
+        "Training description of the meta-algorithm: gradations aᵢⱼ and additional features dᵢⱼ",
         GROUP_BRACE,
         headers,
         matrix,
@@ -773,7 +827,7 @@ def _new_object(view: RunView) -> Table:
         ("Feature", "Type (1 = I)", "x", "x′"),
         rows,
         GROUP_BRACE,
-        "Scale unification uses the training min and max; the class of S is not an input.",
+        "Normalization uses the training min and max; the class of S is not an input.",
     )
 
 
@@ -1047,7 +1101,7 @@ def _folds(view: RunView, protocol: ProtocolResult) -> Table:
                 fold.split.repeat,
                 " ".join(ids[int(i)] for i in fold.split.test),
                 *sizes,
-                ", ".join(map(str, fold.permitted_k)) if fold.permitted_k else None,
+                ", ".join(map(str, fold.admissible_k)) if fold.admissible_k else None,
                 fold.r,
                 set_text(list(fold.tuplam_names or ())) if fold.tuplam_names else None,
                 fold.undefined or "",
@@ -1063,7 +1117,7 @@ def _folds(view: RunView, protocol: ProtocolResult) -> Table:
             "Held out",
             "|K1| in fold",
             "|K2| in fold",
-            "Permitted k",
+            "Admissible k",
             "r = |Ψ(r)|",
             "TUPLAM (operator·k)",
             "Undefined",
@@ -1080,12 +1134,12 @@ def _margins(view: RunView) -> Table:
     ids = view.trace.object_ids
     rows: list[tuple[Cell, ...]] = []
     for j, (a, b) in enumerate(
-        zip(analysis.with_majorizer, analysis.without_majorizer, strict=True)
+        zip(analysis.with_majorizing_function, analysis.without_majorizing_function, strict=True)
     ):
-        for what, m in (("with majorizer", a), ("without majorizer", b)):
+        for what, m in (("with majorizing function", a), ("without majorizing function", b)):
             rows.append(
                 (
-                    latent_name(j),
+                    additional_name(j),
                     what,
                     m.boundary,
                     m.left,
@@ -1099,9 +1153,9 @@ def _margins(view: RunView) -> Table:
             )
     return Table(
         "margins",
-        "Margins of the latent features with and without the majorizer",
+        "Margins of the additional features with and without the majorizing function",
         (
-            "Latent feature",
+            "Additional feature",
             "Variant",
             "b (boundary)",
             "left: max K2",
@@ -1125,15 +1179,16 @@ def _object_margins(view: RunView) -> Table:
     headers: list[str] = []
     columns: list[Any] = []
     for j, (a, b) in enumerate(
-        zip(analysis.with_majorizer, analysis.without_majorizer, strict=True)
+        zip(analysis.with_majorizing_function, analysis.without_majorizing_function, strict=True)
     ):
-        name = latent_name(j)
-        headers += [name, f"margin {name}", f"{name} (no ϕ)", f"margin {name} (no ϕ)"]
+        name = additional_name(j)
+        headers += [name, f"margin {name}", f"{name} (no φ)", f"margin {name} (no φ)"]
         columns += [a.values, a.object_margins, b.values, b.object_margins]
     return _object_table(
         view,
         "object-margins",
-        "Object margins mᵢ = yᵢ·(dᵢ − b) of every latent feature, with and without the majorizer",
+        "Object margins mᵢ = yᵢ·(dᵢ − b) of every additional feature, with and without the "
+        "majorizing function",
         GROUP_EVALUATION,
         headers,
         np.column_stack(columns),
@@ -1196,8 +1251,8 @@ def _sensitivity(view: RunView) -> Table:
     variants = view.sensitivity or ()
     rows = tuple(
         (
-            v.centres.value,
-            v.step4_passes,
+            v.class_means.value,
+            v.majorizing_passes,
             v.label,
             v.tuplam,
             ", ".join(f"{c:.4f}" for c in v.crit),
@@ -1210,10 +1265,10 @@ def _sensitivity(view: RunView) -> Table:
     )
     return Table(
         "sensitivity",
-        "Sensitivity to the two template/article switches",
+        "Sensitivity to the two switches of the agglomerative algorithm",
         (
-            "Class centres",
-            "STEP 4 passes",
+            "Class means",
+            "majorizing passes",
             "Setting",
             "TUPLAM",
             "crit per iteration",
@@ -1224,15 +1279,15 @@ def _sensitivity(view: RunView) -> Table:
         ),
         rows,
         GROUP_EVALUATION,
-        "⚠ Template: θ and γ from running partial class means, the majorizer applied twice in "
-        "STEP 4. Article: final class means, one pass.",
+        "The article: final class means, one majorizing pass in Step 4. ⚠ Running partial class "
+        "means and a second pass deviate from it.",
         labels=3,
     )
 
 
 def summary_rows(view: RunView) -> list[tuple[str, Cell]]:
     """The key figures of a run, in the order of the workbook's *Overview*."""
-    trace, hag, result = view.trace, view.hag, view.result
+    trace, agglomerative, result = view.trace, view.agglomerative, view.result
     d = view.dataset
     quantitative = int(np.count_nonzero(d.quantitative))
     rows: list[tuple[str, Cell]] = [
@@ -1242,12 +1297,12 @@ def summary_rows(view: RunView) -> list[tuple[str, Cell]]:
         (f"|K1| (class {trace.classes[0]})", trace.class_sizes[0]),
         (f"|K2| (class {trace.classes[1]})", trace.class_sizes[1]),
         ("Base operators", ", ".join(o.label for o in trace.operators)),
-        (f"Permitted k ({trace.permitted_k.rule})", _k_text(trace.permitted_k.ks)),
+        (f"Admissible k ({trace.admissible_k.rule})", _k_text(trace.admissible_k.ks)),
         ("Synthetic features r = |Ψ(r)|", trace.r),
-        ("TUPLAM (selected synthetic features, in order)", hag.label),
-        ("Latent (additional) features p", hag.p),
-        ("crit per iteration", ", ".join(f"{c:.4f}" for c in hag.crit) or None),
-        ("HAG stopped because", hag.stop.text),
+        ("TUPLAM (selected synthetic features, in order)", agglomerative.label),
+        ("Additional (latent) features p", agglomerative.p),
+        ("crit per iteration", ", ".join(f"{c:.4f}" for c in agglomerative.crit) or None),
+        ("hierarchical agglomerative algorithm stopped because", agglomerative.stop.text),
     ]
     for protocol in result.protocols:
         name = protocol_title(protocol.protocol)
@@ -1263,7 +1318,7 @@ def summary_rows(view: RunView) -> list[tuple[str, Cell]]:
     )
     rows.append((f"New object ({what}): class", decision_text(demo.decision, trace.classes)))
     for deviation in active_deviations(view.config):
-        rows.append((f"⚠ Template calculation ({deviation.adr})", deviation.statement))
+        rows.append((f"⚠ Deviates from the article ({deviation.adr})", deviation.statement))
     return rows
 
 
@@ -1288,8 +1343,8 @@ def _summary(view: RunView) -> Table:
 
 def table_specs(view: RunView) -> list[TableSpec]:
     """The tables of a run in pipeline order, with their sizes, not yet built."""
-    trace, hag, result = view.trace, view.hag, view.result
-    m, n, r, p = trace.m, len(trace.feature_names), trace.r, hag.p
+    trace, agglomerative, result = view.trace, view.agglomerative, view.result
+    m, n, r, p = trace.m, len(trace.feature_names), trace.r, agglomerative.p
     depth = neighbour_depth(view)
     specs: list[TableSpec] = []
 
@@ -1325,22 +1380,50 @@ def table_specs(view: RunView) -> list[TableSpec]:
     add("psi", GROUP_PSI, wide, lambda: _psi(view))
     gradations = sum(f.membership.gradations.size for f in trace.features)
     add("membership", GROUP_MEMBERSHIP, 11 * gradations, lambda: _membership(view))
-    if trace.bit_masks:
+    add(
+        "metaobject",
+        GROUP_MEMBERSHIP,
+        len(trace.operators) * (len(trace.admissible_k.ks) + 1),
+        lambda: _metaobject(view),
+    )
+    if trace.class_sequences:
         add(
-            "bit-masks",
+            "class-sequence-masks",
             GROUP_MEMBERSHIP,
-            m * (len(trace.bit_masks) + 2),
-            lambda: _bit_masks(view),
+            len(trace.class_sequences) * (len(trace.class_sequences[0].ks) + 1),
+            lambda: _class_sequences(view),
+        )
+    if trace.majority_chains:
+        add(
+            "majority-chains",
+            GROUP_MEMBERSHIP,
+            m * (len(trace.majority_chains) + 2),
+            lambda: _majority_chains(view),
         )
     add("synthetic-features", GROUP_OMEGA, 17 * r, lambda: _synthetic_features(view))
     add("object-membership", GROUP_OMEGA, wide, lambda: _object_membership(view))
     add("correct-side", GROUP_OMEGA, wide, lambda: _correct_side(view))
     add("contributions", GROUP_ETA, wide, lambda: _contributions(view))
-    iterations = len(hag.iterations)
-    add("hag-iterations", GROUP_HAG, 8 * (iterations + 1), lambda: _hag_iterations(view))
-    candidates = sum(it.candidates.size for it in hag.iterations)
-    add("hag-candidates", GROUP_HAG, 8 * candidates, lambda: _hag_candidates(view))
-    add("hag-chosen-blocks", GROUP_HAG, 15 * m * p, lambda: _hag_chosen_blocks(view))
+    iterations = len(agglomerative.iterations)
+    add(
+        "agglomerative-iterations",
+        GROUP_AGGLOMERATIVE,
+        8 * (iterations + 1),
+        lambda: _agglomerative_iterations(view),
+    )
+    candidates = sum(it.candidates.size for it in agglomerative.iterations)
+    add(
+        "agglomerative-candidates",
+        GROUP_AGGLOMERATIVE,
+        8 * candidates,
+        lambda: _agglomerative_candidates(view),
+    )
+    add(
+        "agglomerative-chosen-blocks",
+        GROUP_AGGLOMERATIVE,
+        15 * m * p,
+        lambda: _agglomerative_chosen_blocks(view),
+    )
     add("meta-dataset", GROUP_META_DATASET, m * (2 * p + 3), lambda: _meta_dataset(view))
     add("training-description", GROUP_BRACE, m * (2 * p + 3), lambda: _description(view))
     add("new-object", GROUP_BRACE, 4 * n, lambda: _new_object(view))

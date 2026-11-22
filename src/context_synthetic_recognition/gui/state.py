@@ -50,7 +50,7 @@ class AppState(QObject):
     """Theme or zoom changed."""
 
     def __init__(self, parent: QObject | None = None) -> None:
-        """Start with the template preset and nothing loaded."""
+        """Start with the default preset (the article's method) and nothing loaded."""
         super().__init__(parent)
         self.dataset: Dataset | None = None
         self.dataset_source: str | None = None

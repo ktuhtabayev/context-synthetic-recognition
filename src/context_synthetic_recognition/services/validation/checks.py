@@ -1,9 +1,9 @@
 """Checks: a sheet range of a workbook and the values the package computes for it.
 
 A :class:`Check` pairs a cell range with a function that returns the expected grid from a
-*subject* — whatever the package computed for that workbook (a fitted model, a HAG result, …).
-:func:`run_check` compares the grid with the workbook's cached cell values: numbers to a
-tolerance, text exactly, ``None`` against an empty cell.
+*subject* — whatever the package computed for that workbook (a fitted model, a agglomerative
+algorithm result, …). :func:`run_check` compares the grid with the workbook's cached cell values:
+numbers to a tolerance, text exactly, ``None`` against an empty cell.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ import numpy.typing as npt
 
 from context_synthetic_recognition.errors import CSRError
 from context_synthetic_recognition.notation import DASH, object_name
+from context_synthetic_recognition.services.validation import sheets
 
 DEFAULT_TOLERANCE = 1e-9
 """Numbers must agree to this absolute difference (the Validation sheet's acceptance level)."""
@@ -46,7 +47,7 @@ class Check(Generic[S]):
     expected: Callable[[S], Grid]
     """Values for the range (rows × columns); ``None`` = empty cell, ``—`` = undefined."""
     when: Callable[[S], bool] | None = None
-    """Run the check only if this holds (e.g. only for executed HAG iterations)."""
+    """Run the check only if this holds (e.g. only for iterations that were executed)."""
 
     def applies(self, subject: S) -> bool:
         """Whether the check is run for ``subject``."""
@@ -190,14 +191,13 @@ def _show(value: Any) -> str:
     return f"{value:.12g}" if isinstance(value, float) else repr(value)
 
 
-SHEET_ALIASES: dict[str, tuple[str, ...]] = {"Zhuravlev Distances": ("Zhuravlyov Distances",)}
-"""Other names a sheet of the map may have: the author's workbook keeps *Zhuravlev Distances*,
-workbooks exported by this package use the agreed spelling (ADR-023)."""
-
-
 def find_sheet(sheet_names: Sequence[str], name: str) -> str | None:
-    """The workbook's name of the map's sheet ``name`` (the name itself or an alias), if any."""
-    for candidate in (name, *SHEET_ALIASES.get(name, ())):
+    """The validated file's name of the map's sheet ``name``.
+
+    The workbook's own name or, in an exported mirror, the mirror's name
+    (:data:`.sheets.MIRROR_NAMES`).
+    """
+    for candidate in dict.fromkeys((name, sheets.mirror_name(name))):
         if candidate in sheet_names:
             return candidate
     return None

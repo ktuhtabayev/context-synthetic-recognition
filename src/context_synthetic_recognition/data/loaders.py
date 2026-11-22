@@ -1,4 +1,4 @@
-"""Dataset loaders: the experiment workbook, the template CSV/DAT layout, CSV, XLSX and Parquet.
+"""Dataset loaders: the experiment workbook, the extended CSV/DAT layout, CSV, XLSX and Parquet.
 
 Formats (registry :data:`LOADERS`, names as in ``dataset.format`` of the configuration):
 
@@ -6,8 +6,8 @@ Formats (registry :data:`LOADERS`, names as in ``dataset.format`` of the configu
     The *Dataset* sheet of the author's Excel experiment: a header row with ``Class`` above the
     class column, one row per object (features in the columns left of ``Class``), then the
     feature-type row (1 = quantitative, 0 = nominal).
-``extended`` (alias ``template-extended``)
-    The author's dataset layout, as in the template project (``.csv`` comma-separated or ``.dat``
+``extended`` (alias ``extended``)
+    The author's dataset layout (``.csv`` comma-separated or ``.dat``
     whitespace-separated, decimal commas accepted): a first row ``m, n, c``; m rows of n features
     and the class label; a last row of n type flags (1 = quantitative, 0 = nominal).
 ``csv``, ``xlsx``, ``parquet``
@@ -93,9 +93,9 @@ def detect_format(path: Path, sheet: str | None = None) -> str:
         return "cs-workbook" if _looks_like_cs_workbook(path, sheet or WORKBOOK_SHEET) else "xlsx"
     if suffix in {".csv", ".txt"}:
         first = next(_csv_rows(path), None)
-        return "template-extended" if first is not None and _meta_header(first) else "csv"
+        return "extended" if first is not None and _meta_header(first) else "csv"
     if suffix == ".dat":
-        return "template-extended"
+        return "extended"
     if suffix in {".parquet", ".pq"}:
         return "parquet"
     raise DatasetError(
@@ -338,7 +338,7 @@ def load_cs_workbook(path: Path, options: LoadOptions) -> Dataset:
     return _override_types(dataset, options.feature_types)
 
 
-# ---------------------------------------------------------------- the template layout
+# ---------------------------------------------------------------- the extended layout
 
 
 def _csv_rows(path: Path, delimiter: str = ",") -> Iterator[list[str]]:
@@ -367,7 +367,7 @@ def _dat_rows(path: Path) -> Iterator[list[str]]:
 
 
 def _meta_header(row: Sequence[str]) -> tuple[int, int, int] | None:
-    """(m, n, c) if ``row`` is the template's first row, else ``None``."""
+    """(m, n, c) if ``row`` is the first row of the extended layout, else ``None``."""
     cells = [cell.strip() for cell in row if cell.strip()]
     if len(cells) != 3:
         return None
@@ -378,8 +378,8 @@ def _meta_header(row: Sequence[str]) -> tuple[int, int, int] | None:
     return m, n, c
 
 
-def load_template_extended(path: Path, options: LoadOptions) -> Dataset:
-    """The template project's layout (format ``template-extended``).
+def load_extended_layout(path: Path, options: LoadOptions) -> Dataset:
+    """The author's extended layout (format ``extended``).
 
     Row 1: ``m, n, c``; rows 2 … m + 1: n feature values and the class label; last row: n type
     flags (1 = quantitative, 0 = nominal), optionally followed by a placeholder under the class
@@ -416,7 +416,7 @@ def load_template_extended(path: Path, options: LoadOptions) -> Dataset:
         labels.append(_label(cells[n]))
     flags = [cell for cell in rows[-1] if cell.strip()]
     if len(flags) == n + 1:
-        flags = flags[:n]  # some template files put a placeholder under the class column
+        flags = flags[:n]  # some files put a placeholder under the class column
     if len(flags) != n:
         raise DatasetError(f"{path.name}: the type row has {len(flags)} flags, expected n = {n}")
     types = tuple(_flag(flag, f"{path.name} type row") for flag in flags)
@@ -578,9 +578,8 @@ def load_parquet(path: Path, options: LoadOptions) -> Dataset:
 
 LOADERS.add("cs-workbook", load_cs_workbook, summary="Dataset sheet of the Excel experiment")
 LOADERS.add(
-    "template-extended",
-    load_template_extended,
-    aliases=("extended",),
+    "extended",
+    load_extended_layout,
     summary="extended layout: m n c / objects + class / type flags 1 = I, 0 = J (.dat, .csv)",
 )
 LOADERS.add("csv", load_csv, summary="CSV table with a header row")

@@ -1,8 +1,8 @@
-"""Results explorer: the steps of the workbook as a tree of tables and figures.
+"""Results explorer: the steps of the method as a tree of tables and figures.
 
-The tree follows the pipeline — the stage names are the workbook's. Tables are the exporters'
-tables (built when first opened), coloured by what their cells mean; figures are the exporters'
-figures on an interactive canvas. Selecting an object — in any table or in the selector — marks
+The tree follows the pipeline, with the exporters' stage names. Tables are the exporters' tables
+(built when first opened), coloured by what their cells mean; figures are the exporters' figures
+on an interactive canvas. Selecting an object — in any table or in the selector — marks
 it in every table and redraws its neighbourhood.
 """
 
@@ -52,14 +52,16 @@ TABLE_NAMES = {
     "chi1": "χ₁ counts",
     "psi": "Ψ(r)",
     "membership": "Membership f, stability g",
-    "bit-masks": "Bit masks (Task 2)",
+    "metaobject": "Metaobject (stability g_k)",
+    "class-sequence-masks": "Class-sequence bit masks (Task 2)",
+    "majority-chains": "Majority bit chains (Task 2)",
     "synthetic-features": "g, G, ω, η per feature",
     "object-membership": "g(S, k) per object",
     "correct-side": "Correct side of G",
     "contributions": "Contributions η",
-    "hag-iterations": "Iterations",
-    "hag-candidates": "Candidates: θ, γ, θ/γ",
-    "hag-chosen-blocks": "Blocks of the chosen q",
+    "agglomerative-iterations": "Iterations",
+    "agglomerative-candidates": "Candidates: θ, γ, θ/γ",
+    "agglomerative-chosen-blocks": "Blocks of the chosen q",
     "meta-dataset": "Meta-dataset Y",
     "training-description": "Training description",
     "new-object": "New object: values",
@@ -88,9 +90,9 @@ FIGURE_NAMES = {
     "distances": "Distance heat maps",
     "neighbourhoods": "Neighbourhoods by rank",
     "synthetic-features": "ω and stability g",
-    "hag-candidates": "θ/γ per candidate",
-    "hag-criterion": "Criterion per iteration",
-    "margins": "Margins of the latent features",
+    "agglomerative-candidates": "θ/γ per candidate",
+    "agglomerative-criterion": "Criterion per iteration",
+    "margins": "Margins of the additional features",
     "margin-widths": "Margin widths",
     "roc": "ROC curves",
     "confusion": "Confusion matrices",
@@ -100,8 +102,8 @@ FIGURE_GROUPS = {
     "distances": tab.GROUP_DISTANCES,
     "neighbourhoods": tab.GROUP_NEIGHBOURS,
     "synthetic-features": tab.GROUP_OMEGA,
-    "hag-candidates": tab.GROUP_HAG,
-    "hag-criterion": tab.GROUP_HAG,
+    "agglomerative-candidates": tab.GROUP_AGGLOMERATIVE,
+    "agglomerative-criterion": tab.GROUP_AGGLOMERATIVE,
 }
 """Stage of every figure; the others belong to the evaluation."""
 FIGURE_MARK = "▣ "
@@ -213,8 +215,8 @@ class ResultsPage(Page):
             state,
             settings,
             tr(
-                "Every step of the pipeline, as in the workbook. Click a column to sort; click a "
-                "row to follow its object through every table."
+                "Every step of the method, in its order. Click a column to sort; click a row to "
+                "follow its object through every table."
             ),
             parent,
         )

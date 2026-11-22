@@ -1,6 +1,6 @@
 """Dataset page: choose or open a dataset, look at it, set the feature types.
 
-The summary on the right is live: |K1|, |K2|, the permitted k and r = |Ψ(r)| follow the dataset
+The summary on the right is live: |K1|, |K2|, the admissible k and r = |Ψ(r)| follow the dataset
 and the configuration (:func:`~context_synthetic_recognition.services.datasets.summarize`).
 """
 
@@ -176,9 +176,9 @@ class DatasetPage(Page):
         features_layout.addWidget(
             hint(
                 tr(
-                    "The type decides how a feature enters the distance: |x′ − y′| on the unified "
-                    "scale for I, equal / not equal for J. Changing a type re-reads the dataset "
-                    "and drops the current result."
+                    "The type decides how a feature enters the distance: |x′ − y′| of the "
+                    "normalized values for I, equal / not equal for J. Changing a type re-reads "
+                    "the dataset and drops the current result."
                 ),
                 "note",
             )
@@ -205,7 +205,7 @@ class DatasetPage(Page):
             ("k1", "|K1|"),
             ("k2", "|K2|"),
             ("missing", tr("Missing values")),
-            ("k", tr("Permitted k")),
+            ("k", tr("Admissible k")),
             ("r", tr("Synthetic features r")),
             ("operators", tr("Base operators")),
         ):
@@ -380,7 +380,7 @@ class DatasetPage(Page):
         return widget
 
     def refresh_summary(self) -> None:
-        """Recompute |Kᵢ|, the permitted k and r for the current dataset and configuration."""
+        """Recompute |Kᵢ|, the admissible k and r for the current dataset and configuration."""
         dataset = self.state.dataset
         facts = self._fact_labels
         if dataset is None:
@@ -413,7 +413,7 @@ class DatasetPage(Page):
         facts["missing"].setToolTip(
             tr("A dataset with missing values is not loaded; the message names the cells.")
         )
-        ks = summary.permitted_k
+        ks = summary.admissible_k
         facts["k"].setText(
             "—"
             if ks is None

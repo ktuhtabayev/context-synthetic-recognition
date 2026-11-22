@@ -6,11 +6,9 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
-from context_synthetic_recognition.config import ContextConfig, ExperimentConfig
-from context_synthetic_recognition.core.context import fit_context
-from context_synthetic_recognition.core.metrics import METRICS, traits_of
-from context_synthetic_recognition.core.model import fit_model
-from context_synthetic_recognition.core.normalizers import (
+from context_synthetic_recognition.config import ExperimentConfig, LocalContextConfig
+from context_synthetic_recognition.core.local_context.metrics import METRICS, traits_of
+from context_synthetic_recognition.core.local_context.normalizers import (
     NORMALIZERS,
     RankScaling,
     UnitLengthScaling,
@@ -23,12 +21,16 @@ from context_synthetic_recognition.core.normalizers import (
     unit_length,
     zscore,
 )
+from context_synthetic_recognition.core.model import fit_model
+from context_synthetic_recognition.core.synthetic_features.psi import fit_psi
 from context_synthetic_recognition.data import Dataset
 from context_synthetic_recognition.errors import ConfigError
 from context_synthetic_recognition.export import build_view
 from context_synthetic_recognition.export.excel import build_workbook
 from context_synthetic_recognition.export.tables import run_tables
 from context_synthetic_recognition.services.runner import run_experiment
+
+from .conftest import excel_experiment
 
 QUANT = np.array([True, False, True])
 X = np.array(
@@ -303,30 +305,30 @@ def test_range_normalized_metrics_do_not_depend_on_an_affine_normalizer(
 
 
 def config_with(normalizer: str) -> ExperimentConfig:
-    return ExperimentConfig.model_validate({"preprocessing": {"normalizer": normalizer}})
+    return ExperimentConfig.model_validate({"local_context": {"normalizer": normalizer}})
 
 
 @pytest.mark.parametrize("name", [n for n in EVERY if n != "minmax"])
 def test_every_normalizer_runs_through_the_model(experiment: Dataset, name: str) -> None:
     model = fit_model(experiment, config_with(name))
-    trace = model.context.trace
+    trace = model.psi.trace
     assert trace.scaling.normalizer == name
     assert np.array_equal(
         trace.normalized[:, experiment.nominal], experiment.X[:, experiment.nominal]
     )
     # ρ_J does not see the quantitative features: its synthetic features are the workbook's
-    workbook = fit_context(experiment).trace
+    workbook = fit_psi(experiment, excel_experiment()).trace
     assert np.array_equal(trace.operators[2].distances, workbook.operators[2].distances)
     # Theorem: the new-object path reproduces the training rows with the training constants
-    again = model.context.represent(experiment.X, exclude=np.arange(experiment.m))
+    again = model.psi.represent(experiment.X, exclude=np.arange(experiment.m))
     assert np.array_equal(again.normalized, trace.normalized)
     assert np.array_equal(again.values, np.column_stack([f.values for f in trace.features]))
 
 
 def test_the_default_is_still_the_workbook(experiment: Dataset) -> None:
-    assert ExperimentConfig().preprocessing.normalizer.name == "minmax"
-    assert [o.metric.name for o in ContextConfig().operators] == ["zhuravlyov"] * 3
-    trace = fit_context(experiment).trace
+    assert excel_experiment().local_context.normalizer.name == "minmax"
+    assert [o.metric.name for o in LocalContextConfig().operators] == ["zhuravlyov"] * 3
+    trace = fit_psi(experiment, excel_experiment()).trace
     assert list(trace.scaling.statistics) == ["min", "max"]
     assert trace.normalized[:, experiment.quantitative].min() == 0.0
     assert trace.normalized[:, experiment.quantitative].max() == 1.0
@@ -335,8 +337,8 @@ def test_the_default_is_still_the_workbook(experiment: Dataset) -> None:
 def test_the_exports_describe_another_normalizer_and_metric(experiment: Dataset) -> None:
     config = ExperimentConfig.model_validate(
         {
-            "preprocessing": {"normalizer": "robust"},
-            "context": {
+            "local_context": {
+                "normalizer": "robust",
                 "operators": [
                     {"label": "H", "metric": "heom"},
                     {
@@ -345,7 +347,7 @@ def test_the_exports_describe_another_normalizer_and_metric(experiment: Dataset)
                         "features": "quantitative",
                     },
                     {"label": "ρ_J", "features": "nominal"},
-                ]
+                ],
             },
         }
     )
@@ -363,7 +365,7 @@ def test_the_exports_describe_another_normalizer_and_metric(experiment: Dataset)
         "Q3",
         "Distinct values",
     )
-    assert "scale unification “robust”" in features.note
+    assert "normalization “robust”" in features.note
     assert features.rows[1][3:8] == (None,) * 5  # x₂ is nominal
     assert "“robust”" in tables["normalized"].title
     assert "median" in tables["normalized"].note

@@ -138,8 +138,9 @@ exclude_also = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-# Protected source material: never reformatted or linted (CLAUDE.md)
-extend-exclude = ["resources", "docs/handoff"]
+# Never reformatted or linted: the author's local source material (not in the repository, ADR-060)
+# and the independent re-implementation kept as written (the test oracle)
+extend-exclude = ["resources", "docs/handoff", "tests/golden/independent"]
 
 [tool.ruff.format]
 line-ending = "lf"

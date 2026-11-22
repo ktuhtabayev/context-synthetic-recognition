@@ -215,7 +215,7 @@ def test_switching_the_language_keeps_the_work(
     assert window.dataset_page.load("heart-disease-10")
     run(window)
     state = window.state
-    window.configure_page.apply_preset("article")  # an undoable edit; the run becomes stale
+    window.configure_page.apply_preset("alpha-0.1")  # an undoable edit; the run becomes stale
     window.state.select_object(2)
     assert window.go_to(window.results_page)
     dataset, view, config = state.dataset, state.view, state.config

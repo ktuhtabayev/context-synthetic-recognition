@@ -7,18 +7,17 @@ import numpy as np
 import pytest
 
 from context_synthetic_recognition.config import (
-    ContextConfig,
-    ExperimentConfig,
-    HAGConfig,
-    MetaConfig,
+    LocalContextConfig,
+    MetaAlgorithmConfig,
     OperatorConfig,
     plugin,
-    preset,
 )
-from context_synthetic_recognition.core.meta import REFUSAL
+from context_synthetic_recognition.core.meta_algorithm.algorithm import REFUSAL
 from context_synthetic_recognition.core.model import CSModel, fit_model
 from context_synthetic_recognition.data import Dataset, FeatureType
 from context_synthetic_recognition.errors import ModelUndefinedError, RegistryError
+
+from .conftest import article_switches, excel_experiment, workbook_additional, workbook_config
 
 RESUBSTITUTION = [1, 2, 2, 1, 1, 2, 2, 2, 2, 2]
 
@@ -28,7 +27,7 @@ def test_the_experiment_model(experiment_cs_model: CSModel) -> None:
     assert model.tuplam == (5, 2, 0, 1, 3)
     assert model.p == 4
     assert model.classes == (1, 2)
-    Y = model.meta_dataset
+    Y = model.meta_table
     assert Y.p == 4
     assert Y.Y.shape == (10, 9)
     assert Y.columns == (
@@ -37,13 +36,13 @@ def test_the_experiment_model(experiment_cs_model: CSModel) -> None:
         "y₂ (a₁)",
         "y₃ (a₂)",
         "y₄ (a₄)",
-        "r₁",
-        "r₂",
-        "r₃",
-        "r₄",
+        "d₁",
+        "d₂",
+        "d₃",
+        "d₄",
     )
     assert np.array_equal(Y.initial, model.trace.contributions[:, [5, 2, 0, 1, 3]])
-    assert np.array_equal(Y.latent, model.hag.latent)
+    assert np.array_equal(Y.additional, model.agglomerative.additional)
     assert np.array_equal(model.description.gradations, model.trace.values[:, [5, 2, 0, 1, 3]])
     assert model.description.gradations[0].tolist() == [2, 1, 2, 2, 2]  # Brace, row S₁
 
@@ -82,11 +81,11 @@ def test_the_class_of_a_left_out_object_is_never_read(
 ) -> None:
     # poison the class of Sᵢ in the context model: its own description and decision must not move
     for i in range(experiment.m):
-        classes = experiment_cs_model.context.reference_classes.copy()
+        classes = experiment_cs_model.psi.reference_classes.copy()
         classes[i] = 1 - classes[i]
         poisoned = dataclasses.replace(
             experiment_cs_model,
-            context=dataclasses.replace(experiment_cs_model.context, reference_classes=classes),
+            psi=dataclasses.replace(experiment_cs_model.psi, reference_classes=classes),
         )
         honest = experiment_cs_model.classify(experiment.X[i], exclude=[i])
         attacked = poisoned.classify(experiment.X[i], exclude=[i])
@@ -108,7 +107,7 @@ def test_a_new_object(experiment_cs_model: CSModel) -> None:
 
 
 def test_both_presets(experiment: Dataset) -> None:
-    article = fit_model(experiment, preset("article"))
+    article = fit_model(experiment, article_switches())
     assert article.tuplam == (5, 0, 1, 3, 4)
     decisions = article.classify_training().decisions
     assert decisions.tolist() == [1, 1, 2, 1, 1, 1, 1, 1, 1, 1]  # 5 of 10 correct
@@ -121,7 +120,7 @@ def test_text_labels_and_refusals() -> None:
         y=np.array(["absent", "absent", "absent", "present", "present", "present"]),
         feature_types=(FeatureType.QUANTITATIVE, FeatureType.NOMINAL),
     )
-    model = fit_model(dataset)
+    model = fit_model(dataset, excel_experiment())
     assert model.classes == ("absent", "present")
     result = model.classify(X, exclude=np.arange(6))
     for decision, label in zip(result.decisions, result.labels, strict=True):
@@ -132,27 +131,35 @@ def test_text_labels_and_refusals() -> None:
 
 
 def test_a_single_synthetic_feature() -> None:
-    # one operator and one permitted k: r = 1, TUPLAM = {a₁}, p = 0
+    # one operator and one admissible k: r = 1, TUPLAM = {a₁}, p = 0
     X = np.array([[0.0], [0.1], [0.2], [0.9], [1.0], [0.8], [0.15]])
     dataset = Dataset(
         X=X, y=np.array([1, 1, 1, 2, 2, 2, 1]), feature_types=(FeatureType.QUANTITATIVE,)
     )
-    config = ExperimentConfig(
-        context=ContextConfig(operators=(OperatorConfig(label="ρ"),)),
-        k=plugin("explicit", values=[3]),
+    config = workbook_config(
+        local_context=LocalContextConfig(operators=(OperatorConfig(label="ρ"),)),
+        admissible_k=plugin("explicit", values=[3]),
     )
     model = fit_model(dataset, config)
     assert model.tuplam == (0,)
     assert model.p == 0
-    assert model.meta_dataset.Y.shape == (7, 1)
+    assert model.meta_table.Y.shape == (7, 1)
     assert model.classify_training().decisions.tolist() == [1, 1, 1, 2, 2, 2, 1]
 
 
 def test_bad_plug_ins_fail_before_steps_1_to_8(experiment: Dataset) -> None:
-    with pytest.raises(RegistryError, match="majorizers"):
-        fit_model(experiment, ExperimentConfig(hag=HAGConfig(majorizer=plugin("relu"))))
+    with pytest.raises(RegistryError, match="majorizing functions"):
+        fit_model(
+            experiment,
+            workbook_config(
+                additional_features=workbook_additional(majorizing_function=plugin("relu"))
+            ),
+        )
     with pytest.raises(RegistryError, match="decision rules"):
-        fit_model(experiment, ExperimentConfig(meta=MetaConfig(decision_rule=plugin("vote"))))
+        fit_model(
+            experiment,
+            workbook_config(meta_algorithm=MetaAlgorithmConfig(decision_rule=plugin("vote"))),
+        )
 
 
 def test_undefined_models_are_reported() -> None:
@@ -161,5 +168,5 @@ def test_undefined_models_are_reported() -> None:
         y=np.array([1, 2, 2]),
         feature_types=(FeatureType.QUANTITATIVE,),
     )
-    with pytest.raises(ModelUndefinedError, match="no k is permitted"):
-        fit_model(dataset)
+    with pytest.raises(ModelUndefinedError, match="no k is admissible"):
+        fit_model(dataset, excel_experiment())

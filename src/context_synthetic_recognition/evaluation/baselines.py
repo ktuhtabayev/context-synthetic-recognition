@@ -4,9 +4,9 @@ Registry :data:`BASELINES`:
 
 ``knn-vote`` (default)
     Plain k-nearest-neighbour majority vote for every base operator and k: the object gets the
-    class of the majority of its k nearest training objects, with the fold's scale unification,
+    class of the majority of its k nearest training objects, with the fold's normalization,
     the same operators, rounding and tie rule (sheet *Leave-One-Out*, columns M–R). The k are
-    3 and 5 by default, independent of the fold's permitted k (ADR-009).
+    3 and 5 by default, independent of the fold's admissible k (ADR-009).
 ``logistic-regression``, ``random-forest``, ``svm``, ``decision-tree``, ``naive-bayes``
     scikit-learn classifiers (optional extra ``[sklearn]``) on the quantitative features scaled by
     the fold's normalizer and the nominal features one-hot encoded (categories of the training
@@ -29,14 +29,18 @@ import numpy.typing as npt
 from pydantic import Field, JsonValue, field_validator
 from pydantic.dataclasses import dataclass as params_dataclass
 
-from context_synthetic_recognition.config.models import ExperimentConfig
+from context_synthetic_recognition.config.models import ExperimentConfig, PluginSpec
 from context_synthetic_recognition.core.arrays import FloatArray, IntArray
-from context_synthetic_recognition.core.encoders import k1_counts
-from context_synthetic_recognition.core.meta import K1_DECISION, K2_DECISION, REFUSAL
-from context_synthetic_recognition.core.neighbours import neighbour_order
-from context_synthetic_recognition.core.normalizers import NORMALIZERS, Scaling
-from context_synthetic_recognition.core.operators import resolve_operators
+from context_synthetic_recognition.core.local_context.neighbours import neighbour_order
+from context_synthetic_recognition.core.local_context.normalizers import NORMALIZERS, Scaling
+from context_synthetic_recognition.core.local_context.operators import resolve_operators
+from context_synthetic_recognition.core.meta_algorithm.algorithm import (
+    K1_DECISION,
+    K2_DECISION,
+    REFUSAL,
+)
 from context_synthetic_recognition.core.registry import PARAMS_CONFIG, Registry
+from context_synthetic_recognition.core.synthetic_features.encoders import k1_counts
 from context_synthetic_recognition.data.schema import Dataset
 from context_synthetic_recognition.errors import ConfigError
 
@@ -79,10 +83,11 @@ BASELINES: Registry[Baseline] = Registry("baselines")
 """Baselines by name."""
 
 
-def _scaling(data: BaselineInput) -> Scaling:
-    spec = data.config.preprocessing.normalizer
-    return NORMALIZERS.get(spec.name)(
-        data.train.X, data.train.quantitative, NORMALIZERS.make_params(spec.name, spec.params)
+def _scaling(data: BaselineInput, spec: PluginSpec | None = None) -> Scaling:
+    """The normalization ``spec`` (the local contexts' by default) fitted on the training part."""
+    chosen = spec or data.config.local_context.normalizer
+    return NORMALIZERS.get(chosen.name)(
+        data.train.X, data.train.quantitative, NORMALIZERS.make_params(chosen.name, chosen.params)
     )
 
 
@@ -119,20 +124,25 @@ def knn_vote(data: BaselineInput, params: KnnVoteParams | None = None, /) -> lis
     """
     chosen = params or KnnVoteParams()
     train = data.train
-    scaling = _scaling(data)
-    reference = scaling.transform(train.X)
-    targets = scaling.transform(np.asarray(data.X, dtype=np.float64))
-    operators, _ = resolve_operators(data.config.context, train.feature_names, train.quantitative)
+    X = np.asarray(data.X, dtype=np.float64)
+    operators, _ = resolve_operators(
+        data.config.local_context, train.feature_names, train.quantitative
+    )
     if chosen.operators is not None:
         unknown = sorted(set(chosen.operators) - {o.label for o in operators})
         if unknown:
             raise ConfigError(f"knn-vote: unknown operators {', '.join(unknown)}")
         operators = tuple(o for o in operators if o.label in chosen.operators)
-    operators = tuple(o.fit(reference) for o in operators)
     y = train.class_index
     outputs = []
-    for operator in operators:
-        D = operator.distances(targets, reference, decimals=data.config.context.distance_decimals)
+    for unfitted in operators:
+        scaling = _scaling(data, unfitted.normalizer)
+        reference = scaling.transform(train.X)
+        targets = scaling.transform(X)
+        operator = unfitted.fit(reference)
+        D = operator.distances(
+            targets, reference, decimals=data.config.local_context.distance_decimals
+        )
         order = neighbour_order(D, data.exclude)
         usable = [k for k in chosen.ks if k <= order.shape[1]]
         chi1 = k1_counts(order, y, usable) if usable else np.empty((targets.shape[0], 0))

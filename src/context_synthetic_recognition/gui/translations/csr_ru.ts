@@ -100,32 +100,92 @@
         <translation>all (I ∪ J), quantitative (I), nominal (J) или названия признаков через запятую</translation>
     </message>
     <message>
+        <source>The operator's own normalization; by default that of the local contexts</source>
+        <translation>Собственное нормирование оператора; по умолчанию — нормирование локальных контекстов</translation>
+    </message>
+    <message>
         <source>Remove this operator</source>
         <translation>Удалить этот оператор</translation>
+    </message>
+    <message>
+        <source>Normalizer</source>
+        <translation>Нормирование</translation>
     </message>
     <message>
         <source>Add operator</source>
         <translation>Добавить оператор</translation>
     </message>
     <message>
-        <source>Every setting of the method. The defaults are the template preset, which reproduces the Excel experiment; Edit → Undo takes back any change.</source>
-        <translation>Все настройки метода. По умолчанию действует предустановка «Шаблон», воспроизводящая эксперимент в Excel; Правка → Отменить возвращает любое изменение.</translation>
+        <source>Every setting of the method, in the order of its stages. The default preset follows the article; Edit → Undo takes back any change.</source>
+        <translation>Все настройки метода в порядке его этапов. Предустановка «default» следует статье; Правка → Отменить возвращает любое изменение.</translation>
     </message>
     <message>
-        <source>Template preset</source>
-        <translation>Предустановка «Шаблон»</translation>
+        <source>A named set of settings of the method</source>
+        <translation>Именованный набор настроек метода</translation>
     </message>
     <message>
-        <source>Running class centres, two majorizer passes (default)</source>
-        <translation>Текущие центры классов, два прохода мажоранты (по умолчанию)</translation>
+        <source>The article's method (the default)</source>
+        <translation>Метод статьи (по умолчанию)</translation>
     </message>
     <message>
-        <source>Article preset</source>
-        <translation>Предустановка «Статья»</translation>
+        <source>The default with α = 0.1, as in the article's experiments</source>
+        <translation>Настройки по умолчанию с α = 0.1, как в экспериментах статьи</translation>
     </message>
     <message>
-        <source>Final class centres, one majorizer pass</source>
-        <translation>Итоговые центры классов, один проход мажоранты</translation>
+        <source>The default with α = 0.2, as in the article's experiments</source>
+        <translation>Настройки по умолчанию с α = 0.2, как в экспериментах статьи</translation>
+    </message>
+    <message>
+        <source>The settings of the Excel experiment: odd k = 3 … 2·min|Kᵢ| − 3, running class means, two passes of the majorizing function (⚠ deviates from the article)</source>
+        <translation>Настройки эксперимента в Excel: нечётные k = 3 … 2·min|Kᵢ| − 3, текущие средние значения классов, два применения мажорирующей функции (⚠ отклоняется от статьи)</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Применить</translation>
+    </message>
+    <message>
+        <source>Set the method settings of the chosen preset; Edit → Undo takes them back</source>
+        <translation>Установить настройки метода из выбранной предустановки; Правка → Отменить возвращает прежние</translation>
+    </message>
+    <message>
+        <source>the objects that remain in E₁ (the article)</source>
+        <translation>объекты, оставшиеся в E₁ (статья)</translation>
+    </message>
+    <message>
+        <source>the objects moved to D</source>
+        <translation>объекты, перенесённые в D</translation>
+    </message>
+    <message>
+        <source>keep covering other objects with |r(S)|</source>
+        <translation>продолжают покрывать другие объекты с |r(S)|</translation>
+    </message>
+    <message>
+        <source>final class means M₁, M₂ (the article)</source>
+        <translation>итоговые средние значения классов M₁, M₂ (статья)</translation>
+    </message>
+    <message>
+        <source>running partial class means</source>
+        <translation>текущие частичные средние значения классов</translation>
+    </message>
+    <message>
+        <source>1 pass (the article)</source>
+        <translation>1 применение (статья)</translation>
+    </message>
+    <message>
+        <source>2 passes</source>
+        <translation>2 применения</translation>
+    </message>
+    <message>
+        <source>The features ρ is applied to: all (I ∪ J), quantitative (I), nominal (J), or feature names separated by commas</source>
+        <translation>Признаки, к которым применяется ρ: all (I ∪ J), quantitative (I), nominal (J) или названия признаков через запятую</translation>
+    </message>
+    <message>
+        <source>none</source>
+        <translation>нет</translation>
+    </message>
+    <message>
+        <source>T: the ids of the objects held out before R-IPS, separated by commas (E₁ = E₀ ∖ T)</source>
+        <translation>T: идентификаторы объектов, отложенных до R-IPS, через запятую (E₁ = E₀ ∖ T)</translation>
     </message>
     <message>
         <source>Distances are rounded to this many decimals so that equal distances tie exactly</source>
@@ -140,12 +200,24 @@
         <translation>Пропускать постоянные синтетические признаки</translation>
     </message>
     <message>
-        <source>Drop features that take one value on every training object (off: as the workbook)</source>
-        <translation>Исключать признаки, принимающие одно значение на всех обучающих объектах (выключено: как в книге Excel)</translation>
+        <source>Drop features that take one value on every training object (off by default)</source>
+        <translation>Исключать признаки, принимающие одно значение на всех объектах обучающей выборки (по умолчанию выключено)</translation>
     </message>
     <message>
-        <source>α — regularisation, 0 &lt; α &lt; 1</source>
-        <translation>α — регуляризация, 0 &lt; α &lt; 1</translation>
+        <source>Zero value: a = 0 where the classes are indistinguishable (f_k(μ) = 0.5)</source>
+        <translation>Нулевое значение: a = 0 там, где классы неразличимы (f_k(μ) = 0.5)</translation>
+    </message>
+    <message>
+        <source>The values 0, 1, 2 of the article's experiments: every feature that takes 0 on a training object is left out. Off: formula (5) alone.</source>
+        <translation>Значения 0, 1, 2 из экспериментов статьи: каждый признак, принимающий значение 0 на объекте обучающей выборки, исключается. Выключено: только формула (5).</translation>
+    </message>
+    <message>
+        <source>Original nominal features combined with the synthetic ones: nominal (all of J) or feature names separated by commas; empty: none</source>
+        <translation>Исходные номинальные признаки, объединяемые с синтетическими: nominal (все признаки J) или названия признаков через запятую; пусто — нет</translation>
+    </message>
+    <message>
+        <source>α — margin regularization parameter, 0 &lt; α &lt; 1</source>
+        <translation>α — параметр для регуляризации отступа, 0 &lt; α &lt; 1</translation>
     </message>
     <message>
         <source>δ — the grouping stops when θ/γ ≤ δ</source>
@@ -160,26 +232,6 @@
         <translation>cr1 — кандидат выбирается, только если θ/γ &lt; cr1</translation>
     </message>
     <message>
-        <source>running partial means (template)</source>
-        <translation>текущие средние (шаблон)</translation>
-    </message>
-    <message>
-        <source>final class means (article)</source>
-        <translation>итоговые средние (статья)</translation>
-    </message>
-    <message>
-        <source>2 passes (template)</source>
-        <translation>2 прохода (шаблон)</translation>
-    </message>
-    <message>
-        <source>1 pass (article)</source>
-        <translation>1 проход (статья)</translation>
-    </message>
-    <message>
-        <source>⚠ differs from the article</source>
-        <translation>⚠ не как в статье</translation>
-    </message>
-    <message>
         <source>The positive class of precision, recall and ROC</source>
         <translation>Положительный класс для точности, полноты и ROC</translation>
     </message>
@@ -188,20 +240,24 @@
         <translation>Начальное значение генератора для разбиений в рандомизированных протоколах</translation>
     </message>
     <message>
-        <source>Steps 2–3 · Base operators (metric × feature subset)</source>
-        <translation>Шаги 2–3 · Базовые операторы (метрика × признаки)</translation>
+        <source>R-IPS · Precedent base for training and testing</source>
+        <translation>R-IPS · База прецедентов для обучения и тестирования</translation>
     </message>
     <message>
-        <source>Step 9 · Hierarchical agglomerative grouping</source>
-        <translation>Шаг 9 · Иерархическая агломеративная группировка</translation>
+        <source>Step 9 · Additional features: hierarchical agglomerative algorithm</source>
+        <translation>Шаг 9 · Дополнительные признаки: иерархический агломеративный алгоритм</translation>
     </message>
     <message>
-        <source>Load a dataset to see the permitted k.</source>
-        <translation>Загрузите набор данных, чтобы увидеть допустимые k.</translation>
+        <source>Load a dataset to see the admissible k.</source>
+        <translation>Загрузите набор данных, чтобы увидеть допустимые значения k.</translation>
     </message>
     <message>
         <source>Edit the configuration</source>
         <translation>Изменение конфигурации</translation>
+    </message>
+    <message>
+        <source>as the local contexts</source>
+        <translation>как у локальных контекстов</translation>
     </message>
     <message>
         <source>Label</source>
@@ -220,36 +276,52 @@
         <translation>Соответствует предустановке:</translation>
     </message>
     <message>
-        <source>Step 1 · Scale unification</source>
-        <translation>Шаг 1 · Унификация шкал</translation>
+        <source>⚠ deviates from the article</source>
+        <translation>⚠ отклоняется от статьи</translation>
     </message>
     <message>
-        <source>Distance decimals</source>
-        <translation>Знаков в расстояниях</translation>
+        <source>Metric ρ</source>
+        <translation>Метрика ρ</translation>
     </message>
     <message>
-        <source>Permitted k</source>
-        <translation>Допустимые k</translation>
+        <source>Test sample T</source>
+        <translation>Тестовая выборка T</translation>
+    </message>
+    <message>
+        <source>Training sample</source>
+        <translation>Обучающая выборка</translation>
+    </message>
+    <message>
+        <source>Blocked objects</source>
+        <translation>Заблокированные объекты</translation>
+    </message>
+    <message>
+        <source>Step 1 · Normalization</source>
+        <translation>Шаг 1 · Нормирование</translation>
+    </message>
+    <message>
+        <source>Steps 2–3 · Base operators (metric × feature subset)</source>
+        <translation>Шаги 2–3 · Базовые операторы (метрика × признаки)</translation>
+    </message>
+    <message>
+        <source>Admissible k</source>
+        <translation>Допустимые значения k</translation>
     </message>
     <message>
         <source>Steps 4–8 · Synthetic features Ψ(r)</source>
         <translation>Шаги 4–8 · Синтетические признаки Ψ(r)</translation>
     </message>
     <message>
-        <source>Majorizer ϕ</source>
-        <translation>Мажоранта ϕ</translation>
+        <source>Majorizing function φ</source>
+        <translation>Мажорирующая функция φ</translation>
     </message>
     <message>
-        <source>⚠ The two calculations that differ from the article:</source>
-        <translation>⚠ Два вычисления, отличающиеся от статьи:</translation>
+        <source>Class means in θ, γ</source>
+        <translation>Средние значения классов в θ, γ</translation>
     </message>
     <message>
-        <source>Class centres in θ, γ</source>
-        <translation>Центры классов в θ, γ</translation>
-    </message>
-    <message>
-        <source>STEP 4 passes</source>
-        <translation>Проходы на ШАГЕ 4</translation>
+        <source>Passes of the majorizing function</source>
+        <translation>Применения мажорирующей функции</translation>
     </message>
     <message>
         <source>Steps 10–12 · Meta-algorithm</source>
@@ -264,20 +336,20 @@
         <translation>Эксперимент</translation>
     </message>
     <message>
+        <source>⚠ Switches: one value follows the article, the other deviates from it.</source>
+        <translation>⚠ Переключатели: одно значение следует статье, другое отклоняется от неё.</translation>
+    </message>
+    <message>
         <source>custom</source>
         <translation>своя</translation>
     </message>
     <message>
-        <source>⚠ Template calculations that differ from the article are active:</source>
-        <translation>⚠ Включены вычисления шаблона, отличающиеся от статьи:</translation>
+        <source>⚠ Settings that deviate from the article are active:</source>
+        <translation>⚠ Действуют настройки, отклоняющиеся от статьи:</translation>
     </message>
     <message>
-        <source>They reproduce the template workbooks exactly; the Article preset follows the article.</source>
-        <translation>Они точно воспроизводят книги-шаблоны; предустановка «Статья» следует статье.</translation>
-    </message>
-    <message>
-        <source>⚠ This configuration follows the article for both switches (final class centres, one majorizer pass); it does not reproduce the template workbooks.</source>
-        <translation>⚠ Эта конфигурация следует статье по обоим переключателям (итоговые центры классов, один проход мажоранты); она не воспроизводит книги-шаблоны.</translation>
+        <source>The default preset follows the article.</source>
+        <translation>Предустановка «default» следует статье.</translation>
     </message>
     <message>
         <source>{name}: k = {ks}  →  r = {r} synthetic features ({operators} operator(s) × {count} k)</source>
@@ -288,8 +360,12 @@
         <translation>оценивание: выберите хотя бы один протокол</translation>
     </message>
     <message>
-        <source>Normalizer</source>
-        <translation>Нормализатор</translation>
+        <source>The training and the test sample of the protocols rips and nested-cross-validation (Definition 3).</source>
+        <translation>Обучающая и тестовая выборки протоколов rips и nested-cross-validation (Определение 3).</translation>
+    </message>
+    <message>
+        <source>Distance decimals</source>
+        <translation>Знаков в расстояниях</translation>
     </message>
     <message>
         <source>Rule</source>
@@ -300,8 +376,12 @@
         <translation>Кодировщик</translation>
     </message>
     <message>
-        <source>Weights</source>
-        <translation>Веса</translation>
+        <source>Informativeness ω</source>
+        <translation>Информативность ω</translation>
+    </message>
+    <message>
+        <source>Original features</source>
+        <translation>Исходные признаки</translation>
     </message>
     <message>
         <source>Decision rule</source>
@@ -332,8 +412,8 @@
         <translation>Зерно (seed)</translation>
     </message>
     <message>
-        <source>No permitted k for {name}.</source>
-        <translation>Для {name} нет допустимых k.</translation>
+        <source>No admissible k for {name}.</source>
+        <translation>Для {name} нет допустимых значений k.</translation>
     </message>
     <message>
         <source>Preset: {name}</source>
@@ -362,10 +442,6 @@
     <message>
         <source>last column</source>
         <translation>последний столбец</translation>
-    </message>
-    <message>
-        <source>none</source>
-        <translation>нет</translation>
     </message>
     <message>
         <source>Read again</source>
@@ -412,8 +488,8 @@
         <translation>Различных значений</translation>
     </message>
     <message>
-        <source>The type decides how a feature enters the distance: |x′ − y′| on the unified scale for I, equal / not equal for J. Changing a type re-reads the dataset and drops the current result.</source>
-        <translation>Тип определяет, как признак входит в расстояние: |x′ − y′| в унифицированной шкале для I, равно / не равно для J. Изменение типа перечитывает набор данных и сбрасывает текущий результат.</translation>
+        <source>The type decides how a feature enters the distance: |x′ − y′| of the normalized values for I, equal / not equal for J. Changing a type re-reads the dataset and drops the current result.</source>
+        <translation>Тип определяет, как признак входит в расстояние: |x′ − y′| нормированных значений для I, равно / не равно для J. Изменение типа перечитывает набор данных и сбрасывает текущий результат.</translation>
     </message>
     <message>
         <source>Objects m</source>
@@ -492,8 +568,8 @@
         <translation>Экспорт</translation>
     </message>
     <message>
-        <source>Write the run on screen: the Excel mirror of the experiment workbook, every table, the figures and the run report.</source>
-        <translation>Сохранить показанный запуск: книгу Excel — зеркало книги эксперимента, все таблицы, рисунки и отчёт о запуске.</translation>
+        <source>Write the run on screen: an Excel workbook of every step, every table, the figures and the run report.</source>
+        <translation>Сохранить показанный запуск: книгу Excel со всеми шагами, все таблицы, рисунки и отчёт о запуске.</translation>
     </message>
     <message>
         <source>All</source>
@@ -620,8 +696,8 @@
         <translation>Исключить его из собственного контекста</translation>
     </message>
     <message>
-        <source>The object is not its own neighbour: the Theorem check of the workbook</source>
-        <translation>Объект не является собственным соседом: проверка Теоремы из книги Excel</translation>
+        <source>The object is not its own neighbour: the check of the Theorem</source>
+        <translation>Объект не является собственным соседом: проверка Теоремы</translation>
     </message>
     <message>
         <source>Paste a row: n values separated by commas, semicolons, spaces or tabs</source>
@@ -640,8 +716,8 @@
         <translation>Соседи</translation>
     </message>
     <message>
-        <source>Unified values</source>
-        <translation>Унифицированные значения</translation>
+        <source>Normalized values</source>
+        <translation>Нормированные значения</translation>
     </message>
     <message>
         <source>— a new object —</source>
@@ -708,8 +784,8 @@
         <translation>Выберите объект — в таблице или в списке выше.</translation>
     </message>
     <message>
-        <source>Every step of the pipeline, as in the workbook. Click a column to sort; click a row to follow its object through every table.</source>
-        <translation>Все шаги конвейера, как в книге Excel. Щёлкните столбец для сортировки; щёлкните строку, чтобы проследить её объект во всех таблицах.</translation>
+        <source>Every step of the method, in its order. Click a column to sort; click a row to follow its object through every table.</source>
+        <translation>Все шаги метода по порядку. Щёлкните столбец для сортировки; щёлкните строку, чтобы проследить её объект во всех таблицах.</translation>
     </message>
     <message>
         <source>The object marked in every table (cross-highlighting)</source>
@@ -772,8 +848,8 @@
         <translation>никогда</translation>
     </message>
     <message>
-        <source>Evaluate all four settings of the two ⚠ switches (a leave-one-out for each)</source>
-        <translation>Оценить все четыре варианта двух ⚠ переключателей (скользящий контроль для каждого)</translation>
+        <source>Evaluate the four combinations of the class means and the passes of the majorizing function (a leave-one-out for each)</source>
+        <translation>Оценить четыре сочетания средних значений классов и числа применений мажорирующей функции (скользящий контроль для каждого)</translation>
     </message>
     <message>
         <source>⚠ Switch sensitivity</source>
@@ -836,8 +912,8 @@
         <translation>Запускать пока нечего.</translation>
     </message>
     <message>
-        <source>article calculation for both switches</source>
-        <translation>вычисление по статье для обоих переключателей</translation>
+        <source>follows the article</source>
+        <translation>следует статье</translation>
     </message>
     <message>
         <source>⚠ The results on screen were computed with another configuration. Run again to update them.</source>
@@ -876,8 +952,8 @@
         <translation>✗ {message}</translation>
     </message>
     <message>
-        <source>⚠ template calculation for {fields}</source>
-        <translation>⚠ вычисление по шаблону для: {fields}</translation>
+        <source>⚠ deviates from the article: {fields}</source>
+        <translation>⚠ отклоняется от статьи: {fields}</translation>
     </message>
     <message>
         <source>{name} · m = {m}, n = {n} · protocols: {protocols} · {switches}</source>
@@ -1024,6 +1100,10 @@
         <translation>Повторить</translation>
     </message>
     <message>
+        <source>Apply a preset</source>
+        <translation>Применить предустановку</translation>
+    </message>
+    <message>
         <source>&amp;Run</source>
         <translation>&amp;Запуск</translation>
     </message>
@@ -1122,22 +1202,22 @@
     <message>
         <source>Context-synthetic recognition {version}
 
-The context-synthetic model of recognition algorithms (CS-model): local k-nearest-neighbour contexts → synthetic features Ψ(r) → hierarchical agglomerative grouping → meta-algorithm.
+The context-synthetic model of recognition algorithms (CS-model): R-IPS → local k-nearest-neighbour contexts → synthetic features Ψ(r) → additional features (hierarchical agglomerative algorithm) → meta-algorithm.
 
-⚠ Two template calculations differ from the article (running class centres in θ/γ; the STEP 4 majorizer applied twice). Both are switches on the Configure page; the default reproduces the template workbooks.</source>
+The default preset follows the article. Settings that deviate from it are switches on the Configure page, marked “⚠ deviates from the article”.</source>
         <translation>Context-synthetic recognition {version}
 
-Контекстно-синтетическая модель алгоритмов распознавания (КС-модель): локальные контексты k ближайших соседей → синтетические признаки Ψ(r) → иерархическая агломеративная группировка → метаалгоритм.
+Контекстно-синтетическая модель алгоритмов распознавания (КС-модель): R-IPS → локальные контексты k ближайших соседей → синтетические признаки Ψ(r) → дополнительные признаки (иерархический агломеративный алгоритм) → метаалгоритм.
 
-⚠ Два вычисления шаблона отличаются от статьи (текущие центры классов в θ/γ; мажоранта на ШАГЕ 4 применяется дважды). Оба — переключатели на странице «Настройка»; по умолчанию воспроизводятся книги-шаблоны.</translation>
+Предустановка «default» следует статье. Настройки, отклоняющиеся от неё, — переключатели на странице «Настройка», отмеченные «⚠ отклоняется от статьи».</translation>
     </message>
     <message>
         <source>preset: {name}</source>
         <translation>предустановка: {name}</translation>
     </message>
     <message>
-        <source>⚠ {n} template calculation(s)</source>
-        <translation>⚠ вычислений шаблона: {n}</translation>
+        <source>⚠ deviates from the article: {n} setting(s)</source>
+        <translation>⚠ отклонения от статьи: {n}</translation>
     </message>
     <message>
         <source>TUPLAM = {tuplam}</source>

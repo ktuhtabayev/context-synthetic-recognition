@@ -55,8 +55,8 @@ class ExportPage(Page):
             state,
             settings,
             tr(
-                "Write the run on screen: the Excel mirror of the experiment workbook, every "
-                "table, the figures and the run report."
+                "Write the run on screen: an Excel workbook of every step, every table, the "
+                "figures and the run report."
             ),
             parent,
         )

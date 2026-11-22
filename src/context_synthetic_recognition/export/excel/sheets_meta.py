@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 
-from context_synthetic_recognition.core.meta import REFUSAL, MetaSteps
+from context_synthetic_recognition.core.meta_algorithm.algorithm import REFUSAL, MetaSteps
 from context_synthetic_recognition.export.excel.common import (
     ALL_OBJECTS,
     BRACE,
@@ -29,7 +29,7 @@ from context_synthetic_recognition.export.wording import (
     set_text,
     tuple_text,
 )
-from context_synthetic_recognition.notation import DASH, latent_name, subscript, synthetic_name
+from context_synthetic_recognition.notation import DASH, additional_name, subscript, synthetic_name
 
 EXCLUDED_RANK = 999
 """Rank shown (as "—") for the training object left out of the new object's context."""
@@ -39,8 +39,8 @@ YES, NO = "✅", "❌"
 
 
 def slot_name(view: RunView, position: int) -> str:
-    """The TUPLAM feature at ``position`` (0 = y₀), or "—" if the HAG did not fill it."""
-    tuplam = view.hag.tuplam
+    """The TUPLAM feature at ``position`` (0 = y₀), or "—" if the algorithm did not fill it."""
+    tuplam = view.agglomerative.tuplam
     return synthetic_name(tuplam[position]) if position < len(tuplam) else DASH
 
 
@@ -64,36 +64,36 @@ def _y_headers(view: RunView) -> list[str]:
 
 
 def _r_headers(view: RunView) -> list[str]:
-    return [latent_name(k) for k in range(view.slots - 1)]
+    return [additional_name(k) for k in range(view.slots - 1)]
 
 
 # ---------------------------------------------------------------- Dataset for Meta-algorithm
 
 
-def meta_dataset(book: Book) -> None:
-    """Sheet *Dataset for Meta-algorithm* (Step 10): TUPLAM order, y, r and Y = (y, r)."""
+def meta_table(book: Book) -> None:
+    """Sheet *Dataset for Meta-algorithm* (Step 10): TUPLAM order, y, r and Y = (y, d)."""
     view = book.view
-    trace, hag, data = view.trace, view.hag, view.model.meta_dataset
+    trace, agglomerative, data = view.trace, view.agglomerative, view.model.meta_table
     m, slots = trace.m, view.slots
-    latent_slots = slots - 1
+    additional_slots = slots - 1
     ids, labels = trace.object_ids, view.labels
     sheet = book.sheet(META_DATASET, "meta")
     sheet.widths({1: 32, (2, max(14, 2 * slots + 4)): 13})
     sheet.title_bar(
         "Step 10 · Dataset for the meta-algorithm — initial features y (TUPLAM order) and "
-        "additional (latent) features r",
+        "additional (latent) features d",
         2 * slots + 4,
     )
-    sheet.bar(3, 1, 4, "TUPLAM order (from the HAG sheets)")
+    sheet.bar(3, 1, 4, "TUPLAM order (from the hierarchical agglomerative algorithm sheets)")
     sheet.row(4, 1, ["Position", "Feature index", "Feature", "Selected in"], "header")
     for k in range(slots):
-        filled = k < len(hag.tuplam)
+        filled = k < len(agglomerative.tuplam)
         sheet.row(
             5 + k,
             1,
             [
                 f"y{subscript(k)}",
-                hag.tuplam[k] + 1 if filled else DASH,
+                agglomerative.tuplam[k] + 1 if filled else DASH,
                 slot_name(view, k),
                 "STEP 2 · max ω" if k == 0 else f"Iteration {k}",
             ],
@@ -101,62 +101,65 @@ def meta_dataset(book: Book) -> None:
         )
     row = slots + 6
     sheet.merge(row, 1, 2, "|TUPLAM| = initial features", "key")
-    sheet.put(row, 3, len(hag.tuplam), "value")
-    sheet.merge(row + 1, 1, 2, "p = |TUPLAM| − 1 = latent features", "key")
-    sheet.put(row + 1, 3, hag.p, "value")
+    sheet.put(row, 3, len(agglomerative.tuplam), "value")
+    sheet.merge(row + 1, 1, 2, "p = |TUPLAM| − 1 = additional features", "key")
+    sheet.put(row + 1, 3, agglomerative.p, "value")
     sheet.merge(row + 2, 1, 2, "TUPLAM", "key")
-    sheet.merge(row + 2, 3, 2, hag.label, "value_left")
+    sheet.merge(row + 2, 3, 2, agglomerative.label, "value_left")
 
     top = slots + 10
     right = slots + 4
     y = _slots(view, data.initial, slots, float)
-    r = _slots(view, data.latent, latent_slots, float)
+    r = _slots(view, data.additional, additional_slots, float)
     sheet.bar(
         top,
         1,
         slots + 2,
         "Initial features y₀ … y_p  (contribution values ηᵤ(a_tu) of the TUPLAM features)",
     )
-    sheet.bar(top, right, latent_slots + 2, "Additional (latent) features r₁ … r_p")
+    sheet.bar(top, right, additional_slots + 2, "Additional (latent) features d₁ … d_p")
     sheet.row(top + 1, 1, ["№", *_y_headers(view), "Class"], "header")
     sheet.put(top + 1, right, "№", "header")
-    sheet.row(top + 1, right + 1, _r_headers(view), "latent_header")
-    sheet.put(top + 1, right + latent_slots + 1, "Class", "header")
+    sheet.row(top + 1, right + 1, _r_headers(view), "additional_header")
+    sheet.put(top + 1, right + additional_slots + 1, "Class", "header")
     for t in range(m):
         line = top + 2 + t
         sheet.put(line, 1, ids[t], "label")
         sheet.row(line, 2, y[t], "initial_num")
         sheet.put(line, slots + 2, labels[t], "class_")
         sheet.put(line, right, ids[t], "label")
-        sheet.row(line, right + 1, r[t], "latent_num")
-        sheet.put(line, right + latent_slots + 1, labels[t], "class_")
+        sheet.row(line, right + 1, r[t], "additional_num")
+        sheet.put(line, right + additional_slots + 1, labels[t], "class_")
 
     top += m + 3
     sheet.bar(
         top,
         1,
         2 * slots + 1,
-        f"Dataset for Meta-algorithms  Y = (y₀, …, y_p, r₁, …, r_p)  [{view.dataset.name}]",
+        f"Dataset for Meta-algorithms  Y = (y₀, …, y_p, d₁, …, d_p)  [{view.dataset.name}]",
     )
     sheet.put(top + 1, 1, "№", "header")
     sheet.row(top + 1, 2, _y_headers(view), "header")
-    sheet.row(top + 1, slots + 2, _r_headers(view), "latent_header")
+    sheet.row(top + 1, slots + 2, _r_headers(view), "additional_header")
     sheet.put(top + 1, 2 * slots + 1, "Class", "header")
     for t in range(m):
         line = top + 2 + t
         sheet.put(line, 1, ids[t], "label")
         sheet.row(line, 2, y[t], "initial_num")
-        sheet.row(line, slots + 2, r[t], "latent_num")
+        sheet.row(line, slots + 2, r[t], "additional_num")
         sheet.put(line, 2 * slots + 1, labels[t], "class_")
     sheet.notes(
         top + m + 3,
         [
             (
-                "y_j is the contribution value of the j-th TUPLAM feature (Step 8); r_j is the "
+                "y_j is the contribution value of the j-th TUPLAM feature (Step 8); d_j is the "
                 "value "
-                "R(Sₜ) after the j-th HAG iteration (Step 9)."
+                "R(Sₜ) after the j-th hierarchical agglomerative algorithm iteration (Step 9)."
             ),
-            '"—" marks positions that the HAG did not fill (the grouping stopped earlier).',
+            (
+                '"—" marks positions that the agglomerative algorithm did not fill (it stopped '
+                "earlier)."
+            ),
         ],
     )
 
@@ -174,8 +177,8 @@ def sort_keys(view: RunView) -> list[int]:
 def _description_headers(view: RunView) -> tuple[list[str], list[str]]:
     slots = view.slots
     gradations = [f"aᵢ{subscript(k)} ({slot_name(view, k)})" for k in range(slots)]
-    latent = [f"dᵢ{subscript(k + 1)} ({latent_name(k)})" for k in range(slots - 1)]
-    return gradations, latent
+    additional = [f"dᵢ{subscript(k + 1)} ({additional_name(k)})" for k in range(slots - 1)]
+    return gradations, additional
 
 
 def brace(book: Book) -> None:
@@ -183,7 +186,7 @@ def brace(book: Book) -> None:
     view = book.view
     trace, model, demo = view.trace, view.model, view.new_object
     m, n, r, slots = trace.m, len(trace.feature_names), trace.r, view.slots
-    latent_slots = slots - 1
+    additional_slots = slots - 1
     operators = trace.operators
     ids, labels = trace.object_ids, view.labels
     representation = demo.classification.representation
@@ -201,9 +204,9 @@ def brace(book: Book) -> None:
     )
 
     # ---- the training description and the same table sorted by class
-    gradation_headers, latent_headers = _description_headers(view)
+    gradation_headers, additional_headers = _description_headers(view)
     a = _slots(view, model.description.gradations, slots, int)
-    d = _slots(view, model.description.latent, latent_slots, float)
+    d = _slots(view, model.description.additional, additional_slots, float)
     keys = sort_keys(view)
     positions = [sum(other < key for other in keys) + 1 for key in keys]
     sheet.bar(
@@ -211,13 +214,13 @@ def brace(book: Book) -> None:
         1,
         table_width,
         "Training dataset for the meta-algorithm — gradations aᵢⱼ ∈ {1, 2} of the TUPLAM features "
-        "and latent features dᵢⱼ = r_j",
+        "and additional features dᵢⱼ = d_j",
     )
 
     def header(row: int, extra: bool) -> None:
         sheet.put(row, 1, "№", "header")
         sheet.row(row, 2, gradation_headers, "header")
-        sheet.row(row, slots + 2, latent_headers, "latent_header")
+        sheet.row(row, slots + 2, additional_headers, "additional_header")
         sheet.put(row, table_width, "Class", "header")
         if extra:
             sheet.row(row, table_width + 1, ["sort key", "position"], "header")
@@ -225,7 +228,7 @@ def brace(book: Book) -> None:
     def line(row: int, t: int) -> None:
         sheet.put(row, 1, ids[t], "label")
         sheet.row(row, 2, a[t], "synthetic")
-        sheet.row(row, slots + 2, d[t], "latent_num")
+        sheet.row(row, slots + 2, d[t], "additional_num")
         sheet.put(row, table_width, labels[t], "class_")
 
     header(4, True)
@@ -357,7 +360,7 @@ def brace(book: Book) -> None:
         top + 5,
         [
             (
-                "Scale unification uses the training min and max (Step 1); distances, ranks and χ₁ "
+                "Normalization uses the training min and max (Step 1); distances, ranks and χ₁ "
                 "use exactly the rules of Steps 2–5. The class of S is not an input anywhere on "
                 "this "
                 "sheet."
@@ -407,7 +410,7 @@ def meta(book: Book) -> None:
     classification = demo.classification
     steps = classification.meta.steps(0)
     a = model.description.gradations
-    d = model.description.latent
+    d = model.description.additional
     in_k1 = trace.class_index == 0
     sheet = book.sheet(META, "meta")
     sheet.widths({1: 18, (2, 10): 14, (11, 23): 8, (24, 25): 4})
@@ -456,7 +459,7 @@ def meta(book: Book) -> None:
         "integer",
         "synthetic",
         "integer",
-        "latent_num",
+        "additional_num",
         "integer",
         "integer",
         "integer",
@@ -482,7 +485,7 @@ def meta(book: Book) -> None:
                 f"aᵢ{cur}",
                 f"a{cur} = aᵢ{cur} ?",
                 f"dᵢ{cur}",
-                "latent sign",
+                "additional sign",
                 "keep?",
                 "in B after",
             ],
@@ -495,12 +498,12 @@ def meta(book: Book) -> None:
             before = bool(b1_before[t] if in_k1[t] else b2_before[t])
             after = bool(b1_after[t] if in_k1[t] else b2_after[t])
             value: Any = DASH
-            latent: Any = DASH
+            additional: Any = DASH
             match: Any = DASH
             sign: Any = DASH
             keep: Any = YES if before else DASH
             if executed:
-                value, latent = int(a[t, j]), float(d[t, j - 1])
+                value, additional = int(a[t, j]), float(d[t, j - 1])
                 matched, ok = bool(steps.match[j, t]), bool(steps.sign[j - 1, t])
                 match = YES if matched else NO
                 good, bad = ("✅ (+)", "❌ (−)") if in_k1[t] else ("✅ (−)", "❌ (+)")
@@ -509,7 +512,7 @@ def meta(book: Book) -> None:
             sheet.row(
                 top + 2 + t,
                 1,
-                [ids[t], labels[t], int(before), value, match, latent, sign, keep, int(after)],
+                [ids[t], labels[t], int(before), value, match, additional, sign, keep, int(after)],
                 step_styles,
             )
             sheet.row(top + 2 + t, 24, [int(b1_after[t]), int(b2_after[t])], "muted")

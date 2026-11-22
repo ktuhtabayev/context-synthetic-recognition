@@ -10,8 +10,9 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QLineEdit
 from pytestqt.qtbot import QtBot
 
-from context_synthetic_recognition.config import plugin, preset
-from context_synthetic_recognition.config.models import CentreMode
+from context_synthetic_recognition.config import ExperimentConfig, plugin
+from context_synthetic_recognition.config.models import ClassMeans
+from context_synthetic_recognition.config.presets import DEVIATIONS, PresetName
 from context_synthetic_recognition.data.schema import FeatureType
 from context_synthetic_recognition.export.report import ExportError
 from context_synthetic_recognition.gui.pages.results import (
@@ -25,6 +26,7 @@ from context_synthetic_recognition.gui.theme import DARK, LIGHT, CellRole
 from context_synthetic_recognition.gui.window import MainWindow
 from context_synthetic_recognition.services.runner import save_run
 
+from ..conftest import excel_experiment
 from ..test_export_figures import EXPERIMENT_FIGURES
 from ..test_export_tables import EXPERIMENT_TABLES
 from .conftest import RUN_TIMEOUT, Run
@@ -59,8 +61,8 @@ def test_the_dataset_page_before_and_after_loading(window: MainWindow) -> None:
     assert shown["features"] == "13  (6 quantitative, 7 nominal)"
     assert shown["k1"] == "4 objects of class 1  (40 %)"
     assert shown["k2"] == "6 objects of class 2  (60 %)"
-    assert shown["k"] == "3, 5   (formula, 2 value(s))"
-    assert shown["r"] == "6"
+    assert shown["k"] == "3   (min-class, 1 value(s))"  # the default: the article's rule
+    assert shown["r"] == "3"
     assert shown["operators"] == "ρ (13), ρ_I (6), ρ_J (7)"
     assert page.balance.sizes == (4, 6)
     assert page.problems.text() == ""
@@ -72,15 +74,19 @@ def test_the_dataset_page_before_and_after_loading(window: MainWindow) -> None:
 
 def test_the_summary_follows_the_configuration(loaded: MainWindow) -> None:
     state = loaded.state
-    state.set_config(state.config.model_copy(update={"k": plugin("explicit", values=[3])}))
+    state.set_config(
+        state.config.model_copy(update={"admissible_k": plugin("explicit", values=[3])})
+    )
     assert facts(loaded)["k"] == "3   (explicit, 1 value(s))"
     assert facts(loaded)["r"] == "3"
-    state.set_config(state.config.model_copy(update={"k": plugin("explicit", values=[11])}))
+    state.set_config(
+        state.config.model_copy(update={"admissible_k": plugin("explicit", values=[11])})
+    )
     assert facts(loaded)["k"] == "—"
     assert loaded.dataset_page.problems.text().startswith("⚠ ")
     state.undo_stack.undo()
     state.undo_stack.undo()
-    assert facts(loaded)["k"] == "3, 5   (formula, 2 value(s))"
+    assert facts(loaded)["k"] == "3, 5   (twice-min-class, 2 value(s))"
 
 
 def test_changing_a_feature_type(loaded: MainWindow, run: Run) -> None:
@@ -140,7 +146,7 @@ def test_dataset_errors_are_shown(window: MainWindow, tmp_path: Path) -> None:
     assert window.state.dataset is None
     assert page.load("heart-disease-270")
     assert not page.error.isVisibleTo(page)
-    assert facts(window)["k"].startswith("3, 5, …, 237")
+    assert facts(window)["k"] == "3, 5, …, 119   (min-class, 59 value(s))"  # odd k ≤ min|Kᵢ|
 
 
 def test_the_dataset_page_in_the_dark_theme(loaded: MainWindow) -> None:
@@ -155,109 +161,262 @@ def test_the_dataset_page_in_the_dark_theme(loaded: MainWindow) -> None:
 # ---------------------------------------------------------------- Configure
 
 
-def test_the_configure_page_shows_the_template_preset(loaded: MainWindow) -> None:
-    page = loaded.configure_page
-    assert page.preset_badge.text() == "template"
+def test_the_configure_page_starts_with_the_default_preset(window: MainWindow) -> None:
+    page = window.configure_page
+    assert window.state.config == ExperimentConfig()
+    assert page.preset_badge.text() == "default"
+    assert [page.preset_choice.itemText(i) for i in range(page.preset_choice.count())] == [
+        name.value for name in PresetName
+    ]
+    assert page.deviations.text() == ""  # the article's method: nothing deviates
+    assert not page.deviations.isVisibleTo(page)
+    # every deviation of the library has its switch and its badge, hidden while it is off
+    keys = {found.key for found in DEVIATIONS}
+    assert set(page.switches) == keys
+    assert set(page.deviation_badges) == keys
+    assert {label.text() for label in page.deviation_badges.values()} == {
+        "⚠ deviates from the article"
+    }
+    assert not any(label.isVisibleTo(page) for label in page.deviation_badges.values())
+    assert not window.deviation_button.isVisibleTo(window)
+    assert page.rips_metric.spec() == plugin("zhuravlyov")
+    assert page.rips_normalizer.spec() == plugin("minmax")
+    assert page.rips_features.currentText() == "all"
+    assert page.rips_training.currentData() == "remaining"
+    assert not page.keep_blocked_cover.isChecked()
+    assert page.test_sample.text() == ""
+    assert page.class_means.currentData() == ClassMeans.FINAL.value
+    assert page.passes.currentData() == 1
+    assert page.informativeness.spec() == plugin("formula-4")
+    assert page.original_features.currentText() == ""
+    assert not page.zero_value.isChecked()
+    assert [row.normalizer_editor.optional_spec() for row in page.operators.rows] == [None] * 3
+    assert page.k_preview.text() == "Load a dataset to see the admissible k."
+    assert page.widgets_config() == window.state.config
+
+
+def test_the_configure_page_applies_the_excel_experiment_preset(window: MainWindow) -> None:
+    page, state = window.configure_page, window.state
+    assert window.dataset_page.load("heart-disease-10")
+    assert page.k_preview.text() == (
+        "Heart-Disease (10, 13, 2): k = 3  →  r = 3 synthetic features (3 operator(s) × 1 k)"
+    )
+    page.preset_choice.setCurrentIndex(page.preset_choice.findData("excel-experiment"))
+    page.apply_button.click()
+    expected = excel_experiment()
+    assert state.config.additional_features == expected.additional_features
+    assert state.config.admissible_k == expected.admissible_k
+    assert state.config.name == "cs-model"  # the name, the seed and the data stay
+    assert state.config.dataset.path == "heart-disease-10"
+    assert state.undo_stack.undoText() == "Preset: excel-experiment"
+    assert page.preset_badge.text() == "excel-experiment"
     text = page.deviations.text()
-    assert text.startswith("⚠ Template calculations that differ from the article are active:")
-    assert "hag.centres, ADR-002" in text
-    assert "hag.step4_passes, ADR-003" in text
-    assert page.centres_badge.isVisibleTo(page)
-    assert page.passes_badge.isVisibleTo(page)
+    assert text.startswith("⚠ Settings that deviate from the article are active:")
+    assert "additional_features.class_means, ADR-002" in text
+    assert "additional_features.majorizing_passes, ADR-003" in text
+    assert text.endswith("The default preset follows the article.")
+    shown = {key for key, label in page.deviation_badges.items() if label.isVisibleTo(page)}
+    assert shown == {"class_means", "majorizing_passes"}
+    assert window.deviation_button.text() == "⚠ deviates from the article: 2 setting(s)"
+    assert "ADR-002" in window.deviation_button.toolTip()
     assert page.problems.text() == ""
     assert page.k_preview.text() == (
         "Heart-Disease (10, 13, 2): k = 3, 5  →  r = 6 synthetic features (3 operator(s) × 2 k)"
     )
     assert [row.label.text() for row in page.operators.rows] == ["ρ", "ρ_I", "ρ_J"]
     assert (page.alpha.value(), page.delta.value(), page.kappa.value()) == (0.3, 0.1, 5)
-    assert page.widgets_config() == loaded.state.config
+    assert page.class_means.currentData() == ClassMeans.RUNNING.value
+    assert page.widgets_config() == state.config
+    window.undo_action.trigger()
+    assert page.preset_badge.text() == "default"
+    assert page.preset_choice.currentData() == "default"  # the choice follows the settings
+    assert not any(label.isVisibleTo(page) for label in page.deviation_badges.values())
 
 
 def test_presets_and_undo(loaded: MainWindow) -> None:
     page, state = loaded.configure_page, loaded.state
-    page.article_button.click()
-    assert state.config.hag.centres is CentreMode.FINAL
-    assert state.config.hag.step4_passes == 1
-    assert page.preset_badge.text() == "article"
-    assert "follows the article for both switches" in page.deviations.text()
-    assert not page.centres_badge.isVisibleTo(page)
+    assert page.preset_badge.text() == "excel-experiment"
+    assert page.preset_choice.currentData() == "excel-experiment"
+    page.preset_choice.setCurrentIndex(page.preset_choice.findData("default"))
+    page.apply_button.click()
+    assert state.config.additional_features.class_means is ClassMeans.FINAL
+    assert state.config.additional_features.majorizing_passes == 1
+    assert page.preset_badge.text() == "default"
+    assert page.deviations.text() == ""
+    assert not page.deviation_badges["class_means"].isVisibleTo(page)
     assert state.config.dataset.path == "heart-disease-10"  # the data stay
     assert not loaded.deviation_button.isVisibleTo(loaded)
     loaded.undo_action.trigger()
-    assert page.preset_badge.text() == "template"
-    assert page.centres.currentData() == CentreMode.RUNNING.value
+    assert page.preset_badge.text() == "excel-experiment"
+    assert page.class_means.currentData() == ClassMeans.RUNNING.value
     loaded.redo_action.trigger()
-    page.template_button.click()
-    assert state.config.hag == preset("template").hag
-    assert loaded.deviation_button.text() == "⚠ 2 template calculation(s)"
+    page.apply_preset("alpha-0.1")
+    assert state.config.additional_features.alpha == 0.1
+    assert page.preset_badge.text() == "alpha-0.1"
+    page.apply_preset("excel-experiment")
+    assert state.config.additional_features == excel_experiment().additional_features
+    assert loaded.deviation_button.text() == "⚠ deviates from the article: 2 setting(s)"
+
+
+def test_the_rips_settings(loaded: MainWindow) -> None:
+    page, state = loaded.configure_page, loaded.state
+    page.rips_metric.combo.setCurrentIndex(page.rips_metric.combo.findData("euclidean"))
+    page.rips_normalizer.combo.setCurrentIndex(page.rips_normalizer.combo.findData("none"))
+    page.rips_features.setCurrentText("quantitative")
+    page.rips_features.lineEdit().editingFinished.emit()  # type: ignore[union-attr]
+    page.test_sample.setText("S1; S₃")  # S1 is read as S₁, the way the dataset names it
+    page.test_sample.editingFinished.emit()
+    rips = state.config.rips
+    assert (rips.metric, rips.normalizer, rips.features) == (
+        plugin("euclidean"),
+        plugin("none"),
+        "quantitative",
+    )
+    assert rips.test_sample == ("S₁", "S₃")
+    assert page.test_sample.text() == "S₁, S₃"
+    assert not page.deviation_badges["training"].isVisibleTo(page)
+    page.rips_training.setCurrentIndex(page.rips_training.findData("moved"))
+    page.rips_training.activated.emit(page.rips_training.currentIndex())
+    page.keep_blocked_cover.setChecked(True)
+    assert (state.config.rips.training, state.config.rips.keep_blocked_cover) == ("moved", True)
+    assert all(label.isVisibleTo(page) for label in page.deviation_badges.values())
+    assert "rips.training, ADR-061" in page.deviations.text()
+    assert "rips.keep_blocked_cover, ADR-061" in page.deviations.text()
+    assert loaded.deviation_button.text() == "⚠ deviates from the article: 4 setting(s)"
+    assert loaded.run_page.plan.text().endswith(
+        "⚠ deviates from the article: rips.keep_blocked_cover, rips.training, "
+        "additional_features.class_means, additional_features.majorizing_passes"
+    )
+    count = state.undo_stack.count()
+    page.test_sample.setText("S1, S₁")  # one object twice
+    page.test_sample.editingFinished.emit()
+    assert "must not repeat an object" in page.rips_error.text()
+    assert page.rips_error.isVisibleTo(page)
+    assert page.test_sample.property("invalid") is True
+    assert state.config.rips.test_sample == ("S₁", "S₃")  # not accepted
+    assert state.undo_stack.count() == count
+    page.test_sample.setText("")
+    page.test_sample.editingFinished.emit()
+    assert not page.rips_error.isVisibleTo(page)
+    assert page.test_sample.property("invalid") is False
+    assert state.config.rips.test_sample == ()
+    page.rips_features.setCurrentText("")  # nothing typed: all features
+    page.rips_features.lineEdit().editingFinished.emit()  # type: ignore[union-attr]
+    assert state.config.rips.features == "all"
+    config = page.widgets_config()
+    assert config == state.config
+    assert ExperimentConfig.model_validate(config.model_dump()) == config  # only real fields
+    for _ in range(state.undo_stack.count()):
+        loaded.undo_action.trigger()
+    assert state.config.rips == excel_experiment().rips
+
+
+def test_the_synthetic_feature_settings(loaded: MainWindow) -> None:
+    page, state = loaded.configure_page, loaded.state
+    page.zero_value.setChecked(True)
+    assert state.config.synthetic_features.zero_value
+    page.original_features.setCurrentIndex(page.original_features.findText("nominal"))
+    page.original_features.activated.emit(page.original_features.currentIndex())
+    assert state.config.synthetic_features.original_features == "nominal"
+    page.original_features.setCurrentText("x₂; x₃")
+    page.original_features.lineEdit().editingFinished.emit()  # type: ignore[union-attr]
+    assert state.config.synthetic_features.original_features == ("x₂", "x₃")
+    assert page.original_features.currentText() == "x₂, x₃"
+    config = page.widgets_config()
+    assert config == state.config
+    assert ExperimentConfig.model_validate(config.model_dump()) == config  # only real fields
+    page.original_features.setCurrentText("")
+    page.original_features.lineEdit().editingFinished.emit()  # type: ignore[union-attr]
+    assert state.config.synthetic_features.original_features == ()
+    assert state.config.synthetic_features.zero_value
+
+
+def test_an_operator_with_its_own_normalization(loaded: MainWindow) -> None:
+    page, state = loaded.configure_page, loaded.state
+    editor = page.operators.rows[1].normalizer_editor
+    assert editor.combo.currentText() == "as the local contexts"
+    assert state.config.local_context.operators[1].normalizer is None
+    editor.combo.setCurrentIndex(editor.combo.findData("none"))
+    assert state.config.local_context.operators[1].normalizer == plugin("none")
+    assert page.operators.rows[1].normalizer_editor.optional_spec() == plugin("none")
+    assert page.widgets_config() == state.config
+    loaded.undo_action.trigger()
+    assert state.config.local_context.operators[1].normalizer is None
+    assert page.operators.rows[1].normalizer_editor.is_unset()
 
 
 def test_editing_the_method(loaded: MainWindow) -> None:
     page, state = loaded.configure_page, loaded.state
     page.alpha.setValue(0.45)
-    assert state.config.hag.alpha == 0.45
+    assert state.config.additional_features.alpha == 0.45
     assert page.preset_badge.text() == "custom"
     page.kappa.setValue(3)
     page.passes.setCurrentIndex(page.passes.findData(1))
     page.passes.activated.emit(page.passes.currentIndex())
-    assert (state.config.hag.kappa, state.config.hag.step4_passes) == (3, 1)
-    assert not page.passes_badge.isVisibleTo(page)
-    assert page.centres_badge.isVisibleTo(page)
-    assert "hag.step4_passes" not in page.deviations.text()
+    assert (
+        state.config.additional_features.kappa,
+        state.config.additional_features.majorizing_passes,
+    ) == (
+        3,
+        1,
+    )
+    assert not page.deviation_badges["majorizing_passes"].isVisibleTo(page)
+    assert page.deviation_badges["class_means"].isVisibleTo(page)
+    assert "additional_features.majorizing_passes" not in page.deviations.text()
     page.skip_constant.setChecked(True)
     page.seed.setValue(7)
     page.name.setText("heart study")
     page.name.editingFinished.emit()
-    assert state.config.synthetic.skip_constant
+    assert state.config.synthetic_features.skip_constant
     assert (state.config.seed, state.config.name) == (7, "heart study")
-    page.majorizer.combo.setCurrentIndex(page.majorizer.combo.findData("tanh"))
-    assert state.config.hag.majorizer == plugin("tanh")
+    page.majorizing_function.combo.setCurrentIndex(page.majorizing_function.combo.findData("tanh"))
+    assert state.config.additional_features.majorizing_function == plugin("tanh")
     count = state.undo_stack.count()
     page.alpha.setValue(0.45)  # the same value: nothing to undo
     assert state.undo_stack.count() == count
     for _ in range(count):
         loaded.undo_action.trigger()
-    assert state.config.hag == preset("template").hag
+    assert state.config.additional_features == excel_experiment().additional_features
     assert page.alpha.value() == 0.3
     assert page.name.text() == "cs-model"
 
 
 def test_the_k_rule_and_its_preview(loaded: MainWindow) -> None:
     page, state = loaded.configure_page, loaded.state
-    page.k.combo.setCurrentIndex(page.k.combo.findData("explicit"))
-    assert state.config.k.name == "explicit"
+    page.admissible_k.combo.setCurrentIndex(page.admissible_k.combo.findData("explicit"))
+    assert state.config.admissible_k.name == "explicit"
     assert any("explicit" in problem for problem in page.config_problems())
     assert page.problems.text().startswith("✗ ")
-    values = page.k.form.widget("values")
+    values = page.admissible_k.form.widget("values")
     assert isinstance(values, QLineEdit)
     values.setText("3")
     values.editingFinished.emit()
-    assert state.config.k == plugin("explicit", values=[3])
+    assert state.config.admissible_k == plugin("explicit", values=[3])
     assert page.problems.text() == ""
     assert "k = 3  →  r = 3 synthetic features" in page.k_preview.text()
     values.setText("21")
     values.editingFinished.emit()
-    assert page.k_preview.text() == "No permitted k for Heart-Disease (10, 13, 2)."
+    assert page.k_preview.text() == "No admissible k for Heart-Disease (10, 13, 2)."
     assert page.config_problems()
     loaded.state.set_dataset(None)
-    assert page.k_preview.text() == "Load a dataset to see the permitted k."
+    assert page.k_preview.text() == "Load a dataset to see the admissible k."
 
 
 def test_editing_the_operators(loaded: MainWindow) -> None:
     page, state = loaded.configure_page, loaded.state
     editor = page.operators
     editor.add_button.click()
-    assert [o.label for o in state.config.context.operators] == ["ρ", "ρ_I", "ρ_J", "ρ4"]
+    assert [o.label for o in state.config.local_context.operators] == ["ρ", "ρ_I", "ρ_J", "ρ4"]
     assert "r = 8 synthetic features (4 operator(s) × 2 k)" in page.k_preview.text()
     row = page.operators.rows[3]
     row.features.setCurrentText("x₁, x₄")
     row.features.lineEdit().editingFinished.emit()  # type: ignore[union-attr]
-    assert state.config.context.operators[3].features == ("x₁", "x₄")
+    assert state.config.local_context.operators[3].features == ("x₁", "x₄")
     row = page.operators.rows[3]
     row.label.setText("ρ")  # a label that is taken
     row.label.editingFinished.emit()
     assert "operator labels must be unique" in page.operator_error.text()
-    assert state.config.context.operators[3].label == "ρ4"  # not accepted
+    assert state.config.local_context.operators[3].label == "ρ4"  # not accepted
     row.label.setText("")
     row.label.editingFinished.emit()
     assert page.operator_error.isVisibleTo(page)
@@ -265,12 +424,12 @@ def test_editing_the_operators(loaded: MainWindow) -> None:
     row.label.setText("ρ_x")
     row.label.editingFinished.emit()
     assert not page.operator_error.isVisibleTo(page)
-    assert state.config.context.operators[3].label == "ρ_x"
+    assert state.config.local_context.operators[3].label == "ρ_x"
     page.operators.rows[3].remove.click()
-    assert len(state.config.context.operators) == 3
+    assert len(state.config.local_context.operators) == 3
     for _ in range(4):  # the last operator cannot be removed
         page.operators.rows[0].remove.click()
-    assert [o.label for o in state.config.context.operators] == ["ρ_J"]
+    assert [o.label for o in state.config.local_context.operators] == ["ρ_J"]
     assert "r = 2 synthetic features (1 operator(s) × 2 k)" in page.k_preview.text()
 
 
@@ -292,8 +451,8 @@ def test_the_evaluation_settings(loaded: MainWindow) -> None:
     page.distance_decimals.setValue(8)
     page.skip_empty.setChecked(False)
     assert state.config.evaluation.score_decimals == 6
-    assert state.config.context.distance_decimals == 8
-    assert not state.config.context.skip_empty_operators
+    assert state.config.local_context.distance_decimals == 8
+    assert not state.config.local_context.skip_empty_operators
     for name in ("resubstitution", "leave-one-out", "hold-out"):
         page.protocols.boxes[name].setChecked(False)
     assert "evaluation: choose at least one protocol" in page.config_problems()
@@ -329,14 +488,15 @@ def test_running_the_experiment(loaded: MainWindow, run: Run, qtbot: QtBot) -> N
     page = loaded.run_page
     assert page.plan.text() == (
         "Heart-Disease (10, 13, 2) · m = 10, n = 13 · protocols: resubstitution, leave-one-out · "
-        "⚠ template calculation for hag.centres, hag.step4_passes"
+        "⚠ deviates from the article: additional_features.class_means, "
+        "additional_features.majorizing_passes"
     )
     assert page.run_button.isEnabled()
     with qtbot.waitSignal(page.finished, timeout=RUN_TIMEOUT):
         run(loaded)
     view = loaded.state.view
     assert view is not None
-    assert view.hag.label == "{a₆, a₃, a₁, a₂, a₄}"
+    assert view.agglomerative.label == "{a₆, a₃, a₁, a₂, a₄}"
     assert view.sensitivity is not None
     assert loaded.state.run_folder is None
     assert page.stage.text() == "Finished: TUPLAM = {a₆, a₃, a₁, a₂, a₄}, p = 4."
@@ -369,9 +529,9 @@ def test_a_saved_run_and_staleness(loaded: MainWindow, run: Run, tmp_path: Path)
     assert loaded.settings.recent("recent/runs") == [str(folder)]
     assert page.summary_note.text() == f"Run folder: {folder}"
     assert page.stale.text() == ""
-    loaded.configure_page.article_button.click()
+    loaded.configure_page.apply_preset("default")
     assert "computed with another configuration" in page.stale.text()
-    assert "article calculation for both switches" in page.plan.text()
+    assert page.plan.text().endswith(" · follows the article")
     assert "⚠ computed with another configuration" in loaded.result_label.text()
     page.folder_dialog = lambda: ""
     page.browse.click()  # cancelled
@@ -433,9 +593,9 @@ def test_the_results_tree(evaluated: MainWindow) -> None:
     groups = [page.tree.topLevelItem(i).text(0) for i in range(page.tree.topLevelItemCount())]
     assert groups[:4] == [
         "Summary",
-        "1 · Input data",
-        "Step 1 · Scale unification",
-        "Step 2 · Distances",
+        "Input data",
+        "Local contexts · normalization",
+        "Local contexts · distances",
     ]
     assert groups[-2:] == ["Evaluation", "Checks"]
     view = evaluated.state.view
@@ -445,7 +605,7 @@ def test_the_results_tree(evaluated: MainWindow) -> None:
     assert table_name("psi", view) == "Ψ(r)"
     assert table_name("something-else", view) == "something-else"
     assert figure_name("outcomes-leave-one-out") == "Outcomes · leave-one-out"
-    assert figure_name("margins") == "Margins of the latent features"
+    assert figure_name("margins") == "Margins of the additional features"
     assert figure_name("unknown") == "unknown"
 
 
@@ -461,8 +621,10 @@ def test_opening_tables_and_figures(evaluated: MainWindow) -> None:
     assert page.stack.currentWidget() is page.figure_panel
     figure = page.figure_panel.figure()
     assert figure is not None
-    assert len(figure.get_axes()) == 8  # four latent features, with and without the majorizer
-    assert page.figure_panel.caption.text().startswith("The latent features r₁ … r_p on a line")
+    assert (
+        len(figure.get_axes()) == 8
+    )  # four additional features, with and without the majorizing function
+    assert page.figure_panel.caption.text().startswith("The additional features d₁ … d_p on a line")
     assert not page.open(TABLE, "confusion-hold-out")  # this run has no hold-out
     assert page.current_key() == (FIGURE, "margins")
     assert page.open(TABLE, "margins")
@@ -551,9 +713,9 @@ def test_decimals_filter_copy_and_save(evaluated: MainWindow, tmp_path: Path) ->
     assert panel.count.text() == "4 of 8 rows"
     panel.copy_button.click()
     copied = QGuiApplication.clipboard().text().splitlines()
-    assert copied[0].split("\t")[:2] == ["Latent feature", "Variant"]
+    assert copied[0].split("\t")[:2] == ["Additional feature", "Variant"]
     assert len(copied) == 5
-    assert copied[1].split("\t")[:2] == ["r₁", "without majorizer"]
+    assert copied[1].split("\t")[:2] == ["d₁", "without majorizing function"]
     panel.filter.clear()
     panel.view.selectRow(0)
     assert len(panel.view.selection_text().splitlines()) == 2  # the header and the selected row
@@ -561,7 +723,7 @@ def test_decimals_filter_copy_and_save(evaluated: MainWindow, tmp_path: Path) ->
     panel.save_dialog = lambda suggested: str(target) if suggested == "margins.csv" else ""
     panel.save_button.click()
     lines = target.read_text(encoding="utf-8").splitlines()
-    assert lines[0].startswith("Latent feature,Variant,")
+    assert lines[0].startswith("Additional feature,Variant,")
     assert len(lines) == 9
     assert "0.14817726709828" in lines[1]  # the file keeps every digit
     panel.save_dialog = lambda suggested: ""
@@ -616,12 +778,12 @@ def test_the_results_follow_the_theme_and_a_new_run(evaluated: MainWindow, run: 
             model.style.cell(0, 1, 2)  # type: ignore[misc,index]
         ][0]
     )
-    evaluated.configure_page.article_button.click()
+    evaluated.configure_page.apply_preset("default")
     assert "computed with another configuration" in page.stale.text()
     run(evaluated)
     assert page.stale.text() == ""
     assert page.current_key() == (TABLE, "psi")  # the table that was open stays open
-    assert evaluated.state.view.hag.settings.step4_passes == 1  # type: ignore[union-attr]
+    assert evaluated.state.view.agglomerative.settings.majorizing_passes == 1  # type: ignore[union-attr]
 
 
 # ---------------------------------------------------------------- New object
@@ -731,12 +893,12 @@ def test_the_new_object_page_without_a_run(window: MainWindow) -> None:
 
 @pytest.fixture
 def two_runs(evaluated: MainWindow, run: Run, tmp_path: Path) -> MainWindow:
-    """A window whose runs folder holds the template run and the article run."""
+    """A window whose runs folder holds a run of the Excel experiment and one of the default."""
     view = evaluated.state.view
     assert view is not None
     runs = tmp_path / "runs"
     save_run(view.result, runs)
-    evaluated.configure_page.article_button.click()
+    evaluated.configure_page.apply_preset("default")
     evaluated.run_page.runs_dir.setText(str(runs))
     run(evaluated, save=True)  # type: ignore[call-arg]
     return evaluated
@@ -747,7 +909,7 @@ def test_comparing_two_runs(two_runs: MainWindow, qtbot: QtBot) -> None:
     assert page.runs_dir.text() == str(two_runs.settings.runs_dir)
     assert len(page.records) == 2
     assert page.runs.rowCount() == 2
-    assert page.runs.item(0, 4).text() in {"template", "article"}
+    assert page.runs.item(0, 4).text() in {"excel-experiment", "default"}
     assert page.runs.item(0, 6).text().endswith("(leave-one-out)")
     assert page.message.text() == "Tick at least two runs."
     assert not page.facts.isVisibleTo(page)
@@ -759,7 +921,7 @@ def test_comparing_two_runs(two_runs: MainWindow, qtbot: QtBot) -> None:
     assert facts_table is not None
     assert facts_table.columns == ("Fact", page.records[0].run_id, page.records[1].run_id)
     rows = {row[0]: row[1:] for row in facts_table.rows}
-    assert set(rows["Preset"]) == {"template", "article"}
+    assert set(rows["Preset"]) == {"excel-experiment", "default"}
     model = page.facts.model()
     assert model is not None
     preset_row = [row[0] for row in facts_table.rows].index("Preset")
@@ -769,7 +931,11 @@ def test_comparing_two_runs(two_runs: MainWindow, qtbot: QtBot) -> None:
     assert model.index(dataset_row, 1).data(background) is None
     settings = page.settings_table.table()
     assert settings is not None
-    assert [row[0] for row in settings.rows] == ["hag.centres", "hag.step4_passes"]
+    assert [row[0] for row in settings.rows] == [
+        "admissible_k.name",
+        "additional_features.class_means",
+        "additional_features.majorizing_passes",
+    ]
     page.set_checked(0, False)
     assert page.message.isVisibleTo(page)
     page.runs.selectRow(1)
@@ -898,7 +1064,7 @@ def test_the_export_page_follows_the_run(two_runs: MainWindow) -> None:
     assert page.folder.text() == str(
         two_runs.state.run_folder
     )  # a saved run exports into its folder
-    two_runs.configure_page.template_button.click()
+    two_runs.configure_page.apply_preset("excel-experiment")
     assert "the export shows the run, not the edited configuration" in page.stale.text()
     two_runs.new_object_page.paste.setText("58 1 3 125 250 0 2 150 0 1 2 1 7")
     two_runs.new_object_page.fill_from_text()

@@ -85,7 +85,7 @@ def test_the_report_of_the_experiment(report: Report, experiment_view: RunView) 
     headings = [b for b in report.blocks if isinstance(b, Heading)]
     assert [h.text for h in headings if h.level == 2] == SECTIONS
     assert [h.text for h in headings if h.level == 3] == [
-        "Margins of the latent features",
+        "Margins of the additional features",
         "Sensitivity to the two switches",
     ]
     tables = [b.table.key for b in report.blocks if isinstance(b, TableBlock)]
@@ -95,7 +95,7 @@ def test_the_report_of_the_experiment(report: Report, experiment_view: RunView) 
         "dataset",
         "synthetic-features",
         "psi",
-        "hag-iterations",
+        "agglomerative-iterations",
         "meta-dataset",
         "new-object-steps",
         "resubstitution",
@@ -109,28 +109,29 @@ def test_the_report_of_the_experiment(report: Report, experiment_view: RunView) 
     figures = [b.spec.key for b in report.blocks if isinstance(b, FigureBlock)]
     assert sorted(figures) == sorted(spec.key for spec in figure_specs(experiment_view))
     assert isinstance(report.blocks[-1], Code)
-    assert "centres: running" in report.blocks[-1].text
+    assert "class_means: running" in report.blocks[-1].text
 
 
-def test_the_report_highlights_the_template_deviations(report: Report) -> None:
+def test_the_report_highlights_the_deviations(report: Report) -> None:
     warnings = [b for b in report.blocks if isinstance(b, Paragraph) and b.kind == "warning"]
     assert len(warnings) == 1
     assert report.blocks[1] is warnings[0]  # the first thing after the "Summary" heading
     text = warnings[0].text
-    assert text.startswith("⚠ Two template calculations differ from the article: ")
-    assert "hag.centres (ADR-002) and hag.step4_passes (ADR-003)" in text
-    assert text.endswith("the default, which reproduces the template workbooks exactly.")
-    hag = next(
+    assert text.startswith("⚠ This run deviates from the article: ")
+    assert "(additional_features.class_means, ADR-002)" in text
+    assert "(additional_features.majorizing_passes, ADR-003)" in text
+    assert text.endswith("Each is a configuration switch.")
+    agglomerative = next(
         b.text for b in report.blocks if isinstance(b, Paragraph) and b.text.startswith("α = ")
     )
-    assert "⚠ class centres = running, ⚠ STEP 4 passes = 2" in hag
-    assert "TUPLAM = {a₆, a₃, a₁, a₂, a₄}, p = 4 latent feature(s)" in hag
+    assert "⚠ class means = running, ⚠ majorizing passes = 2" in agglomerative
+    assert "TUPLAM = {a₆, a₃, a₁, a₂, a₄}, p = 4 additional feature(s)" in agglomerative
     # a run with the article's switches says so as prominently
     article = build_report(shape("numeric"))
-    warning = article.blocks[1]
-    assert isinstance(warning, Paragraph)
-    assert warning.kind == "warning"
-    assert "This run follows the article for both" in warning.text
+    note = article.blocks[1]
+    assert isinstance(note, Paragraph)
+    assert note.kind == "note"
+    assert note.text.startswith("This run follows the article")
 
 
 def test_the_reproducibility_section(report: Report, experiment_view: RunView) -> None:
@@ -138,7 +139,7 @@ def test_the_reproducibility_section(report: Report, experiment_view: RunView) -
         b.text for b in report.blocks if isinstance(b, Paragraph) and b.text.startswith("Run ")
     )
     assert text.startswith(f"Run {EXPERIMENT_RUN_ID} · context-synthetic-recognition {__version__}")
-    assert "preset template" in text
+    assert "preset excel-experiment" in text
     assert experiment_view.dataset.content_hash() in text
     unsaved = build_report(shape("tiny"))
     text = next(
@@ -164,7 +165,7 @@ def test_reports_of_other_shapes(name: str) -> None:
     sections = [b.text for b in found.blocks if isinstance(b, Heading) and b.level == 2]
     assert sections == SECTIONS
     sub = [b.text for b in found.blocks if isinstance(b, Heading) and b.level == 3]
-    assert sub == (["Margins of the latent features"] if view.hag.p else [])
+    assert sub == (["Margins of the additional features"] if view.agglomerative.p else [])
     for block in found.blocks:
         if isinstance(block, TableBlock):
             assert len(block.table.rows) <= 60
@@ -219,7 +220,7 @@ def test_the_html_escapes_and_says_what_was_shortened() -> None:
 
 
 def test_a_figure_as_a_data_uri(experiment_view: RunView) -> None:
-    spec = next(s for s in figure_specs(experiment_view) if s.key == "hag-criterion")
+    spec = next(s for s in figure_specs(experiment_view) if s.key == "agglomerative-criterion")
     uri = figure_data_uri(spec, dpi=40)
     assert uri.startswith("data:image/png;base64,iVBORw0KGgo")
 

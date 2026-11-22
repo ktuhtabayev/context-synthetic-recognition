@@ -63,8 +63,8 @@ def test_header_tooltips(tables: TableSet) -> None:
     ]
     assert "formula (2)" in header_tooltip("g_k (2)", features)
     assert "formula (3)" in header_tooltip("G_k (3)", features)
-    candidates = tables["hag-candidates"]
-    assert "HAG STEP 3" in header_tooltip("θ/γ", candidates)
+    candidates = tables["agglomerative-candidates"]
+    assert "agglomerative Step 3" in header_tooltip("θ/γ", candidates)
     assert header_tooltip("θ/γ", candidates).endswith(candidates.note)
     bare = Table("t", "T", ("a", "b"), ((1, 2),), "g")
     assert header_tooltip("plain", bare) == "plain"
@@ -116,17 +116,17 @@ def test_synthetic_features_and_tuplam(experiment_view: RunView, tables: TableSe
     ]
 
 
-def test_latent_features_and_the_chosen_candidate(
+def test_additional_features_and_the_chosen_candidate(
     experiment_view: RunView, tables: TableSet
 ) -> None:
     meta = tables["meta-dataset"]
     style = style_for(meta, experiment_view)
     assert style.header_roles[1] is CellRole.SELECTED  # y₀ (a₆)
-    assert style.header_roles[6] is CellRole.LATENT  # r₁
+    assert style.header_roles[6] is CellRole.ADDITIONAL  # d₁
     margins = roles(tables["margins"], experiment_view)
-    assert margins[0][0] is CellRole.LATENT  # the row of r₁
+    assert margins[0][0] is CellRole.ADDITIONAL  # the row of d₁
     assert margins[0][1] is None
-    candidates = tables["hag-candidates"]
+    candidates = tables["agglomerative-candidates"]
     chosen = candidates.columns.index("Chosen q")
     for row, found in zip(candidates.rows, roles(candidates, experiment_view), strict=True):
         expected = CellRole.SELECTED if row[chosen] == 1 else None
@@ -184,7 +184,7 @@ def test_the_object_column(experiment_view: RunView, tables: TableSet) -> None:
     assert style_for(tables["psi"], experiment_view).object_column == 0
     assert style_for(tables["neighbours-rho"], experiment_view).object_column == 0
     assert style_for(tables["summary"], experiment_view).object_column is None
-    assert style_for(tables["hag-candidates"], experiment_view).object_column is None
+    assert style_for(tables["agglomerative-candidates"], experiment_view).object_column is None
     empty = Table("e", "E", ("№",), (), "g")
     assert style_for(empty, experiment_view).object_column is None
     assert style_for(empty).header_roles == (None,)
@@ -208,7 +208,7 @@ def test_the_table_model(experiment_view: RunView, tables: TableSet) -> None:
     right = int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
     assert index.data(Qt.ItemDataRole.TextAlignmentRole) == right
     label = model.index(0, 0)
-    assert label.data() == "r₁"
+    assert label.data() == "d₁"
     assert label.data(Qt.ItemDataRole.FontRole).bold()
     assert label.data(Qt.ItemDataRole.ToolTipRole) is None
     assert index.data(Qt.ItemDataRole.FontRole) is None

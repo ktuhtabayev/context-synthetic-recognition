@@ -41,7 +41,7 @@ from context_synthetic_recognition.services.runner import (
 )
 from context_synthetic_recognition.services.validation import validate_workbook
 
-from .conftest import EXPERIMENT_RUN_ID
+from .conftest import CONFIGS, EXPERIMENT_RUN_ID, workbook_config
 from .shapes import shape
 from .test_export_figures import EXPERIMENT_FIGURES
 from .test_export_tables import EXPERIMENT_TABLES
@@ -124,12 +124,12 @@ def test_a_run_folder_is_self_contained(
     assert sorted(p.name for p in run_folder.iterdir()) == RUN_FILES
     stored = json.loads((run_folder / "results.json").read_text(encoding="utf-8"))
     assert [v["label"] for v in stored["sensitivity"]] == [
-        "template (default)",
-        "running centres, 1 pass",
-        "final centres, 2 passes",
+        "running means, 2 passes",
+        "running means, 1 pass",
+        "final means, 2 passes",
         "article",
     ]
-    assert stored["sensitivity"][0]["centres"] == "running"
+    assert stored["sensitivity"][0]["class_means"] == "running"
     loaded = load_run(run_folder)
     assert loaded.folder == run_folder
     assert loaded.manifest.run_id == run_folder.name
@@ -169,7 +169,7 @@ def test_differences_from_the_stored_results_are_reported(run_folder: Path) -> N
     stored = json.loads(file.read_text(encoding="utf-8"))
     stored["model"]["r"] = 99
     stored["protocols"]["leave-one-out"]["methods"]["CS-model"]["accuracy"] = 0.9
-    stored["sensitivity"][0]["centres"] = "sideways"  # not a setting: ignored, evaluated anew
+    stored["sensitivity"][0]["class_means"] = "sideways"  # not a setting: ignored, evaluated anew
     file.write_text(json.dumps(stored), encoding="utf-8")
     loaded = load_run(run_folder)
     assert loaded.warnings == (
@@ -195,7 +195,7 @@ def test_run_folders_that_cannot_be_read(
     with pytest.raises(RunError, match="the dataset is not the one the run was computed on"):
         load_run(run_folder)
     # a folder of version 0.4 has no snapshot, and the file its configuration names is gone
-    config = ExperimentConfig(dataset=DatasetConfig(path=str(tmp_path / "gone.csv")))
+    config = workbook_config(dataset=DatasetConfig(path=str(tmp_path / "gone.csv")))
     old = save_run(run_experiment(experiment_result.dataset, config), tmp_path / "old")
     (old / SNAPSHOT_NAME).unlink()
     with pytest.raises(RunError, match=r"has no dataset\.json and its dataset cannot be found"):
@@ -203,7 +203,7 @@ def test_run_folders_that_cannot_be_read(
 
 
 def test_a_run_folder_without_snapshot_falls_back_to_the_configuration(tmp_path: Path) -> None:
-    config = ExperimentConfig(dataset=DatasetConfig(path="builtin:heart-disease-10"))
+    config = workbook_config(dataset=DatasetConfig(path="builtin:heart-disease-10"))
     result = run_experiment(load_builtin("heart-disease-10"), config)
     folder = save_run(result, tmp_path)
     (folder / SNAPSHOT_NAME).unlink()
@@ -272,7 +272,7 @@ def test_exporting_every_format(experiment_view: RunView, tmp_path: Path) -> Non
     # the workbook is the mirror: it passes the validation of the experiment
     report = validate_workbook(folder / "workbook.xlsx")
     assert report.passed
-    assert report.cells == 11631
+    assert report.cells == 11622
     # tables/: one CSV per table and an index
     with (folder / "tables" / "index.csv").open(encoding="utf-8", newline="") as handle:
         index = list(csv.reader(handle))
@@ -286,12 +286,12 @@ def test_exporting_every_format(experiment_view: RunView, tmp_path: Path) -> Non
     assert trace["format"] == "context-synthetic-recognition/trace"
     assert trace["run"] == EXPERIMENT_RUN_ID
     assert trace["dataset"]["hash"] == experiment_view.dataset.content_hash()
-    assert trace["config"]["hag"]["centres"] == "running"
+    assert trace["config"]["additional_features"]["class_means"] == "running"
     assert [t["key"] for t in trace["tables"]] == EXPERIMENT_TABLES
     # markdown/ and latex/: one file per table and one that holds or inputs them all
     together = (folder / "markdown" / "tables.md").read_text(encoding="utf-8")
     assert together.startswith(f"# {experiment_view.dataset.name}: tables of the run\n")
-    assert "## Step 9 · Hierarchical agglomerative grouping\n" in together
+    assert "## Additional features · hierarchical agglomerative algorithm\n" in together
     assert "### Ψ(r): synthetic features aᵤ(Sⱼ) ∈ {1, 2} by formula (5)\n" in together
     assert (folder / "markdown" / "psi.md").read_text(encoding="utf-8").startswith("# Ψ(r)")
     document = (folder / "latex" / "all-tables.tex").read_text(encoding="utf-8")
@@ -443,9 +443,11 @@ def test_csr_run_export_errors(tmp_path: Path) -> None:
 
 @pytest.fixture
 def saved_run(tmp_path: Path) -> Path:
-    """A run of Heart-Disease (10, 13, 2) saved without exports and without sensitivity."""
+    """A run of Heart-Disease (10, 13, 2) with the workbook's settings, saved without exports and
+    without sensitivity."""
     runs = tmp_path / "runs"
-    result = runner.invoke(app, ["run", "heart-disease-10", "--runs-dir", str(runs)])
+    workbook = ["-c", str(CONFIGS / "excel-experiment.yaml")]
+    result = runner.invoke(app, ["run", "heart-disease-10", *workbook, "--runs-dir", str(runs)])
     assert result.exit_code == 0, result.output
     (folder,) = runs.iterdir()
     return folder
@@ -463,9 +465,9 @@ def test_csr_export_of_the_latest_run(saved_run: Path) -> None:
     assert f"Heart-Disease (10, 13, 2) · run {saved_run.name}" in result.output
     assert f"  folder: {saved_run}" in result.output
     assert "sensitivity" in trace_tables(saved_run)
-    assert "| r₁ | with majorizer | 0.19 |" in (saved_run / "markdown" / "margins.md").read_text(
-        encoding="utf-8"
-    )
+    assert "| d₁ | with majorizing function | 0.19 |" in (
+        saved_run / "markdown" / "margins.md"
+    ).read_text(encoding="utf-8")
 
 
 def test_csr_export_by_name_into_another_folder(saved_run: Path, tmp_path: Path) -> None:

@@ -1,4 +1,4 @@
-"""The article's notation for display: S₁, x₁, a₁, r₁ (1-based, subscript digits).
+"""The article's notation for display: S₁, x₁, a₁, d₁ (1-based, subscript digits).
 
 Code is 0-based internally; everything shown to a user (tables, messages, exports, the GUI) uses
 these 1-based names, as the workbook and the article do (ADR-017).
@@ -32,9 +32,9 @@ def synthetic_name(index: int) -> str:
     return f"a{subscript(index + 1)}"
 
 
-def latent_name(index: int) -> str:
-    """Name of the latent (additional) feature with 0-based ``index``: ``r₁`` for 0 (HAG)."""
-    return f"r{subscript(index + 1)}"
+def additional_name(index: int) -> str:
+    """Name of the additional feature with 0-based ``index``: ``d₁`` for 0 (the article's dᵢⱼ)."""
+    return f"d{subscript(index + 1)}"
 
 
 def class_name(index: int) -> str:
@@ -43,5 +43,5 @@ def class_name(index: int) -> str:
 
 
 def join_values(values: tuple[int, ...] | list[int]) -> str:
-    """``(3, 5)`` → ``3, 5`` — the workbook's way of listing the permitted k."""
+    """``(3, 5)`` → ``3, 5`` — the workbook's way of listing the admissible k."""
     return ", ".join(str(value) for value in values)

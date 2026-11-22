@@ -12,11 +12,13 @@ import numpy as np
 
 from context_synthetic_recognition import __version__
 from context_synthetic_recognition.config.io import config_hash
-from context_synthetic_recognition.config.models import CentreMode, HAGConfig
+from context_synthetic_recognition.config.models import AdditionalFeaturesConfig, ClassMeans
 from context_synthetic_recognition.config.presets import matching_preset
-from context_synthetic_recognition.core.majorizers import MAJORIZERS
-from context_synthetic_recognition.core.normalizers import NORMALIZERS
-from context_synthetic_recognition.core.trace import OperatorContext
+from context_synthetic_recognition.core.additional_features.majorizing_functions import (
+    MAJORIZING_FUNCTIONS,
+)
+from context_synthetic_recognition.core.local_context.normalizers import NORMALIZERS
+from context_synthetic_recognition.core.trace import LocalContext
 from context_synthetic_recognition.export.excel.common import (
     DATASET,
     NOMINAL,
@@ -33,10 +35,10 @@ from context_synthetic_recognition.export.view import RunView
 from context_synthetic_recognition.notation import DASH
 
 FEATURE_WIDTH_RAW = 9.77734375
-"""Width of a feature column on the *Dataset* sheet (the template's)."""
+"""Width of a feature column on the *Dataset* sheet (the experiment workbook's)."""
 
 
-def operator_kind(view: RunView, operator: OperatorContext) -> str:
+def operator_kind(view: RunView, operator: LocalContext) -> str:
     """``all``, ``quantitative`` or ``nominal`` (the operators ρ, ρ_I, ρ_J), else ``custom``."""
     quantitative = view.trace.scaling.quantitative
     used = np.zeros(quantitative.size, dtype=bool)
@@ -84,24 +86,24 @@ def _rows(sheet: SheetWriter, row: int, rows: list[tuple[Any, ...]]) -> int:
     return row
 
 
-def _majorizer(hag: HAGConfig) -> tuple[str, str]:
-    name = MAJORIZERS.info(hag.majorizer.name).name
+def _majorizing_function(agglomerative: AdditionalFeaturesConfig) -> tuple[str, str]:
+    name = MAJORIZING_FUNCTIONS.info(agglomerative.majorizing_function.name).name
     if name == "sigmoid":
         return (
             "σ(x) = 1 / (1 + e^(−x))",
             (
                 "b ← b + α·σ(−b) for Sₜ ∈ K1,  b ← b − α·σ(−b) for Sₜ ∈ K2  "
-                "(logistic sigmoid, as in the template)"
+                "(logistic sigmoid; the article does not define φ)"
             ),
         )
-    summary = MAJORIZERS.info(name).summary
+    summary = MAJORIZING_FUNCTIONS.info(name).summary
     return (
         name,
-        f"b ← b + α·ϕ(−b) for Sₜ ∈ K1,  b ← b − α·ϕ(−b) for Sₜ ∈ K2  ({summary})",
+        f"b ← b + α·φ(−b) for Sₜ ∈ K1,  b ← b − α·φ(−b) for Sₜ ∈ K2  ({summary})",
     )
 
 
-def _operator_row(view: RunView, operator: OperatorContext) -> tuple[str, str, str]:
+def _operator_row(view: RunView, operator: LocalContext) -> tuple[str, str, str]:
     quantitative = view.trace.scaling.quantitative
     n = quantitative.size
     count = operator.features.size
@@ -131,10 +133,10 @@ def _operator_row(view: RunView, operator: OperatorContext) -> tuple[str, str, s
 
 
 def parameters(book: Book) -> None:
-    """Sheet *Parameters*: the k range, the HAG parameters with both switches, the operators."""
+    """Sheet *Parameters*: admissible k, the agglomerative algorithm and its switches, operators."""
     view = book.view
     trace, config = view.trace, view.config
-    ks, hag = trace.permitted_k, config.hag
+    ks, agglomerative = trace.admissible_k, config.additional_features
     sheet = book.sheet(PARAMETERS, "info")
     sheet.widths({1: 46, 2: 22, 3: 110})
     sheet.title_bar(
@@ -143,15 +145,12 @@ def parameters(book: Book) -> None:
         height=22.0,
     )
 
-    formula = ks.rule == "formula"
-    sheet.bar(
-        3,
-        1,
-        3,
-        "k range  ·  formula-based (k_min = 3 fixed, k_max = 2 · min |Kᵢ| − 3 from the class sizes)"
-        if formula
-        else f"k range  ·  strategy “{ks.rule}”",
-    )
+    twice = ks.rule == "twice-min-class"
+    titles = {
+        "min-class": "Admissible k  ·  the article: odd k = 3 … min(|K1|, |K2|)",
+        "twice-min-class": "Admissible k  ·  odd k = 3 … 2 · min |Kᵢ| − 3 from the class sizes",
+    }
+    sheet.bar(3, 1, 3, titles.get(ks.rule, f"Admissible k  ·  strategy “{ks.rule}”"))
     sheet.row(
         4, 1, ["Parameter", "Value", "Rule / meaning"], ["header_left", "header", "header_left"]
     )
@@ -168,15 +167,17 @@ def parameters(book: Book) -> None:
         (
             "k_min",
             DASH if ks.k_min is None else ks.k_min,
-            "Fixed for every dataset" if formula else f"Not used by the strategy “{ks.rule}”",
+            "Fixed for every dataset" if ks.k_min is not None else f"Not used by “{ks.rule}”",
         ),
         (
-            "k_max = 2 · min |Kᵢ| − 3",
+            "k_max = 2 · min |Kᵢ| − 3" if twice else "k_max = min |Kᵢ|",
             DASH if ks.k_max is None else ks.k_max,
-            "At k = k_max a same-class majority needs (k + 1)/2 = min |Kᵢ| − 1 neighbours",
+            "At k = k_max an own-class majority needs (k + 1)/2 = min |Kᵢ| − 1 neighbours"
+            if twice
+            else "The article: k ≤ min(|K1|, |K2|)",
         ),
-        ("Permitted k  (odd, k_min … k_max)", ks.label, ks.note),
-        ("Number of permitted k", ks.count, ""),
+        ("Admissible k  (odd, k_min … k_max)", ks.label, ks.note),
+        ("Number of admissible k", ks.count, ""),
         (
             "Base operators",
             len(trace.operators),
@@ -185,12 +186,12 @@ def parameters(book: Book) -> None:
         (
             "r = |Ψ(r)|  (synthetic features)",
             trace.r,
-            "One synthetic feature per (operator, permitted k)"
-            + (f"; {skipped} constant feature(s) skipped (ADR-030)" if skipped else ""),
+            "One synthetic feature per (operator, admissible k)"
+            + (f"; {skipped} feature(s) left out (ADR-030, ADR-064)" if skipped else ""),
         ),
         (
             "Layout check",
-            "✓ the workbook has a column for every permitted k",
+            "✓ the workbook has a column for every admissible k",
             "",
             "key",
             "value_left",
@@ -199,85 +200,70 @@ def parameters(book: Book) -> None:
     ]
     _rows(sheet, 5, rows)
 
-    template = HAGConfig()
-    at_template = (hag.alpha, hag.delta, hag.kappa, hag.cr1) == (
-        template.alpha,
-        template.delta,
-        template.kappa,
-        template.cr1,
-    )
-    sheet.bar(
-        17,
-        1,
-        3,
-        "Hierarchical agglomerative grouping (HAG)  ·  values of the template experiment"
-        if at_template
-        else "Hierarchical agglomerative grouping (HAG)",
-    )
+    default = AdditionalFeaturesConfig()
+    sheet.bar(17, 1, 3, "Additional features D(t)  ·  the hierarchical agglomerative algorithm")
     sheet.row(
         18, 1, ["Parameter", "Value", "Rule / meaning"], ["header_left", "header", "header_left"]
     )
 
-    def origin(value: float, default: float) -> str:
-        return "Template value" if value == default else f"Template value: {default:g}"
+    def origin(value: float, usual: float) -> str:
+        return "The default" if value == usual else f"The default: {usual:g}"
 
     limit = trace.r - 1
     kappa_note = (
-        f"{origin(hag.kappa, template.kappa)}; ϰ ≤ r − 1 = {limit} ✓"
-        if hag.kappa <= limit
+        f"{origin(agglomerative.kappa, default.kappa)}; ϰ ≤ r − 1 = {limit} ✓"
+        if agglomerative.kappa <= limit
         else f"⚠ ϰ exceeds r − 1 = {limit}: the grouping ends when P is empty"
     )
-    function, rule = _majorizer(hag)
-    centres = 1 if hag.centres is CentreMode.RUNNING else 2
+    function, rule = _majorizing_function(agglomerative)
+    class_means = 1 if agglomerative.class_means is ClassMeans.RUNNING else 2
     _rows(
         sheet,
         19,
         [
             (
-                "α  (regularisation of the margin, 0 < α < 1)",
-                hag.alpha,
-                origin(hag.alpha, template.alpha),
+                "α  (margin regularization parameter, 0 < α < 1)",
+                agglomerative.alpha,
+                origin(agglomerative.alpha, default.alpha),
                 "key",
                 "input",
                 "text",
             ),
             (
                 "δ  (threshold for θ / γ, 0 < δ < 0.5)",
-                hag.delta,
-                origin(hag.delta, template.delta),
+                agglomerative.delta,
+                origin(agglomerative.delta, default.delta),
                 "key",
                 "input",
                 "text",
             ),
-            ("ϰ  (maximum |TUPLAM|)", hag.kappa, kappa_note, "key", "input", "text"),
+            ("ϰ  (maximum |TUPLAM|)", agglomerative.kappa, kappa_note, "key", "input", "text"),
             (
                 "cr1  (initial value of the criterion)",
-                plain(hag.cr1),
-                origin(hag.cr1, template.cr1),
+                plain(agglomerative.cr1),
+                origin(agglomerative.cr1, default.cr1),
                 "key",
                 "input",
                 "text",
             ),
-            ("Majorizing function ϕ", function, rule, "key", "value_left", "text"),
+            ("Majorizing function φ", function, rule, "key", "value_left", "text"),
             (
-                "⚠1 Class centres in θ and γ",
-                centres,
+                "⚠1 Class means in θ and γ",
+                class_means,
                 (
-                    "1 = running partial class means, as computed in the template cells  ·  "
-                    "2 = final class means M₁, M₂ (article and the template formula box)  ·  "
-                    "see “Template Deviations”"
+                    "2 = final class means M₁, M₂ (the article)  ·  1 = running partial class "
+                    "means (⚠ deviates from the article)  ·  see “Switches”"
                 ),
                 "warn1_key",
                 "input",
                 "warn1_text",
             ),
             (
-                "⚠2 Majorizer passes in STEP 4",
-                hag.step4_passes,
+                "⚠2 Majorizing function passes in Step 4",
+                agglomerative.majorizing_passes,
                 (
-                    "2 = template (the majorizer is applied again to b of STEP 3)  ·  "
-                    "1 = article (R ← R + η_q, then the majorizer once)  ·  see “Template "
-                    "Deviations”"
+                    "1 = the article (R ← R + η_q, then the majorizing function once)  ·  2 = "
+                    "applied again to b of Step 3 (⚠ deviates from the article)  ·  see “Switches”"
                 ),
                 "warn2_key",
                 "input",
@@ -311,7 +297,7 @@ def parameters(book: Book) -> None:
     sheet.bar(row, 1, 3, "Other rules")
     evaluation = config.evaluation
     positive = trace.classes[view.result.positive - 1]
-    decimals = config.context.distance_decimals
+    decimals = config.local_context.distance_decimals
     row = _rows(
         sheet,
         row + 1,
@@ -368,7 +354,7 @@ def parameters(book: Book) -> None:
                 "text",
             ),
             (
-                "Scale unification",
+                "Normalization",
                 trace.scaling.normalizer,
                 "Fitted on the training objects only; nominal codes are never changed",
                 "key",
@@ -377,7 +363,7 @@ def parameters(book: Book) -> None:
             ),
             (
                 "Constant synthetic features",
-                "skipped" if config.synthetic.skip_constant else "kept",
+                "skipped" if config.synthetic_features.skip_constant else "kept",
                 "synthetic.skip_constant (ADR-030); the workbook keeps them",
                 "key",
                 "value_left",
@@ -539,7 +525,7 @@ def normalized(book: Book) -> None:
         "Step 1 · Normalized dataset — quantitative features mapped to [0, 1], "
         "nominal features unchanged"
         if minmax
-        else f"Step 1 · Normalized dataset — scale unification “{scaling.normalizer}”, "
+        else f"Step 1 · Normalized dataset — normalization “{scaling.normalizer}”, "
         "nominal features unchanged",
         n + 2,
     )
@@ -547,9 +533,9 @@ def normalized(book: Book) -> None:
         3,
         1,
         n + 2,
-        f"{view.dataset.name} after scale unification:  x′ = (x − min) / (max − min)  for j ∈ I"
+        f"{view.dataset.name} after normalization:  x′ = (x − min) / (max − min)  for j ∈ I"
         if minmax
-        else f"{view.dataset.name} after scale unification ({scaling.normalizer})",
+        else f"{view.dataset.name} after normalization ({scaling.normalizer})",
     )
     sheet.row(4, 1, ["№", *trace.feature_names, "Class"], "header")
     styles = ["quantitative_num" if q else "nominal" for q in is_quantitative]
@@ -576,7 +562,7 @@ def normalized(book: Book) -> None:
             "Type 1 = quantitative feature (set I): rescaled to [0, 1] with the fractional-linear "
             f"(min–max) transform; min and max are taken over the training objects {span}."
             if minmax
-            else "Type 1 = quantitative feature (set I): mapped by the scale unification "
+            else "Type 1 = quantitative feature (set I): mapped by the normalization "
             f"“{scaling.normalizer}” — {NORMALIZERS.info(scaling.normalizer).summary} — "
             f"fitted on the training objects {span}.",
             (
@@ -601,7 +587,7 @@ def normalized(book: Book) -> None:
 # ---------------------------------------------------------------- distances
 
 
-def _operator_bar(view: RunView, operator: OperatorContext) -> str:
+def _operator_bar(view: RunView, operator: LocalContext) -> str:
     label = operator.label
     kind = operator_kind(view, operator)
     if kind == "all":
@@ -642,7 +628,7 @@ def distances(book: Book) -> None:
         else f"Step 2 · Pairwise distances of the base operators — {labels}",
         m + 1,
     )
-    decimals = view.config.context.distance_decimals
+    decimals = view.config.local_context.distance_decimals
     if m * m * len(operators) > book.options.max_matrix_cells:
         sheet.put(
             3,

@@ -1,9 +1,10 @@
 """Typed experiment configuration (pydantic v2).
 
 One :class:`ExperimentConfig` describes a run completely. Unknown keys are errors and instances
-are immutable. The defaults are the **template** setting, which reproduces the author's template
-workbooks and the full Excel experiment exactly (ADR-004); :mod:`.presets` holds the named presets
-and the two template-vs-article switches.
+are immutable. The sections follow the method of the article: the local contexts, the admissible
+values of k, the synthetic features Ψ(r), the additional features D(t) of the hierarchical
+agglomerative algorithm, the meta-algorithm and the evaluation. :mod:`.presets` holds the named
+presets and the settings that deviate from the article.
 
 Pluggable components are :class:`PluginSpec` values (registry name + parameters). Their
 parameters are validated by the component's own parameter type when the pipeline resolves them.
@@ -15,6 +16,9 @@ from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
+
+SCHEMA_VERSION = 2
+"""Version of the configuration format."""
 
 
 class ConfigModel(BaseModel):
@@ -50,13 +54,17 @@ def plugin(name: str, **params: JsonValue) -> PluginSpec:
     return PluginSpec(name=name, params=params)
 
 
-class CentreMode(StrEnum):
-    """Class centres used by θ and γ in HAG STEP 3 (template deviation 1, ADR-002)."""
+class ClassMeans(StrEnum):
+    """The class means M₁, M₂ that θ and γ are measured from.
 
-    RUNNING = "running"
-    """Template cells: |bₜ − M| uses the running partial class sum up to row t divided by |Kᵢ|."""
+    Step 3 of the agglomerative algorithm.
+    """
+
     FINAL = "final"
-    """Article (and the template's formula box): final class means M₁ = Σbₜ/|K1|, M₂ = Σbₜ/|K2|."""
+    """The article: M₁ = Σbₜ/|K1| and M₂ = Σbₜ/|K2| over all objects."""
+    RUNNING = "running"
+    """⚠ Deviates from the article: |bₜ − M| uses the running partial class sum up to row t
+    divided by |Kᵢ|."""
 
 
 class DatasetConfig(ConfigModel):
@@ -66,9 +74,7 @@ class DatasetConfig(ConfigModel):
     """A dataset file (relative paths: against the configuration file's folder), a dataset of the
     project's ``datasets`` folder by id or name (``heart-disease-270``), ``builtin:<name>``, or
     ``None`` for the default dataset (``datasets/default.dat``; ADR-035)."""
-    format: Literal[
-        "auto", "cs-workbook", "extended", "template-extended", "csv", "xlsx", "parquet"
-    ] = "auto"
+    format: Literal["auto", "cs-workbook", "extended", "csv", "xlsx", "parquet"] = "auto"
     """``auto`` picks the loader from the file extension and content."""
     sheet: str | None = None
     """Sheet name for Excel files (the experiment workbook uses ``Dataset``)."""
@@ -82,15 +88,37 @@ class DatasetConfig(ConfigModel):
     """Policy for missing values; only ``error`` for now (ADR-015)."""
 
 
-class PreprocessingConfig(ConfigModel):
-    """Scale unification (Step 1), fitted on the training objects only."""
+class RIPSConfig(ConfigModel):
+    """R-IPS: forming the precedent base for training and testing (the first stage)."""
 
+    metric: PluginSpec = Field(default_factory=lambda: plugin("zhuravlyov"))
+    """Proximity measure ρ of the hyperspheres (Zhuravlyov metric by default)."""
     normalizer: PluginSpec = Field(default_factory=lambda: plugin("minmax"))
-    """Fractional-linear (min–max) transform of the quantitative features by default."""
+    """Normalization of the quantitative features, fitted on E₁ = E₀ ∖ T."""
+    features: Literal["all", "quantitative", "nominal"] | tuple[str, ...] = "all"
+    """The features ρ is applied to: ``all`` (I ∪ J), ``quantitative`` (I), ``nominal`` (J) or
+    explicit feature names."""
+    training: Literal["remaining", "moved"] = "remaining"
+    """The training sample: the objects left in E₁ (``remaining``) or ⚠ the moved set D
+    (``moved``); the rest of E₀ is the test sample."""
+    keep_blocked_cover: bool = False
+    """⚠ Blocked objects keep covering other objects with |r(S)| (off: the article's text, where
+    blocking makes r(S) negative)."""
+    test_sample: tuple[str, ...] = ()
+    """T: object ids held out before R-IPS (E₁ = E₀ ∖ T); empty by default."""
+    distance_decimals: int = Field(10, ge=0, le=15)
+    """Distances are rounded to this many decimals so that equal distances tie exactly."""
+
+    @field_validator("test_sample")
+    @classmethod
+    def _test_sample_is_a_set(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(set(value)) != len(value):
+            raise ValueError("the test sample must not repeat an object")
+        return value
 
 
 class OperatorConfig(ConfigModel):
-    """A base operator of Ψ: a metric applied to a feature subset (article: variants of Ψ)."""
+    """A base operator of Ψ: a metric applied to a feature subset (the variants of Ψ)."""
 
     label: str = Field(min_length=1)
     """Display name, e.g. ``ρ``, ``ρ_I``, ``ρ_J``; used in synthetic-feature names."""
@@ -98,6 +126,9 @@ class OperatorConfig(ConfigModel):
     """Distance on the selected features (Zhuravlyov metric by default)."""
     features: Literal["all", "quantitative", "nominal"] | tuple[str, ...] = "all"
     """``all`` (I ∪ J), ``quantitative`` (I), ``nominal`` (J) or explicit feature names."""
+    normalizer: PluginSpec | None = None
+    """The operator's own normalization (e.g. ``none`` for the Euclidean metric on the raw
+    quantitative features); ``None``: the local contexts' normalizer."""
 
     @field_validator("features")
     @classmethod
@@ -118,11 +149,14 @@ def _default_operators() -> tuple[OperatorConfig, ...]:
     )
 
 
-class ContextConfig(ConfigModel):
-    """Local contexts Ψ_ρ,k: base operators, distances and neighbour ordering (Steps 2–3)."""
+class LocalContextConfig(ConfigModel):
+    """Local contexts Ψ_ρ,k: normalization, base operators, distances and neighbour order."""
 
+    normalizer: PluginSpec = Field(default_factory=lambda: plugin("minmax"))
+    """Normalization of the quantitative features, fitted on the training objects only:
+    min–max to [0; 1] by default."""
     operators: tuple[OperatorConfig, ...] = Field(default_factory=_default_operators, min_length=1)
-    """Base operators; one synthetic feature per (operator, permitted k)."""
+    """Base operators; one synthetic feature per (operator, admissible k)."""
     distance_decimals: int = Field(10, ge=0, le=15)
     """Distances are rounded to this many decimals so that equal distances tie exactly."""
     tie_break: Literal["smaller-index"] = "smaller-index"
@@ -140,41 +174,51 @@ class ContextConfig(ConfigModel):
         return value
 
 
-class SyntheticConfig(ConfigModel):
-    """Synthetic features Ψ(r) and their weights (formulas (1)–(6))."""
+class SyntheticFeaturesConfig(ConfigModel):
+    """Synthetic features Ψ(r) and their informativeness (formulas (1)–(6))."""
 
     encoder: PluginSpec = Field(default_factory=lambda: plugin("formula-5"))
-    """Class-free majority feature aᵤ ∈ {1, 2} by formula (5)."""
-    weights: PluginSpec = Field(default_factory=lambda: plugin("omega"))
-    """Informativeness ω by formula (4), used by the contributions (6) and by HAG STEP 2."""
+    """The binary synthetic feature a ∈ {1, 2} by formula (5), from the classes of the
+    neighbours only."""
+    informativeness: PluginSpec = Field(default_factory=lambda: plugin("formula-4"))
+    """Informativeness ω by formula (4), used by the contributions (6) and by Step 2 of the
+    agglomerative algorithm."""
     skip_constant: bool = False
     """Drop synthetic features that take one value on every training object (η = 0, no
-    information, yet ω can be 1 at large k). Off by default: the workbook keeps them (ADR-030)."""
+    information, yet ω can be 1 at large k). Off by default (ADR-030)."""
+    original_features: Literal["nominal"] | tuple[str, ...] = ()
+    """Original nominal features combined with the synthetic ones: ``nominal`` (all of set J)
+    or feature names. Each acts as a feature of Ψ(r) whose gradations are its codes (formulas
+    (1)–(4) and (6)); quantitative features are not admitted (ADR-065). Empty: none."""
+    zero_value: bool = False
+    """The values {0, 1, 2} of the article's experiments: a training object takes 0 where the
+    classes are indistinguishable at its gradation (f_k(μ) = 0.5), and every feature that takes 0
+    is left out, so the rest stay in {1, 2} (ADR-064). Off: formula (5) alone."""
 
 
-class HAGConfig(ConfigModel):
-    """Hierarchical agglomerative grouping, Steps 1–5 (template parameters by default)."""
+class AdditionalFeaturesConfig(ConfigModel):
+    """Additional features D(t): the hierarchical agglomerative algorithm, Steps 1–5."""
 
     alpha: float = Field(0.3, gt=0.0, lt=1.0)
-    """α — regularisation of the margin, 0 < α < 1."""
+    """α — the margin regularization parameter, 0 < α < 1."""
     delta: float = Field(0.1, gt=0.0, lt=0.5)
     """δ — threshold for θ/γ, 0 < δ < 0.5."""
     kappa: int = Field(5, ge=2)
-    """ϰ — maximum |TUPLAM| (the article asks ϰ ≤ r − 1; not clamped, see ADR-008)."""
+    """ϰ — maximum |TUPLAM| (the article asks ϰ ≤ n − 1; not clamped, see ADR-008)."""
     cr1: float = Field(10.0, gt=0.0)
-    """Initial value of the criterion in STEP 3; a candidate is chosen only if θ/γ < cr1."""
-    majorizer: PluginSpec = Field(default_factory=lambda: plugin("sigmoid"))
-    """Majorizing function ϕ; b ← b ± α·ϕ(−b) (+ for K1, − for K2)."""
-    centres: CentreMode = CentreMode.RUNNING
-    """⚠ Template deviation 1 (ADR-002): ``running`` = template cells, ``final`` = article."""
-    step4_passes: Literal[1, 2] = 2
-    """⚠ Template deviation 2 (ADR-003): majorizer passes in STEP 4; 2 = template, 1 = article."""
+    """Initial value of the criterion in Step 3; a candidate is chosen only if θ/γ < cr1."""
+    majorizing_function: PluginSpec = Field(default_factory=lambda: plugin("sigmoid"))
+    """Majorizing function φ; b ← b ± α·φ(−b) (+ for K1, − for K2)."""
+    class_means: ClassMeans = ClassMeans.FINAL
+    """Class means of θ and γ: ``final`` (the article) or ``running`` (⚠ deviates)."""
+    majorizing_passes: Literal[1, 2] = 1
+    """Applications of the majorizing function in Step 4: 1 (the article) or 2 (⚠ deviates)."""
 
 
-class MetaConfig(ConfigModel):
+class MetaAlgorithmConfig(ConfigModel):
     """Meta-algorithm, Steps 1–5."""
 
-    decision_rule: PluginSpec = Field(default_factory=lambda: plugin("article-step-4"))
+    decision_rule: PluginSpec = Field(default_factory=lambda: plugin("step-4"))
     """K1 if |B1|/|K1| > |B2|/|K2|, K2 if <, 0 (refusal) if equal."""
 
 
@@ -203,20 +247,20 @@ class OutputConfig(ConfigModel):
 class ExperimentConfig(ConfigModel):
     """Complete description of one experiment."""
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
     """Version of this configuration format."""
     name: str = "cs-model"
     """Short name of the experiment."""
     description: str = ""
     """Free text."""
     dataset: DatasetConfig = Field(default_factory=DatasetConfig)
-    preprocessing: PreprocessingConfig = Field(default_factory=PreprocessingConfig)
-    context: ContextConfig = Field(default_factory=ContextConfig)
-    k: PluginSpec = Field(default_factory=lambda: plugin("formula"))
-    """Permitted k: odd k = 3 … 2·min|Kᵢ| − 3 from the training classes (ADR-005, ADR-006)."""
-    synthetic: SyntheticConfig = Field(default_factory=SyntheticConfig)
-    hag: HAGConfig = Field(default_factory=HAGConfig)
-    meta: MetaConfig = Field(default_factory=MetaConfig)
+    rips: RIPSConfig = Field(default_factory=RIPSConfig)
+    local_context: LocalContextConfig = Field(default_factory=LocalContextConfig)
+    admissible_k: PluginSpec = Field(default_factory=lambda: plugin("min-class"))
+    """Admissible values of k (K̂) from the training class sizes: odd k = 3 … min(|K1|, |K2|)."""
+    synthetic_features: SyntheticFeaturesConfig = Field(default_factory=SyntheticFeaturesConfig)
+    additional_features: AdditionalFeaturesConfig = Field(default_factory=AdditionalFeaturesConfig)
+    meta_algorithm: MetaAlgorithmConfig = Field(default_factory=MetaAlgorithmConfig)
     evaluation: EvaluationConfig = Field(default_factory=EvaluationConfig)
     seed: int = Field(42, ge=0)
     """Seed of every random choice (splits of randomised protocols)."""
