@@ -2,7 +2,7 @@
 
 The desktop application takes an experiment through the whole workflow — **Dataset → Configure →
 Run → Results → New object → Compare → Export** — and shows every table and figure of the
-workbook for any dataset. It computes nothing itself: a run is the same
+method for any dataset. It computes nothing itself: a run is the same
 `run_experiment` the command line uses, and the pages show the same tables and figures the
 exporters write, so the screen, the Excel mirror and the article's tables cannot disagree.
 
@@ -23,12 +23,16 @@ asked for. `csr-gui.exe --self-test report.txt` checks an installation without s
 it loads every language, runs the default experiment, draws a table and a figure, exports the
 run and writes what it found to the report (exit code 0 = everything works).
 
-!!! warning "Two template calculations differ from the article"
-    The application never lets them out of sight: a ⚠ badge in the status bar (click it to see the
-    switches), a warning box at the top of *Configure*, a ⚠ mark beside each switch, the ⚠ rows of
-    *Compare*, and the *Switch sensitivity* table and figure of the results. The default is the
-    template calculation, which reproduces the workbooks exactly; **Edit → Article preset** follows
-    the article. See [DECISIONS.md](DECISIONS.md) (ADR-002 – ADR-004).
+!!! warning "Four switches deviate from the article"
+    The defaults follow the article. Four switches deviate from it when on: in R-IPS, blocked
+    objects that keep covering (`rips.keep_blocked_cover`) and the moved set D as the training
+    sample (`rips.training: moved`, ADR-061); in the agglomerative algorithm, running class means
+    (ADR-002) and two majorizing passes in Step 4 (ADR-003). The application never lets an active
+    one out of sight: the status-bar button "⚠ deviates from the article: n setting(s)" (click it
+    to see them), a warning box at the top of *Configure*, a "⚠ deviates from the article" badge
+    beside each switch, the ⚠ rows of *Compare*, and the *Switch sensitivity* table and figure of
+    the results. **Edit → Apply a preset → excel-experiment** turns on the two switches of the
+    agglomerative algorithm, as the Excel experiment workbook does.
 
 ## 1 · Dataset
 
@@ -45,30 +49,40 @@ class column is tinted by class.
   (default: the last column) and an optional object-id column, then *Read again*. A dataset with
   missing values is not loaded; the message names the cells.
 - **Summary** — live for the current configuration: |K1| and |K2|, the class balance, the
-  permitted k and r = |Ψ(r)|. If the model would be undefined for the data (no permitted k, more
+  admissible k and r = |Ψ(r)|. If the model would be undefined for the data (no admissible k, more
   than two classes), the summary says why.
 
 ## 2 · Configure
 
 ![Configure page](images/gui/configure.png)
 
-Every setting of the method, grouped by the steps of the pipeline. Plug-ins — normalizer, metric,
-k rule, encoder, weights, majorizer, decision rule, protocols, baselines — are chosen from their
-registries, and each plug-in's parameters appear as a form generated from its parameter type, so a
+Every setting of the method, grouped by the stages of the pipeline. Plug-ins — normalizer,
+metric, k rule, encoder, informativeness, majorizing function, decision rule, protocols,
+baselines — are chosen from their registries, and each plug-in's parameters appear as a form generated from its parameter type, so a
 plug-in added to a registry shows up here by itself.
 
-- **Presets** — *Template preset* and *Article preset* set the method; the dataset, the name and
-  the seed stay. The badge at the top says which preset the configuration matches.
-- **Base operators** — a label, a metric and a feature subset each: `all`, `quantitative`,
-  `nominal`, or feature names separated by commas. Labels must be unique. A metric defined on
+- **Presets** — choose `default` (the article), `alpha-0.1`, `alpha-0.2` (the article's
+  experiments) or `excel-experiment` (the workbook's settings) and press *Apply*, or use
+  **Edit → Apply a preset**; the dataset, the name, the seed and the output folder stay. The list
+  shows the preset the configuration matches.
+- **R-IPS** — the metric ρ, its normalizer and feature subset, the test sample T as object ids
+  separated by commas (`S1` is read as `S₁` when the dataset names its objects so), the training
+  sample (the objects remaining in E₁, or ⚠ the moved set D) and ⚠ blocked objects that *keep
+  covering*. A repeated object of T is marked at once, an unknown one is listed among the problems.
+- **Base operators** — a label, a metric, a feature subset (`all`, `quantitative`, `nominal`, or
+  feature names separated by commas) and, on a second line, the operator's own normalization
+  ("as the local contexts" by default, ADR-066). Labels must be unique. A metric defined on
   quantitative features (Euclidean, Mahalanobis, …) or on nominal ones (Hamming) must get a
   subset of that type; otherwise the problem list names the features that do not fit.
-- **Permitted k** — the rule and, live, the k it gives for the loaded dataset and the resulting
-  number of synthetic features.
-- **The two ⚠ switches** — *Class centres in θ, γ* and *STEP 4 passes*, each marked while it is at
-  the template value.
-- **Validation** — problems (an invalid parameter, a k rule that permits nothing, no protocol)
-  are listed at the top and keep *Run* disabled.
+- **Admissible k** — the rule (by default odd k = 3 … min|Kᵢ|, the article) and, live, the k it
+  gives for the loaded dataset and the resulting number of synthetic features.
+- **Synthetic features** — the encoder (formula (5)), the informativeness ω (formula (4)), the
+  zero value of the article's experiments (ADR-064) and original nominal features combined with
+  the synthetic ones (ADR-065).
+- **The ⚠ switches** — each in the group of its stage, with its ADR, and marked "⚠ deviates from
+  the article" while it is on.
+- **Validation** — problems (an invalid parameter, a k rule that permits nothing, an unknown object
+  of the test sample, no protocol) are listed at the top and keep *Run* disabled.
 - **Undo / redo** — every edit can be taken back (**Ctrl+Z**, **Ctrl+Y**).
 - **Files** — **File → Open configuration…** (**Ctrl+Shift+O**) reads a YAML, TOML or JSON
   configuration and loads the dataset it names; **Save configuration as…** (**Ctrl+S**) writes
@@ -84,8 +98,9 @@ pipeline reports, and **Cancel** (**Shift+F5**) stops at the next fold.
 
 - **Save a run folder** — writes `runs/<time>_<hash>/` with the manifest, the results and the
   dataset snapshot ([Evaluation](evaluation.md)); a saved run can be opened again and compared.
-- **⚠ Switch sensitivity** — also evaluates all four settings of the two switches (a leave-one-out
-  each): automatically for samples of at most 60 objects, always, or never.
+- **⚠ Switch sensitivity** — also evaluates all four settings of the two switches of the
+  agglomerative algorithm (a leave-one-out each): automatically for samples of at most 60 objects,
+  always, or never. The two switches of R-IPS are not part of it.
 
 When the configuration is edited after a run, the pages say that the results on screen belong to
 another configuration until the experiment is run again.
@@ -94,17 +109,20 @@ another configuration until the experiment is run again.
 
 ![Results: Ψ(r)](images/gui/results-table.png)
 
-The steps of the workbook as a tree: every stage with its tables and, marked ▣, its figures.
+The stages of the method as a tree — *Input data*, *Local contexts*, *Synthetic features*,
+*Additional features*, *Meta-algorithm*, *Evaluation*, *Checks* (ADR-078): every stage with its
+tables and, marked ▣, its figures — among them the metaobject, the class-sequence masks and the
+majority chains (ADR-067, ADR-074).
 **Previous** / **Next** (**Alt+←**, **Alt+→**) walk through them in order.
 
-Tables use the workbook's colour semantics:
+Tables use the colour semantics of the Excel mirror:
 
 | Colour | Meaning |
 |---|---|
 | blue / yellow header | quantitative (I) / nominal (J) feature |
 | light green header | synthetic feature aᵤ |
-| yellow header or row | a feature of TUPLAM; the chosen candidate q of a HAG iteration |
-| strong green header | latent feature r_j |
+| yellow header or row | a feature of TUPLAM; the chosen candidate q of an iteration of the agglomerative algorithm |
+| strong green header | additional feature dⱼ |
 | blue / orange cell | class K1 / K2 — also aᵤ = 1 / aᵤ = 2, the class a neighbourhood votes for |
 | green / red / grey cell | correct / wrong decision / refusal (0); ✓ / ✗ status |
 
@@ -133,12 +151,12 @@ PDF at the export size.
 
 Type the feature values of an object — there is no class input: the model does not use it — or
 paste a row (commas, semicolons, spaces or tabs), or take a training object. *Leave it out of its
-own context* repeats the workbook's Theorem check: the object must get the representation and the
+own context* repeats the Theorem check: the object must get the representation and the
 decision of its training row.
 
 **Classify** shows the decision with score₁ and score₂ and explains it: B1 and B2 at every step
 of the meta-algorithm, the object's Ψ(r) with χ₁ and χ₂, its neighbours under every operator with
-the permitted k marked, and its unified values. The classified object also becomes the object of
+the admissible k marked, and its normalized values. The classified object also becomes the object of
 the *New object* tables of the results and of the exports.
 
 ## 6 · Compare
@@ -169,7 +187,7 @@ size.
 - The window size, the theme, the zoom, the language, the runs folder and the recent datasets,
   configurations and runs (**File → Recent …**) are remembered between sessions.
 - The colours of the classes and of the figures are colour-blind safe. Correct / wrong use the
-  workbook's green and red and are never the only cue: the predicted and the true class are both
+  Excel mirror's green and red and are never the only cue: the predicted and the true class are both
   written, a refusal is the value 0, and statuses carry ✓ / ✗ / ⚠.
 
 ## Language

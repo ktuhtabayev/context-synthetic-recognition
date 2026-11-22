@@ -6,93 +6,118 @@ anything that changes numerical results is asked before it is changed (CLAUDE.md
 
 Status values: *accepted*, *superseded by ADR-n*.
 
-!!! warning "Two template calculations differ from the article"
+!!! warning "Switches that deviate from the article"
+    - **In R-IPS a blocked object keeps covering other objects with |r(S)|**, although blocking
+      makes r(S) negative — `rips.keep_blocked_cover: true` (ADR-061).
+    - **The objects R-IPS moves to D form the training sample** instead of the objects that remain
+      in E₁ — `rips.training: moved` (ADR-061).
     - **θ and γ are measured from running partial class means instead of the final class means M₁
-      and M₂** (ADR-002).
-    - **In STEP 4 the majorizer is applied twice instead of once** (ADR-003).
+      and M₂** — `additional_features.class_means: running` (ADR-002).
+    - **In Step 4 of the agglomerative algorithm the majorizing function is applied twice instead
+      of once** — `additional_features.majorizing_passes: 2` (ADR-003).
 
-    Both are switches. The default is the template setting, which reproduces the template
-    workbooks exactly; the *article* preset flips both (ADR-004).
+    The defaults follow the article: every switch is set to the article's value (ADR-062). The
+    `excel-experiment` preset turns on the last two and reproduces the Excel experiment workbook
+    exactly.
 
 ---
 
 ## ADR-001 — The Excel experiment is the specification
 
-*Accepted, 2026-09-30.*
+*Accepted, 2026-09-30. Superseded by ADR-058: the article is the specification; the workbook
+remains an acceptance test, run with the `excel-experiment` preset. Where the source material is
+kept now: ADR-060.*
 
-- The workbook
-  `resources/Experiments/Context-Synthetic Recognition Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx`
+- The Excel experiment workbook (now
+  `tests/data/workbooks/Excel experiment [Heart-Disease (10, 13, 2)].xlsx`, ADR-060)
   specifies every computation; its cell formulas define each step and its Validation sheet values
   are acceptance tests (tolerance 1e-9).
   *(The author renamed the workbook on 2026-10-01 and asked for one naming throughout: the file
-  name was updated everywhere in the project, the handoff documents included, and the text of
-  cell A3 of the sheet* Template Deviations *— which quotes the file name of the HAG template —
-  was changed inside the workbook to the template's current name. Only that text changed: every
-  other part of the file is identical and `csr validate` passes on all 11,631 cells.)*
-  *(On 2026-10-11 the author moved the experiment workbooks from
-  `resources/experiments/context-synthetic-model/` to `resources/Experiments/` and renamed the
-  full experiment from "Context-Synthetic Model – Full Experiment …" to "Context-Synthetic
-  Recognition Model – Full Experiment …"; the paths were updated everywhere, the handoff
-  documents included. Both files are byte for byte the previous ones: a copy saved with the
-  article setting of the two switches was set back to the template setting.)*
-- `docs/handoff/CONTEXT_HANDOFF.md` records the agreed decisions; where it and the design chat
-  differ, the handoff wins.
-- `docs/handoff/reference-engine` (with `golden_values.json`) is a test oracle, not the
-  architecture.
-- The template workbooks of `../hag-regularized-stacking-boosting-meta` (HAG, meta-algorithm) are
-  replication targets: SET {x₃, x₆, x₁₃, x₄, x₉} and r₁…r₄ to 1e-12; the meta-algorithm template's
-  new object is classified as Class 2 with B1(a₄) = ∅, B2(a₄) = {S₉, S₁₀}.
-- `resources/Experiments/`, `docs/handoff/` and the template project are never modified.
+  name was updated everywhere in the project, the author's design notes included, and the text of
+  cell A3 of the workbook's switches sheet — which quotes another workbook's file name, that of
+  the agglomerative algorithm's check workbook — was changed inside the workbook to that file's
+  current name. Only that text changed: every other part of the file is identical and
+  `csr validate` passes on all 11,631 cells.)*
+  *(On 2026-10-11 the author moved the experiment workbooks to another folder of the source
+  material and renamed the full experiment from "Context-Synthetic Model – Full Experiment …" to
+  "Context-Synthetic Recognition Model – Full Experiment …"; the paths were updated everywhere,
+  the author's design notes included. Both files are byte for byte the previous ones: a copy
+  saved with the article's setting of the two switches was set back to the workbook's setting.)*
+- The author's design notes (kept outside the repository, ADR-060) record the agreed decisions;
+  where their summary of the decisions and the transcript of the design conversation differ, the
+  summary wins.
+- An independent re-implementation (now `tests/golden/independent`, with `golden_values.json`)
+  is a test oracle, not the architecture.
+- The check workbooks of the agglomerative algorithm and of the meta-algorithm (now
+  `tests/data/workbooks/Additional features [Heart-Disease (10, 13, 2)].xlsx` and
+  `tests/data/workbooks/Meta-algorithm [Heart-Disease (10, 13, 2)].xlsx`) are replication
+  targets: SET {x₃, x₆, x₁₃, x₄, x₉} and r₁…r₄ to 1e-12; the new object of the meta-algorithm's
+  check workbook is classified as Class 2 with B1(a₄) = ∅, B2(a₄) = {S₉, S₁₀}.
+- The author's source material — the experiment workbooks, the design notes and the originals of
+  the check workbooks — is never modified.
 
-## ADR-002 — Switch: class centres in θ and γ (template deviation 1)
-
-*Accepted, 2026-09-30.*
-
-The template's cells compute |bₜ − M| with the **running** partial class sum up to row t divided
-by the full class size |Kᵢ| (not by the number of rows seen so far), although the template's
-formula box and the article use the final means M₁ = Σbₜ/|K1|, M₂ = Σbₜ/|K2|.
-
-Config: `hag.centres = running | final` (default `running`).
-
-## ADR-003 — Switch: majorizer passes in STEP 4 (template deviation 2)
+## ADR-002 — Switch: class means in θ and γ
 
 *Accepted, 2026-09-30.*
 
-The template applies the majorizer again to the already-majorized bₜ of STEP 3; the article
-computes R ← R + η_q and applies the majorizer once.
+The cells of the agglomerative algorithm's check workbook compute |bₜ − M| with the **running**
+partial class sum up to row t divided by the full class size |Kᵢ| (not by the number of rows seen
+so far), although that workbook's formula box and the article use the final means
+M₁ = Σbₜ/|K1|, M₂ = Σbₜ/|K2|.
 
-Config: `hag.step4_passes = 2 | 1` (default `2`).
+Config: `additional_features.class_means = running | final` (default `running`; since ADR-062
+the default is `final`, the article, and `running` is a switch that deviates from it — set by
+the `excel-experiment` preset).
 
-## ADR-004 — Canonical default: template; article as a preset (author)
-
-*Accepted, 2026-09-30.*
-
-The default configuration is the template setting (`running`, `2`). It reproduces the four template
-workbooks and the full experiment: TUPLAM {a₆, a₃, a₁, a₂, a₄}, resubstitution 70 %, LOO 20 % on
-Heart-Disease (10, 13, 2). The `article` preset (`final`, `1`) gives TUPLAM {a₆, a₁, a₂, a₄, a₅},
-resubstitution 50 %, LOO 0 %. Both presets ship as `configs/template.yaml` and
-`configs/article.yaml`; the CLI and the GUI flag every active template deviation.
-
-## ADR-005 — Permitted k (author)
+## ADR-003 — Switch: passes of the majorizing function in Step 4
 
 *Accepted, 2026-09-30.*
+
+The agglomerative algorithm's check workbook applies the majorizing function again to the
+already-majorized bₜ of Step 3; the article computes R ← R + η_q and applies the majorizing
+function once.
+
+Config: `additional_features.majorizing_passes = 2 | 1` (default `2`; since ADR-062 the default
+is `1`, the article, and `2` is a switch that deviates from it — set by the `excel-experiment`
+preset).
+
+## ADR-004 — Canonical default: the Excel experiment's setting; the article as a preset (author)
+
+*Accepted, 2026-09-30. Superseded by ADR-062 and ADR-071: the defaults follow the article; the
+presets are `default`, `alpha-0.1`, `alpha-0.2` and `excel-experiment`.*
+
+The default configuration is the Excel experiment's setting (`running`, `2`). It reproduces the
+check workbooks and the full experiment: TUPLAM {a₆, a₃, a₁, a₂, a₄}, resubstitution 70 %, LOO
+20 % on Heart-Disease (10, 13, 2). The article's preset (`final`, `1`, with the same admissible k)
+gives TUPLAM {a₆, a₁, a₂, a₄, a₅}, resubstitution 50 %, LOO 0 %. Both presets ship as
+configuration files in `configs/` (replaced by the presets of ADR-071); the CLI and the GUI flag
+every active switch that deviates from the article.
+
+## ADR-005 — Admissible k (author)
+
+*Accepted, 2026-09-30. Superseded by ADR-063 as the default: the article's odd k = 3 …
+min(|K1|, |K2|) (strategy `min-class`) is the default; this rule remains available as the
+strategy `twice-min-class`.*
 
 - Odd k = k_min, k_min + 2, …, k_max with **k_min = 3 fixed** for every dataset and
   **k_max = 2·min_i|K_i| − 3**, class sizes counted from the training objects of the current fit
   (each cross-validation fold has its own range). Never hard-coded.
-- **k = 1 is permitted when min|Kᵢ| = 2** (then k_max = 1; this is the only case where k_min drops).
-- min|Kᵢ| ≤ 1: no k is permitted. `fit` raises `ModelUndefinedError` (Definition 1). In
+- **k = 1 is admissible when min|Kᵢ| = 2** (then k_max = 1; this is the only case where k_min
+  drops).
+- min|Kᵢ| ≤ 1: no k is admissible. `fit` raises `ModelUndefinedError` (Definition 1). In
   cross-validation, a fold in that state predicts **0 (refusal)** for its held-out objects — counted
   as errors in accuracy — and is flagged in the report.
 - The article's text r = |{k odd, k ≤ min(|K1|, |K2|)}| is to be corrected to this rule.
 
 ## ADR-006 — Literal k range by default, optional cap and step (author)
 
-*Accepted, 2026-09-30.*
+*Accepted, 2026-09-30. Superseded by ADR-063 as the default: the article's odd k = 3 …
+min(|K1|, |K2|) (strategy `min-class`) is the default; the literal range of ADR-005 remains
+available as the strategy `twice-min-class`, with the cap and the step.*
 
 The default is the literal formula range (Heart-Disease (270, 13, 2): k = 3 … 237, r = 354). The
-`formula` k strategy accepts an optional `k_max_cap` and an even `step`; both are part of the
-configuration and therefore of the run manifest and its hash.
+k strategy of this rule (`twice-min-class`) accepts an optional `k_max_cap` and an even `step`;
+both are part of the configuration and therefore of the run manifest and its hash.
 
 ## ADR-007 — Operators with an empty feature subset are skipped (author)
 
@@ -100,7 +125,7 @@ configuration and therefore of the run manifest and its hash.
 
 An operator whose feature subset is empty for the dataset (e.g. ρ_J on Cancer, which has no nominal
 features — every distance would be 0 and the tie rule would decide every neighbourhood) is dropped
-with a warning; r shrinks accordingly. Config: `context.skip_empty_operators = true`.
+with a warning; r shrinks accordingly. Config: `local_context.skip_empty_operators = true`.
 
 ## ADR-008 — Numerical conventions copied from the workbook
 
@@ -112,12 +137,13 @@ with a warning; r shrinks accordingly. Config: `context.skip_empty_operators = t
   object itself is excluded.
 - f = 0.5 belongs to neither q₁ = min{f > 0.5} nor q₂ = max{f < 0.5}; if one side is empty,
   G_k = 0.5. Membership is undefined ("—") for a gradation no object has.
-- HAG STEP 2: u = argmax ω, first feature on ties. STEP 3: candidates in feature order; θ/γ is
-  compared exactly (identical candidates give bit-identical ratios, so the implementation keeps one
-  operation order for every candidate); q is the **first** minimum, and only if min θ/γ < cr1₀ = 10 —
-  otherwise the grouping stops (the workbook; the template *project* falls back to the first
-  candidate instead). cr1 is reset in every iteration.
-- ϰ is not clamped to r − 1: when a fold has fewer synthetic features, HAG ends when P is empty.
+- Agglomerative algorithm, Step 2: u = argmax ω, first feature on ties. Step 3: candidates in
+  feature order; θ/γ is compared exactly (identical candidates give bit-identical ratios, so the
+  implementation keeps one operation order for every candidate); q is the **first** minimum, and
+  only if min θ/γ < cr1₀ = 10 — otherwise the grouping stops (as in the workbook; falling back to
+  the first candidate instead was not adopted). cr1 is reset in every iteration.
+- ϰ is not clamped to r − 1: when a fold has fewer synthetic features, the agglomerative
+  algorithm ends when P is empty.
 - Scores score₁ − score₂ are rounded to 10 decimals before AUC and ROC (e.g. 0.5 − 2/3 vs 0 − 1/6).
 - Class 1 is the positive class; a refusal (0) counts as an error in accuracy and is reported
   separately (coverage).
@@ -126,7 +152,7 @@ with a warning; r shrinks accordingly. Config: `context.skip_empty_operators = t
 
 *Accepted, 2026-09-30.*
 
-- Scale unification is fitted on the training objects only; a new object uses the training min/max
+- Normalization is fitted on the training objects only; a new object uses the training min/max
   and its values are not clipped to [0, 1].
 - A new object's context is computed against the fixed training sample E with the same operators,
   rounding and tie rule; its synthetic features use only the neighbours' classes (χ₁, formula (5)).
@@ -134,17 +160,18 @@ with a warning; r shrinks accordingly. Config: `context.skip_empty_operators = t
   tests pass poisoned labels and check that nothing changes.
 - A training object passed through the new-object path is excluded from its own context
   (leave-self-out), which reproduces its training row.
-- Leave-one-out re-fits the whole pipeline (scaling, k range, Ψ(r), ω, η, HAG, meta-algorithm) on
-  the other m − 1 objects. The k-NN baselines use the fold's scaling and k = 3, 5 as in the
-  workbook, independent of the fold's permitted k.
+- Leave-one-out re-fits the whole pipeline (scaling, k range, Ψ(r), ω, η, the agglomerative
+  algorithm, the meta-algorithm) on the other m − 1 objects. The k-NN baselines use the fold's
+  scaling and k = 3, 5 as in the workbook, independent of the fold's admissible k.
 
 ## ADR-010 — Binary classification now; K classes as an extension point (author)
 
 *Accepted, 2026-09-30.*
 
-Formulas (1)–(6), the HAG signs (+1 for K1, −1 for K2) and the meta-algorithm are binary in the
-article and stay exact. The data layer and interfaces carry arbitrary class labels; more than two
-classes raise a clear error until a K-class formulation is specified.
+Formulas (1)–(6), the signs of the agglomerative algorithm (+1 for K1, −1 for K2) and the
+meta-algorithm are binary in the article and stay exact. The data layer and interfaces carry
+arbitrary class labels; more than two classes raise a clear error until a K-class formulation is
+specified.
 
 ## ADR-011 — Additional metrics: HEOM, HVDM, Gower first (author)
 
@@ -161,41 +188,40 @@ out by the author because it reads the classes of the training objects.
 
 *Accepted, 2026-09-30.*
 
-Taken from the template project's `datasets/raw` (6 quantitative + 7 nominal features, classes
+Supplied by the author as a raw data file (6 quantitative + 7 nominal features, classes
 150/120). Other datasets follow through the dataset registry.
 
 ## ADR-013 — GUI toolkit: PySide6 (author)
 
 *Accepted, 2026-09-30.*
 
-PySide6 (official Qt binding, LGPL) instead of the template's PyQt6; the API is nearly identical, it
-suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (ADR-017).
+PySide6 (official Qt binding, LGPL) rather than PyQt6; the API is nearly identical, it suits a
+PyInstaller release, and pytest-qt supports it. Figures use matplotlib (ADR-017).
 
 ## ADR-014 — Public repository; unpublished material stays local (author)
 
-*Accepted, 2026-09-30.*
+*Accepted, 2026-09-30. See ADR-060: the author's source material is no longer in the
+repository.*
 
 - Public GitHub repository `ktuhtabayev/context-synthetic-recognition`, CI on Windows.
-- Committed: the experiment workbooks, `CONTEXT_HANDOFF.md`, the task prompt, the images and the
-  reference engine. **Not committed** until the article is published (listed in `.gitignore`, kept
-  on disk): `docs/handoff/article/` (the draft) and `docs/handoff/CHAT_TRANSCRIPT.md`.
+- Committed: the experiment workbooks, the author's design notes (the summary of the decisions,
+  the task description and the images) and an independent re-implementation used as a test
+  oracle. **Not committed** until the article is published (listed in `.gitignore`, kept on
+  disk): the article draft and the transcript of the design conversation.
 - Protected folders are stored byte for byte (`-text` in `.gitattributes`); other text files use LF.
 - No Git LFS: the binary files total about 4 MB.
-- *Amended 2026-10-11 (author):* `resources/Article/` (the article draft),
-  `resources/Interpretation/` (the step-by-step guides), `resources/from Ignatev bobo/`
-  (N. A. Ignatev's article, program and datasets) and
-  `resources/Experiments/ERDR algorithm [Heart-Disease (7, 13, 2)].xlsx` are committed to the
-  public repository at the author's request. `docs/handoff/article/` and
-  `docs/handoff/CHAT_TRANSCRIPT.md` stay held back. The binary and data files now total about
-  8 MB, still without Git LFS.
+- *Amended 2026-10-11 (author):* a copy of the article draft, the step-by-step guides, a related
+  article with its program and datasets, and the workbook of another algorithm
+  (Heart-Disease (7, 13, 2)) are committed to the public repository at the author's request. The
+  draft and the transcript kept with the design notes stay held back. The binary and data files
+  now total about 8 MB, still without Git LFS.
 
 ## ADR-015 — Engineering conventions
 
 *Accepted, 2026-09-30.*
 
-- Python ≥ 3.11 (developed on 3.12, like the template), `src/` layout, setuptools, a `.venv` with
-  an editable pip install (the template's workflow). Runtime dependencies are added with the
-  milestone that first uses them.
+- Python ≥ 3.11 (developed on 3.12), `src/` layout, setuptools, a `.venv` with an editable pip
+  install. Runtime dependencies are added with the milestone that first uses them.
 - ruff (lint + format, line length 100), mypy `strict` on the whole package, pytest with
   hypothesis and coverage ≥ 90 %, pre-commit, GitHub Actions (lint, type-check, tests on Windows,
   Python 3.11–3.13, strict docs build).
@@ -206,7 +232,7 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
 - Documentation: mkdocs-material on MkDocs 1.x (`mkdocs<2`): MkDocs 2.0 removes the plugin and
   theme system Material depends on.
 - Missing values: rejected with a clear error by default.
-- License: MIT, as declared by the template project.
+- License: MIT.
 - *Amended in M2:* mypy runs with `python_version = "3.12"` because numpy ≥ 2.5 ships its stubs with
   PEP 695 `type` statements; ruff's `py311` target and the Python 3.11 test jobs keep the code
   itself 3.11-compatible.
@@ -218,8 +244,9 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
 - pydantic v2 models, unknown keys are errors, instances are immutable; YAML, TOML and JSON.
 - Pluggable components are `{name, params}` specs; each plug-in declares its parameter type, which
   validates `params` when the pipeline resolves it and generates the GUI form.
-- The two template-vs-article switches are first-class typed fields (`hag.centres`,
-  `hag.step4_passes`), described once in `config/presets.py` (`DEVIATIONS`).
+- The two switches that deviate from the article are first-class typed fields
+  (`additional_features.class_means`, `additional_features.majorizing_passes`), described once in
+  `config/presets.py` (`DEVIATIONS`).
 - Configuration hash: SHA-256 of the canonical JSON form (sorted keys) — independent of the file
   format. Run folders: `runs/<YYYYMMDD_HHMMSS>_<hash[:8]>/` with `manifest.yaml` (configuration,
   hashes, seed, package versions, timings).
@@ -242,7 +269,7 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
 - **Class order:** labels are sorted (numbers numerically, text alphabetically); the first class is
   K1, the second K2. For the author's labels 1 and 2 this is the article's numbering.
 - Formats (registry `LOADERS`, the names of `dataset.format`): `cs-workbook` (the experiment's
-  *Dataset* sheet), `template-extended` (the template's `m, n, c` / objects / flags layout, `.csv`
+  *Dataset* sheet), `extended` (the extended `m, n, c` / objects / flags layout, `.csv`
   or whitespace `.dat` with decimal commas; a placeholder flag under the class column is
   accepted), `csv` (delimiter detected), `xlsx`, `parquet` (optional extra
   `context-synthetic-recognition[parquet]`, pyarrow). `auto` detects the format from the extension
@@ -254,8 +281,8 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
   float64 values; the dataset name and the file path are not part of it (the workbook's Dataset
   sheet and the built-in CSV of the same data have the same hash).
 - Built-in datasets (registry `DATASETS`, package data): `heart-disease-10` and `heart-disease-270`,
-  copied from the template project's `datasets/raw` (line endings normalized to LF). Heart-Disease
-  is the UCI Statlog (Heart) dataset (CC BY 4.0).
+  copied from the author's raw data files (line endings normalized to LF). Heart-Disease is the
+  UCI Statlog (Heart) dataset (CC BY 4.0).
 
 ## ADR-019 — Layering and plug-in parameters
 
@@ -265,10 +292,10 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
   `data.schema` (the `Dataset` type); it performs no I/O. Loaders, validation against the workbook
   and dataset summaries live in `data.loaders` and `services`.
 - Each kind of plug-in has its registry next to its implementation (`METRICS`, `NORMALIZERS`,
-  `K_STRATEGIES`, `ENCODERS`, `WEIGHTS`, `LOADERS`, `DATASETS`). Parameter types are frozen pydantic
-  dataclasses with `extra="forbid"` (`PARAMS_CONFIG`); `Registry.make_params` validates a spec's
-  `params` and raises `ConfigError` with every problem. `csr config check` checks the plug-ins of
-  the kinds implemented so far.
+  `K_STRATEGIES`, `ENCODERS`, `INFORMATIVENESS`, `LOADERS`, `DATASETS`). Parameter types are
+  frozen pydantic dataclasses with `extra="forbid"` (`PARAMS_CONFIG`); `Registry.make_params`
+  validates a spec's `params` and raises `ConfigError` with every problem. `csr config check`
+  checks the plug-ins of the kinds implemented so far.
 - `csr validate --against <workbook>` exists from M2 on and covers Steps 1–8; M3 and M4 extend its
   map (`services.validation.workbook_checks`), which the golden tests share.
 
@@ -277,7 +304,8 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
 *Accepted, 2026-09-30 (M2).*
 
 - Zhuravlyov distances add the per-feature terms in feature order (the order of the workbook's
-  SUMPRODUCT and of the reference engine); the quantitative part is rounded, then the sum.
+  SUMPRODUCT and of the independent re-implementation used as a test oracle); the quantitative
+  part is rounded, then the sum.
 - Rounding is `numpy.round` (round half to even of x·10^d). It could differ from Excel's
   half-away-from-zero only for a value exactly halfway at the 11th decimal; the workbook's data do
   not reach that case.
@@ -286,101 +314,106 @@ suits a PyInstaller release, and pytest-qt supports it. Figures use matplotlib (
 - μ and χ₁ come from cumulative sums over the ordered neighbour classes (all k in one pass).
 - f, g, G, ω and η use the workbook's operation order; the terms of stability (2) are added in
   gradation order (numpy's pairwise `sum` would differ in the last bits).
-- Result: Steps 1–8 are **identical** to the reference engine (not merely within 1e-9) on the
-  experiment, on Heart-Disease (270, 13, 2) and on random tie-heavy datasets (property tests), and
-  all 4,022 workbook cells of Steps 1–8 agree to ≤ 4.4e-15 (Excel keeps 15 significant digits).
+- Result: Steps 1–8 are **identical** to the independent re-implementation (not merely within
+  1e-9) on the experiment, on Heart-Disease (270, 13, 2) and on random tie-heavy datasets
+  (property tests), and all 4,022 workbook cells of Steps 1–8 agree to ≤ 4.4e-15 (Excel keeps 15
+  significant digits).
 - Distances are computed in blocks of at most 2²² pairs; the full matrices are kept in the trace.
 
 ## ADR-021 — Encoders and training-side gradations
 
 *Accepted, 2026-09-30 (M2).*
 
-- Formula (5) is the only synthetic-feature encoder (registry `ENCODERS`, `formula-5`). The same-class
-  count μ and the bit masks read the object's own class, so they could not describe a new object
-  (Theorem); they are computed as training-side gradations for formulas (1)–(4) and Task 2, not
-  offered as encoders.
-- Bit masks (first permitted k = most significant bit, β = 2^(number of k) − 1) are formed when at
-  most 62 k are permitted (int64); with more (Heart-Disease 270: 118) the trace has none.
+- Formula (5) is the only synthetic-feature encoder (registry `ENCODERS`, `formula-5`). The
+  same-class count μ and the majority bit chains read the object's own class, so they could not
+  describe a new object (Theorem); they are computed as training-side gradations for
+  formulas (1)–(4) and Task 2, not offered as encoders.
+- Majority bit chains (first admissible k = most significant bit, β = 2^(number of k) − 1) are
+  formed when at most 62 k are admissible (int64); with more (Heart-Disease 270: 118) the trace
+  has none.
 - Membership tables list every gradation 0 … β up to 4,096 of them, otherwise only the gradations
   that occur.
-- The weight of a synthetic feature is a plug-in (`WEIGHTS`, default `omega` = ω by (4)); it
-  receives ω, g and G, leaving room for the template's Criterion-1 and λ·β weights.
+- The weight of a synthetic feature is a plug-in (`INFORMATIVENESS`, default `formula-4` = ω by
+  (4), alias `omega`); it receives ω, g and G, leaving room for further weights such as
+  Criterion-1 and λ·β.
 
 ## ADR-022 — k strategies
 
-*Accepted, 2026-09-30 (M2).*
+*Accepted, 2026-09-30 (M2). Its default is superseded by ADR-063: `min-class`, the article's odd
+k = 3 … min(|K1|, |K2|).*
 
-`formula` (default; ADR-005/006: optional `k_max_cap` ≥ 3 and even `step`), `article` (the draft's
-text, odd k = 1, 3, … ≤ min(|K1|, |K2|), for comparison only), `explicit` (a list of odd k) and
-`range` (odd start, even step, inclusive stop). Every k must be odd (formula (5) then always has a
-majority) and at most the number of neighbours of a training object (m − 1); otherwise the fit
-raises `ModelUndefinedError`.
+`twice-min-class` (the default then; ADR-005/006: optional `k_max_cap` ≥ 3 and even `step`), a
+strategy for the draft's text (odd k = 1, 3, … ≤ min(|K1|, |K2|), for comparison only),
+`explicit` (a list of odd k) and `range` (odd start, even step, inclusive stop). Every k must be
+odd (formula (5) then always has a majority) and at most the number of neighbours of a training
+object (m − 1); otherwise the fit raises `ModelUndefinedError`.
 
 ## ADR-023 — Spelling of the metric: Zhuravlyov (author)
 
-*Accepted, 2026-09-30 (M2).*
+*Accepted, 2026-09-30 (M2). See ADR-060 for where the protected material is kept now.*
 
 The metric is written **Zhuravlyov** (Журавлёв, ё → yo) in code, configuration and documentation;
 its registry name is `zhuravlyov`. The earlier spellings `zhuravlev` and `juravlev` remain aliases,
 so older configuration files still load. The protected material keeps its own spelling: the
-workbook's sheet *Zhuravlev Distances* (the validation map must name it exactly) and the files in
-`docs/handoff/`. The preset configurations' hashes changed with the name.
+workbook's sheet *Zhuravlev Distances* (the validation map must name it exactly) and the files of
+the author's design notes. The preset configurations' hashes changed with the name.
 
-## ADR-024 — HAG: implementation and trace
+## ADR-024 — The hierarchical agglomerative algorithm: implementation and trace
 
 *Accepted, 2026-09-30 (M3).*
 
-- `core.hag.hag` follows Steps 1–5 as specified in ADR-008: candidates in feature order, u = the
-  first maximal weight, q = the first minimal θ/γ among those below cr1₀, no feature added if
-  none is below (the grouping then stops). STEP 3 evaluates the candidates of an iteration in
-  blocks of at most 2²² (object, candidate) values.
+- `core.additional_features.agglomerative` follows Steps 1–5 as specified in ADR-008: candidates
+  in feature order, u = the first maximal weight, q = the first minimal θ/γ among those below
+  cr1₀, no feature added if none is below (the grouping then stops). Step 3 evaluates the
+  candidates of an iteration in blocks of at most 2²² (object, candidate) values.
 - Sums over the objects run in their original order (running sums, as the workbook's cells);
-  the final means are the last running sums divided by |Kᵢ|. The majorizer step is
-  b + (s·α)·ϕ(−b) with σ(−b) = 1/(1 + e^b), the reference engine's operation order (the
-  workbook's `EXP(−b)/(1 + EXP(−b))` is the same number up to the last bit).
+  the final means are the last running sums divided by |Kᵢ|. The step of the majorizing function
+  is b + (s·α)·φ(−b) with σ(−b) = 1/(1 + e^b), the operation order of the independent
+  re-implementation used as a test oracle (the workbook's `EXP(−b)/(1 + EXP(−b))` is the same
+  number up to the last bit).
 - Every iteration records R entering, the candidates, θ, γ, θ/γ, cr1, q, crit, R + η_q with one
   pass, the new R (= r_j), whether it continues and why it stops (`|TUPLAM| = ϰ`, `crit ≤ δ`,
   `P = ∅`, `no θ/γ < cr1₀`). The per-object columns of a candidate block (b, majorized b, running
-  sums, the centres used, |b − M|) are recomputed on demand by `HAGResult.scan` / `scan_from`
-  with the same code, so they are bit-identical to the grouping while the trace stays
+  sums, the class means used, |b − M|) are recomputed on demand by `AgglomerativeResult.scan` /
+  `scan_from` with the same code, so they are bit-identical to the grouping while the trace stays
   O(m·r) instead of O(ϰ·m·r·columns).
-- With one STEP 4 pass the new R is the STEP 3 value of q; with two passes the majorizer is
-  applied to it once more (ADR-003). r = 1 needs no iteration (p = 0).
-- Against the reference engine: identical in the running mode (experiment and Heart-Disease
-  (270, 13, 2)); in the final mode crit differs in the last bits, because the reference's
+- With one pass in Step 4 the new R is the Step 3 value of q; with two passes the majorizing
+  function is applied to it once more (ADR-003). r = 1 needs no iteration (p = 0).
+- Against the independent re-implementation: identical in the running mode (experiment and
+  Heart-Disease (270, 13, 2)); in the final mode crit differs in the last bits, because its
   `sum()` is compensated on Python ≥ 3.12. The tests compare the decisions (TUPLAM, B1/B2,
-  classes) exactly and θ/γ, crit and the latent features to 1e-12, which also covers CPUs whose
-  vectorised `exp` differs from the C library's in the last bit.
+  classes) exactly and θ/γ, crit and the additional features to 1e-12, which also covers CPUs
+  whose vectorised `exp` differs from the C library's in the last bit.
 
 ## ADR-025 — θ/γ = +∞ when γ = 0 (author)
 
 *Accepted, 2026-09-30 (M3).*
 
-HAG STEP 3 is undefined when γ = 0 (the workbook would show `#DIV/0!`, the reference engine
-stops with an error). The candidate's θ/γ is set to +∞: it can never become q, as in the template
-project. If no candidate is left below cr1₀ the grouping stops as usual (`no θ/γ < cr1₀`). This
-does not occur on Heart-Disease; no earlier number changes.
+Step 3 of the agglomerative algorithm is undefined when γ = 0 (the workbook would show
+`#DIV/0!`, the independent re-implementation stops with an error). The candidate's θ/γ is set
+to +∞: it can never become q. If no candidate is left below cr1₀ the grouping stops as usual
+(`no θ/γ < cr1₀`). This does not occur on Heart-Disease; no earlier number changes.
 
 ## ADR-026 — Majorizing functions scaled to (0, 1) (author)
 
 *Accepted, 2026-09-30 (M3).*
 
-Registry `MAJORIZERS`: `sigmoid` (default, σ(x) = 1/(1 + e^(−x)), alias `logistic`), `tanh`
-((1 + tanh x)/2 = σ(2x)), `arctan` (1/2 + arctan(x)/π) and `softsign` ((1 + x/(1 + |x|))/2).
-Every built-in ϕ maps ℝ onto (0, 1), increases and has ϕ(x) + ϕ(−x) = 1, so each step α·ϕ(−b)
-lies in (0, α): it pushes K1 up and K2 down, harder the further b lies on the wrong side of 0.
-The raw tanh, arctan and softsign (range (−1, 1)) were rejected: their step changes sign and
-would pull correctly placed objects back towards 0 — a different regularisation. Custom
-majorizers register through the registry.
+Registry `MAJORIZING_FUNCTIONS`: `sigmoid` (default, σ(x) = 1/(1 + e^(−x)), alias `logistic`),
+`tanh` ((1 + tanh x)/2 = σ(2x)), `arctan` (1/2 + arctan(x)/π) and `softsign`
+((1 + x/(1 + |x|))/2). Every built-in φ maps ℝ onto (0, 1), increases and has φ(x) + φ(−x) = 1,
+so each step α·φ(−b) lies in (0, α): it pushes K1 up and K2 down, harder the further b lies on
+the wrong side of 0. The raw tanh, arctan and softsign (range (−1, 1)) were rejected: their step
+changes sign and would pull correctly placed objects back towards 0 — a different
+regularisation. Custom majorizing functions register through the registry.
 
 ## ADR-027 — Meta-algorithm: gradations, decisions, refusal
 
 *Accepted, 2026-09-30 (M3).*
 
 - Gradations are compared for equality only, so any values work: {1, 2} of formula (5), or the
-  nominal codes of the template's meta-algorithm. The latent-sign condition is strict: an object
-  with dᵢⱼ = 0 falls out of both sets.
-- Step 4 is a plug-in (registry `DECISION_RULES`, default `article-step-4`). It compares the
+  nominal codes of the meta-algorithm's check workbook. The sign condition on the additional
+  features is strict: an object with dᵢⱼ = 0 falls out of both sets.
+- Step 4 is a plug-in (registry `DECISION_RULES`, default `step-4`). It compares the
   scores exactly, as the integers |B1|·|K2| and |B2|·|K1|; for realistic sizes this equals the
   workbook's comparison of the two floating-point scores.
 - Decisions use the article's codes 1 = K1, 2 = K2, 0 = refusal; the class labels (numbers or
@@ -396,50 +429,54 @@ majorizers register through the registry.
 *Accepted, 2026-09-30 (M3).*
 
 - `core.model.fit_model(dataset, config)` fits Steps 1–11 and returns a `CSModel`: the Step 1–8
-  context model, the HAG result, the meta-dataset Y = (y₀ … y_p, r₁ … r_p) and the training
-  description (aᵢ, dᵢ). The HAG majorizer and the decision rule are resolved first, so a wrong
-  plug-in name fails before the costly Steps 1–8.
+  context model, the result of the agglomerative algorithm, the meta-dataset
+  Y = (y₀ … y_p, r₁ … r_p) and the training description (aᵢ, dᵢ). The majorizing function and the
+  decision rule are resolved first, so a wrong plug-in name fails before the costly Steps 1–8.
 - `represent`, `classify` and `predict` take no label (Theorem, ADR-009); `exclude` leaves a
   training object out of its own context.
 - `classify_training` classifies every training object with its training row: its context
   excludes itself while it stays in the meta-algorithm's training description (sheet
   *Meta-algorithm (All Objects)*, Definition 2). It equals `classify(X, exclude=all)`.
-- CLI: `csr fit` (permitted k, r, the HAG iteration by iteration, TUPLAM, training correctness)
-  and `csr classify` (`--values` for a new object, `--object N` for a training object left out of
-  its context) with B1/B2 at every step.
+- CLI: `csr fit` (admissible k, r, the agglomerative algorithm iteration by iteration, TUPLAM,
+  training correctness) and `csr classify` (`--values` for a new object, `--object N` for a
+  training object left out of its context) with B1/B2 at every step.
 
-## ADR-029 — Validation of Steps 9–12 and of the template workbooks (author: copies)
+## ADR-029 — Validation of Steps 9–12 and of the check workbooks (author: copies)
 
-*Accepted, 2026-09-30 (M3).*
+*Accepted, 2026-09-30 (M3). See ADR-060 for where the copies are kept now.*
 
 - `services.validation` recognises three layouts from their sheet names: the experiment and the
-  two templates. For the experiment the inputs come from the workbook itself — the *Dataset*
+  two check workbooks. For the experiment the inputs come from the workbook itself — the *Dataset*
   sheet, α, δ, ϰ, cr1 and **both switches** from *Parameters* B19–B25, and the new object with the
   excluded training object from *Brace for Meta-algorithm* B31:N31 and B35 — so the cached values
   are always compared with the setting they were calculated with. A `--config` is used as given;
-  the report notes when its HAG settings differ from the workbook's.
-- The Step 9–12 map covers every computed cell of the four *Greedy upon Weight* sheets (also the
-  blocks of features already in TUPLAM and the states of an iteration that was not executed),
-  *Dataset for Meta-algorithm*, *Brace for Meta-algorithm*, *Meta-algorithm* and *Meta-algorithm
-  (All Objects)*. Result: 10,272 cells in 19 sheets, all within 3.0e-14.
-- HAG template: every candidate block, θ/γ, cr1, q, the STEP 4 blocks, r₁ … r₄ and Y — 6,131
-  cells within 3.6e-15; SET {x₃, x₆, x₁₃, x₄, x₉}. Meta-algorithm template: the new object
-  (4, 0, 7, 2, 0) is Class 2 with B1(a₄) = ∅, B2(a₄) = {S₉, S₁₀}.
-- The two `- Opus 5.5` template workbooks (same cells as the originals) are copied byte for byte
-  to `tests/data/templates/`, so CI replicates the templates (**author**); a test compares their
-  SHA-256 with the originals whenever the template project is present.
+  the report notes when its settings of the agglomerative algorithm differ from the workbook's.
+- The Step 9–12 map covers every computed cell of the workbook's four step sheets of the
+  agglomerative algorithm (also the blocks of features already in TUPLAM and the states of an
+  iteration that was not executed), *Dataset for Meta-algorithm*, *Brace for Meta-algorithm*,
+  *Meta-algorithm* and *Meta-algorithm (All Objects)*. Result: 10,272 cells in 19 sheets, all
+  within 3.0e-14.
+- Check workbook of the agglomerative algorithm: every candidate block, θ/γ, cr1, q, the Step 4
+  blocks, r₁ … r₄ and Y — 6,131 cells within 3.6e-15; SET {x₃, x₆, x₁₃, x₄, x₉}. Check workbook
+  of the meta-algorithm: the new object (4, 0, 7, 2, 0) is Class 2 with B1(a₄) = ∅,
+  B2(a₄) = {S₉, S₁₀}.
+- The two check workbooks (in the versions whose cells equal the originals') are copied byte for
+  byte into `tests/data/` (now `tests/data/workbooks/`, ADR-060), so CI replicates them
+  (**author**); a test compared their SHA-256 with the originals whenever the originals were
+  present.
 
 ## ADR-030 — Constant synthetic features and the k range on large data (author)
 
-*Accepted, 2026-09-30 (M4).*
+*Accepted, 2026-09-30 (M4). Its default k range is superseded by ADR-063.*
 
 **Finding.** On Heart-Disease (270, 13, 2) the literal k range (k = 3 … 237, ADR-005/006) gives
 synthetic features at k ≥ 233 that are constant on the training sample (aᵤ ≡ 1, so η = 0) but have
 ω = 1: μ counts neighbours of the object's *own* class, and when k approaches m it separates the
-classes trivially, while the class-free formula (5) collapses to the majority class. HAG STEP 2
-starts from such features. Leave-one-out accuracy (whole pipeline re-fitted per fold):
+classes trivially, while the class-free formula (5) collapses to the majority class. Step 2 of
+the agglomerative algorithm starts from such features. Leave-one-out accuracy (whole pipeline
+re-fitted per fold):
 
-| Heart-Disease 270 | template | article |
+| Heart-Disease 270 | Excel experiment's setting | article |
 |---|---|---|
 | literal k = 3 … 237 | 7.0 % | 6.7 % |
 | literal, constant features skipped | 68.1 % | 62.6 % |
@@ -449,12 +486,12 @@ starts from such features. Leave-one-out accuracy (whole pipeline re-fitted per 
 
 **Decisions (author).**
 
-- New switch `synthetic.skip_constant` (default **off**): a synthetic feature that takes one value
-  on every training object is dropped with a warning and the remaining ones are renumbered
-  a₁ … a_r; if every feature is constant the model is undefined (a fold then refuses). Off by
-  default because the workbook keeps them — skipping would change its leave-one-out folds 3, 5
-  and 6 (template 20 % → 30 %); the full fit and resubstitution are unaffected. `csr validate`
-  notes when a configuration turns it on.
+- New switch `synthetic_features.skip_constant` (default **off**): a synthetic feature that takes
+  one value on every training object is dropped with a warning and the remaining ones are
+  renumbered a₁ … a_r; if every feature is constant the model is undefined (a fold then refuses).
+  Off by default because the workbook keeps them — skipping would change its leave-one-out folds
+  3, 5 and 6 (Excel experiment's setting: 20 % → 30 %); the full fit and resubstitution are
+  unaffected. `csr validate` notes when a configuration turns it on.
 - The literal k range stays the default. For large data the recommended setting is
   `configs/heart-disease-270-large-data.yaml`: `skip_constant: true` and `k_max_cap: 21`
   (Heart-Disease 270: LOO 81.5 %, AUC 0.862).
@@ -476,9 +513,10 @@ starts from such features. Leave-one-out accuracy (whole pipeline re-fitted per 
   with TPR and FPR at score ≥ threshold. With K2 positive the score is negated (the AUC is the
   same). Computed by sorting, O(n log n).
 - **Margins** (`evaluation.margins`): b = (min K1 + max K2)/2, width = min K1 − max K2,
-  mᵢ = yᵢ(dᵢ − b) with y = +1 for K1 (the HAG's sign, independent of the positive class),
-  ŷ = K1 if d > b; the objects named at max K2 and min K1 are the first with that value (the
-  workbook's MATCH). *Without majorizer* = y₀ + … + yⱼ, summed left to right.
+  mᵢ = yᵢ(dᵢ − b) with y = +1 for K1 (the sign of the agglomerative algorithm, independent of the
+  positive class), ŷ = K1 if d > b; the objects named at max K2 and min K1 are the first with
+  that value (the workbook's MATCH). *Without majorizing function* = y₀ + … + yⱼ, summed left to
+  right.
 - **Properties** (`core.properties`): Definition 1/Property 1 checks, Definition 4 as conflicting
   pairs (TUPLAM description and full Ψ(r)), Definition 6 as objects with equal k-neighbour sets
   per operator pair and k, identical synthetic features, ties at the k boundary (k-th and
@@ -497,7 +535,7 @@ starts from such features. Leave-one-out accuracy (whole pipeline re-fitted per 
   method has no tuned hyper-parameters yet.
 - A fold whose model is undefined refuses its objects (decision 0, score 0) and is flagged
   (ADR-005). A training part with one class also refuses the baselines (the class numbers of a
-  one-class sample would not match). Folds report |K1|, |K2|, the permitted k, r and TUPLAM as
+  one-class sample would not match). Folds report |K1|, |K2|, the admissible k, r and TUPLAM as
   operator·k (the fold's feature numbers differ from the full fit's).
 - Registry `BASELINES`, evaluated on the same folds: `knn-vote` (every operator × k, k = 3 and 5
   by default as in the workbook, the fold's scaling, rounding and tie rule; a k larger than the
@@ -534,17 +572,18 @@ starts from such features. Leave-one-out accuracy (whole pipeline re-fitted per 
   workbook order — adding *Margin Analysis*, *Accuracy*, *Confusion Matrix*, *Precision, Recall,
   F1 Score*, *ROC Curve & AUC*, *Leave-One-Out* (all ten folds and the six k-NN baselines),
   *Sensitivity (Switches)* (the four settings), *Model Properties*, *Validation* and the
-  experiment rows of *Template Deviations*. All agree within 3.3e-11 (the Leave-One-Out sheet
-  stores the engine's scores rounded to 10 decimals; everything else within 3.0e-14).
+  experiment rows of the workbook's switches sheet. All agree within 3.3e-11 (the Leave-One-Out
+  sheet stores the engine's scores rounded to 10 decimals; everything else within 3.0e-14).
 - Not compared: *Overview*, the input sheets *Dataset*, *Quantitative*, *Nominal*, and the
-  template-data tables of *Template Deviations* and *Sensitivity (Switches)* — the golden tests
-  check the latter against the template workbook copies (ADR-029).
+  tables of the switches sheet and of *Sensitivity (Switches)* that use the data of the
+  agglomerative algorithm's check workbook — the golden tests check the latter against the
+  copies of the check workbooks (ADR-029).
 
 ## ADR-035 — The dataset folder and loading workflow (author)
 
 *Accepted, 2026-09-30 (M5).*
 
-**Author.** Only the raw Heart-Disease datasets for now, in the template's layout: the default
+**Author.** Only the raw Heart-Disease datasets for now, in the extended layout: the default
 dataset Heart-Disease (10, 13, 2) as `datasets/default.dat` and `default.csv`, the raw
 Heart-Disease (270, 13, 2) in `datasets/raw/Heart-Disease/` as `.dat` and `.csv`;
 `datasets/synthetic/` is reserved for pre-existing synthetic datasets and not used; no "-N"
@@ -555,7 +594,7 @@ values and the class; last row of n type flags, 1 = quantitative, 0 = nominal).
 
 - `data.catalog` discovers the folder: `default.*` at the root, `raw/**/<Name> (m, n, c).dat|.csv`
   (family sub-folders), nothing else. The formats of one stem are one dataset; the `.dat` is read
-  (the `.csv` of DDos (10000, 80, 2) in the template project is a rounded copy — 24,723 values
+  (a `.csv` may be a rounded copy: in the author's DDos (10000, 80, 2) files 24,723 values
   differ by up to 0.48 %). Ids are `<name>-<m>`, with `-<n>` when two datasets would share one.
 - `csr data check` (`DatasetCatalog.check`) verifies every file: readable, header (m, n, c) equal
   to the name's, `.dat` and `.csv` identical in data (content hash), SHA-256 per file.
@@ -593,7 +632,7 @@ values and the class; last row of n type flags, 1 = quantitative, 0 = nominal).
 
 **Context.** The author asked for a workbook that mirrors the experiment's sheet structure and
 style. The experiment is live formulas for one shape (10 objects, 13 features, 3 operators,
-k ∈ {3, 5}, 4 HAG iterations); the software runs on any data.
+k ∈ {3, 5}, 4 iterations of the agglomerative algorithm); the software runs on any data.
 
 **Decision.**
 
@@ -601,9 +640,9 @@ k ∈ {3, 5}, 4 HAG iterations); the software runs on any data.
   number or a text computed by the package. The file reads the same in Excel, LibreOffice, pandas
   and `csr validate`, and cannot disagree with the run it documents. Texts that describe live
   formulas ("type a value …", "the engine recomputes …") are reworded for a static export.
-- The layout is **generated**: one *Sorted Neighbors* sheet per base operator, one *Greedy upon
-  Weight* sheet per HAG iteration (min(ϰ, r) − 1 of them; an iteration the grouping did not reach
-  is shown as "not executed", as in the workbook), table columns per permitted k and per
+- The layout is **generated**: one *Sorted Neighbors* sheet per base operator, one step sheet of
+  the agglomerative algorithm per iteration (min(ϰ, r) − 1 of them; an iteration the grouping did
+  not reach is shown as "not executed", as in the workbook), table columns per admissible k and per
   synthetic feature, y₀ … of the meta-dataset for max(min(ϰ, r), |TUPLAM|) positions, a fold sheet
   per hold-out protocol; *Quantitative*, *Nominal* and *Sensitivity (Switches)* only when the run
   has them.
@@ -627,15 +666,15 @@ k ∈ {3, 5}, 4 HAG iterations); the software runs on any data.
 *Accepted, 2026-10-01 (M5).*
 
 A sheet per step works for hundreds of objects, not for every table: Heart-Disease (270, 13, 2)
-with the literal k range has 118 permitted k, r = 354 and 3 × 270 × 270 distances.
+with the literal k range has 118 admissible k, r = 354 and 3 × 270 × 270 distances.
 
 - `ExcelOptions.max_matrix_cells` (250,000): a larger object × object table (distances, ranks) is
   replaced by a note that names the CSV table holding it.
 - `ExcelOptions.max_sheet_cells` (150,000): the budget of a sheet's repeated blocks — neighbour
-  blocks (ranks up to the largest permitted k and one beyond, for as many objects as fit), HAG
-  candidate blocks (only the chosen feature q; θ, γ and θ/γ of every candidate stay in the
-  summary), B1/B2 flags per training object, the membership tables (TUPLAM features only), Task 2
-  bit masks.
+  blocks (ranks up to the largest admissible k and one beyond, for as many objects as fit),
+  candidate blocks of the agglomerative algorithm (only the chosen feature q; θ, γ and θ/γ of
+  every candidate stay in the summary), B1/B2 flags per training object, the membership tables
+  (TUPLAM features only), Task 2 majority bit chains.
 - Whatever is left out is said **on the sheet** and reported by the export (`ExportSummary.notes`,
   printed by the CLI). Nothing is shortened silently, and the summaries above the blocks always
   cover every object.
@@ -685,9 +724,10 @@ validation map keeps the original name, so the experiment workbook validates unc
   correct / wrong / refused always carry a label, never colour alone; objects are named along an
   axis only up to 40. The three categorical colours in use were checked for colour-vision
   deficiencies and contrast against both surfaces.
-- **⚠ The two template deviations are highlighted** in every format: a warning block first in
-  the report, the HAG parameters marked ⚠, the *Template Deviations* and *Sensitivity (Switches)*
-  sheets, the `summary` table and the `sensitivity` figure.
+- **⚠ The two switches that deviate from the article are highlighted** in every format: a
+  warning block first in the report, the parameters of the agglomerative algorithm marked ⚠, the
+  switches sheet and the sheet *Sensitivity (Switches)*, the `summary` table and the
+  `sensitivity` figure.
 - **Report** (`export.report`): a document model (headings, paragraphs, tables, figures, code)
   rendered as one self-contained `report.html` (inline SVG, no script, nothing loaded from the
   network) and as `report.pdf` (A4; DejaVu Sans, which ships with matplotlib and has the Greek
@@ -709,27 +749,29 @@ validation map keeps the original name, so the experiment workbook validates unc
   automatically only for samples of at most 60 objects (`AUTO_SENSITIVITY_OBJECTS`); without them
   the sheet, the table and the figure are left out.
 
-## ADR-043 — The worked examples of *Template Deviations* are computed, not copied
+## ADR-043 — The worked examples of the switches sheet are computed, not copied
 
-*Accepted, 2026-10-01 (M5).*
+*Accepted, 2026-10-01 (M5). Superseded by ADR-075: the examples use the run's own data.*
 
-The sheet *Template Deviations* explains both deviations on the HAG template's own data (13
-original features as contribution values, 10 objects). The mirror needs those numbers for every
-export, and the template project is read-only and absent in CI. The template's input —
-contributions, weights, classes — and its latent features r₁ … r₄ are kept in the package
-(`export/excel/hag_template.json`, taken from the workbook copy of ADR-029; a test compares the
-two). Everything shown about it — θ, γ and θ/γ with running and with final centres, r₁ with one
-and with two majorizer passes, SET under the four switch settings — is computed by the package's
-HAG at export time, so the examples cannot drift from the code.
+The workbook's switches sheet explains both switches on the own data of the agglomerative
+algorithm's check workbook (13 original features as contribution values, 10 objects). The mirror
+needs those numbers for every export, and the original workbook is read-only and absent in CI.
+That workbook's input — contributions, weights, classes — and its additional features r₁ … r₄ are
+kept in the package as a JSON data file (taken from the workbook copy of ADR-029; a test compares
+the two). Everything shown about it — θ, γ and θ/γ with running and with final class means, r₁
+with one and with two passes of the majorizing function, SET under the four switch settings — is
+computed by the package's agglomerative algorithm at export time, so the examples cannot drift
+from the code.
 
 ## ADR-044 — Desktop application: one more interface above the services
 
 *Accepted, 2026-10-01 (M6).*
 
 **Context.** The author asked for an excellent desktop GUI: Dataset → Configure → Run → Explore
-results → Classify a new object → Compare runs → Export. ADR-013 chose PySide6; the template's GUI
-(one window, a theme dictionary shared by the style sheet and matplotlib, a worker thread,
-`QSettings`, document-mode tabs) was inspected and what works was kept.
+results → Classify a new object → Compare runs → Export. ADR-013 chose PySide6; the design keeps
+patterns that have proved themselves in desktop applications of this kind: one window, a theme
+dictionary shared by the style sheet and matplotlib, a worker thread, `QSettings`, document-mode
+tabs.
 
 **Decision.**
 
@@ -767,14 +809,15 @@ every column and cell *means* (`CellRole`) and the theme turns the meaning into 
 themes show the same semantics.
 
 - From the workbook: quantitative (blue) and nominal (yellow) features, synthetic features (light
-  green), latent features (stronger green), correct (green) and wrong (red), warnings.
+  green), additional features (stronger green), correct (green) and wrong (red), warnings.
 - **Classes** are tinted in the two colours they have in every figure (K1 blue, K2 orange) —
   the workbook colours the class column with one colour; two make a table readable at a glance and
   tie tables to figures. The same tints mark aᵤ = 1 / aᵤ = 2 in Ψ(r): the class a neighbourhood
   votes for.
 - **Decisions** (predicted class per method) are coloured by whether they are correct, wrong or a
   refusal — the table form of the *prediction map* figure.
-- **TUPLAM** features and the chosen candidate q of a HAG iteration are yellow ("selected").
+- **TUPLAM** features and the chosen candidate q of an iteration of the agglomerative algorithm
+  are yellow ("selected").
 - Colour is never the only cue: classes and decisions are written, statuses carry ✓ / ✗ / ⚠.
 - Selecting an object (a row or the selector) marks it in every table (cross-highlighting) and
   draws its neighbours with the nested k-neighbourhoods (`export.figures.draw_object_context`).
@@ -796,7 +839,7 @@ themes show the same semantics.
   one, keeps its hash, and keeps matching its preset.
 - Protocols and baselines are check lists in the registry's order; a configuration that lists
   the same plug-in twice shows its first entry.
-- Problems — invalid parameters, a k rule that permits nothing, no protocol, data the model is
+- Problems — invalid parameters, a k rule that admits nothing, no protocol, data the model is
   undefined for — are listed on the Configure and Run pages and keep *Run* disabled.
 - After an edit the run on screen is kept and marked as computed with another configuration
   ("stale") until the experiment is run again; changing the data drops it.
@@ -851,9 +894,10 @@ system is supported.
   GUI tests (ADR-048: no window appears during a test run), LF line endings in the repository and
   in every exported text file (ADR-014, ADR-040: the same bytes and checksums in every checkout),
   forward slashes in displayed relative paths.
-- The handoff prompt's CI line (`docs/handoff/PROMPT_FOR_CLAUDE_CODE.md`) was changed to name
+- The CI line of the task description among the author's design notes was changed to name
   Windows alone — the one phrase, with the author's explicit permission; nothing else in the
-  protected folder was touched.
+  protected material was touched (the design notes are now kept outside the repository,
+  ADR-060).
 - At the author's request the earlier entries of this log (ADR-014, ADR-015, ADR-048) and of
   `CHANGELOG.md` (0.1.0, 0.6.0) were reworded to name Windows alone; until v0.6.0 the CI also ran
   on a second operating system.
@@ -865,32 +909,33 @@ No numerical result changes.
 *Accepted, 2026-10-02 (M7).*
 
 **Context.** Until M7 a metric was only a function `(A, B, quantitative, decimals, params) →
-distances` on the unified values. The metrics of M7 need more: HEOM and Gower divide by the
+distances` on the normalized values. The metrics of M7 need more: HEOM and Gower divide by the
 training range of a feature, Mahalanobis needs the training covariance, Euclidean and its relatives
 are meaningless on nominal codes, and feature weights must match the features of the operator.
 
 **Decision.** A metric declares what the pipeline must know about it with
-`core.metrics.traits(domain=…, fit=…, check=…)`, placed below `@METRICS.register`; a metric that
-declares nothing — every plug-in written before M7 — is heterogeneous and needs no fit.
+`core.local_context.metrics.traits(domain=…, fit=…, check=…)`, placed below
+`@METRICS.register`; a metric that declares nothing — every plug-in written before M7 — is
+heterogeneous and needs no fit.
 
 - **Domain** (`any`, `quantitative`, `nominal`). `resolve_operators` raises a `ConfigError` that
   names the features when an operator gives a metric features of the other type, so the mistake
   is reported by `csr data info`, by the GUI's problem list and before a run — not silently
   "fixed" by dropping features. An empty subset is still skipped first (ADR-007).
 - **Fit step** `(Z, quantitative, params) → state`: the metric's training statistics, estimated
-  on the unified training values of the operator's features. `BaseOperator.fit(Z)` returns a
+  on the normalized training values of the operator's features. `BaseOperator.fit(Z)` returns a
   fitted copy and the metric then receives the state in place of its parameters; calling
   `distances` on an operator that still needs its fit is an error. `fit_context` fits the
-  operators right after the scale unification; the k-NN baselines fit them on the fold's training
+  operators right after the normalization; the k-NN baselines fit them on the fold's training
   part. Leave-one-out therefore re-estimates the statistics in every fold, like everything else
   (ADR-009).
 - **A fit step gets no class labels.** Its signature has no place for them, so a metric cannot
   make the distances of an object depend on a class — its own or anyone else's (ADR-051).
 - **Check** `(quantitative, params)`: parameters that depend on the operator's features (the
   number of feature weights) are verified when the operators are resolved.
-- Fitting on the *unified* values keeps one definition for every normalizer: a metric that divides
-  by the training range or whitens with the training covariance gives the same distances for
-  every affine normalizer (tested), and composes meaningfully with the rank transform.
+- Fitting on the *normalized* values keeps one definition for every normalizer: a metric that
+  divides by the training range or whitens with the training covariance gives the same distances
+  for every affine normalizer (tested), and composes meaningfully with the rank transform.
 
 No configuration field was added: the hash of every existing configuration is unchanged.
 
@@ -903,7 +948,7 @@ metric) is built from the class frequencies of the training sample, so the class
 object would enter its own distances. Only metrics that never read a class label are offered;
 `hvdm` is not a registered name.
 
-**Metrics** (x′, y′ = unified values; I, J = the quantitative and nominal features of the
+**Metrics** (x′, y′ = normalized values; I, J = the quantitative and nominal features of the
 operator; n = their number):
 
 | Name | Domain | Definition |
@@ -927,13 +972,13 @@ operator; n = their number):
   feature order, so equal objects give bit-identical distances and D is symmetric bit for bit
   (ADR-008). `weighted-zhuravlyov` rounds like the Zhuravlyov metric (the quantitative part, then
   the sum): with every weight 1 it is that metric bit for bit (tested).
-- `rangeⱼ` is the training range of the unified values. A feature without spread on the training
-  sample contributes 0 (as min–max maps it to 0); a new value outside the training range is not
-  clipped, so its term may exceed 1 (ADR-009).
-- With min–max unification `gower` is the Zhuravlyov metric divided by n: up to the rounding of
+- `rangeⱼ` is the training range of the normalized values. A feature without spread on the
+  training sample contributes 0 (as min–max maps it to 0); a new value outside the training range
+  is not clipped, so its term may exceed 1 (ADR-009).
+- With min–max normalization `gower` is the Zhuravlyov metric divided by n: up to the rounding of
   the distances the neighbours, and therefore Ψ(r), are those of ρ. It is offered for the name
   the literature uses.
-- `mahalanobis`: sample covariance (divisor m − 1) of the unified training values; when it is
+- `mahalanobis`: sample covariance (divisor m − 1) of the normalized training values; when it is
   singular — a feature without spread, collinear features, fewer objects than features — the
   Moore–Penrose inverse S⁺ is used, computed as a whitening matrix from the eigenvectors with a
   positive eigenvalue.
@@ -992,8 +1037,8 @@ The default operators ρ, ρ_I, ρ_J and every golden value are unchanged.
 
 *Accepted, 2026-10-02 (M7).*
 
-The template project holds further datasets — Cancer (589, 44, 2), Molecular-Biology (100, 10, 2)
-and (100, 50, 2), DDos (10000, 22, 2) and (10000, 80, 2). The author decided to add none of them
+The author has further datasets — Cancer (589, 44, 2), Molecular-Biology (100, 10, 2) and
+(100, 50, 2), DDos (10000, 22, 2) and (10000, 80, 2). The author decided to add none of them
 now: ADR-035 stands (Heart-Disease only), nothing was copied into the repository, and the work a
 10,000-object sample would need (a lean trace, a cap on k, k-fold instead of leave-one-out) is not
 part of M7. Any dataset in the extended layout can still be run from its path
@@ -1045,11 +1090,12 @@ artifact; publish it with the GitHub Release of v0.8.0.
 
 - `scripts/build_exe.py` freezes `csr-gui` as a **folder** (`dist\csr-gui\`, packed as
   `csr-gui-<version>-windows.zip`), not as a single file: a one-file program unpacks itself on
-  every start and is more often held back by virus scanners.
+  every start and is more often held back by antivirus software.
 - Contents: Python, numpy, matplotlib, openpyxl, Qt (PySide6-Essentials), reportlab (the PDF
-  report) and the package with its data — the built-in datasets, the template data, the
-  translations. Left out: pyarrow (Parquet) and scikit-learn (the comparison classifiers), which
-  would multiply the size; the application reports the missing extra when one is asked for.
+  report) and the package with its data — the built-in datasets, the data of the worked examples
+  (ADR-043), the translations. Left out: pyarrow (Parquet) and scikit-learn (the comparison
+  classifiers), which would multiply the size; the application reports the missing extra when
+  one is asked for.
   Qt's software OpenGL renderer and Qt's translations of other languages are removed (27 MB).
   The result is about 150 MB unpacked, 70 MB packed.
 - **`csr-gui --self-test [REPORT]`** checks an installation without showing a window: it loads
@@ -1065,7 +1111,8 @@ artifact; publish it with the GitHub Release of v0.8.0.
 
 ## ADR-056 — The documentation site on GitHub Pages (author)
 
-*Accepted, 2026-10-02 (M8).*
+*Accepted, 2026-10-02 (M8). See ADR-060: the author's design notes are no longer in the
+repository.*
 
 **Author.** Publish the docs site.
 
@@ -1073,10 +1120,10 @@ artifact; publish it with the GitHub Release of v0.8.0.
   *Publish the documentation* (GitHub's Pages actions) to
   <https://ktuhtabayev.github.io/context-synthetic-recognition/>. Branches and tags build the
   site but do not publish it.
-- **Only what is in the repository is published, and not the handoff material.** `mkdocs.yml`
-  excludes `docs/handoff/`, and the CI job fails if a `handoff` folder appears in the built site.
-  The site is never deployed from a working copy: the author's `docs/handoff` also holds the
-  unpublished article draft and the design transcript (ADR-014).
+- **Only what is in the repository is published, and not the author's design notes.**
+  `mkdocs.yml` excludes their folder, and the CI job fails if that folder appears in the built
+  site. The site is never deployed from a working copy: on the author's disk the same folder
+  also holds the unpublished article draft and the design transcript (ADR-014).
 
 ## ADR-057 — M8 housekeeping
 
@@ -1090,5 +1137,323 @@ artifact; publish it with the GitHub Release of v0.8.0.
   of the first line of every command's help.
 - **Wording** (author): docstrings that still announced finished milestones were corrected; the
   extension-points table of the architecture page now lists what is built in and, separately,
-  what is not (the template's Criterion-1 and λ·β weights, nested cross-validation, HVDM).
+  what is not (the Criterion-1 and λ·β weights, nested cross-validation, HVDM).
 - **Development status** (author): the package classifier is *4 - Beta*.
+
+## ADR-058 — The article is the specification (author)
+
+*Accepted, 2026-11-22. Supersedes ADR-001.*
+
+- The author's article on the CS-model (the draft of 19 October 2026) specifies the method:
+  R-IPS, the local contexts, the synthetic features Ψ(r) by formula (5) with membership (1),
+  stability (2), boundary (3), informativeness (4) and contributions (6), the hierarchical
+  agglomerative algorithm (Steps 1–5) with the additional features, the meta-algorithm and the
+  accuracy of Definitions 2 and 3. The draft stays outside the repository (ADR-060).
+- The Excel experiment workbook stays an acceptance test. `csr validate` reads its inputs and
+  runs with the preset `excel-experiment` — the workbook's own settings: odd k = 3 … 2·min|Kᵢ| − 3,
+  running class means, two majorizing passes (ADR-002, ADR-003, ADR-063). 11,622 cells in 579
+  checks agree to 1e-9. Nine cells fewer than before (11,631) are compared: cells whose text only
+  worded the old names of the switches.
+- Where the article and the workbook differ, the article is the default and the workbook's choice
+  stays available as a switch or a strategy, flagged ⚠ wherever it is on.
+- Where the article is silent or contradicts itself, the choice is recorded here and flagged
+  (ADR-061, ADR-063, ADR-064, ADR-067, ADR-068).
+
+## ADR-059 — The article's names; configuration schema 2 (author)
+
+*Accepted, 2026-11-22.*
+
+- Every name follows the article through `docs/glossary.md` (Russian term → symbol → English →
+  code). The core is ordered by the stages of the method: `core/rips`, `core/local_context`,
+  `core/synthetic_features`, `core/additional_features`, `core/meta_algorithm`; `core/model.py`
+  puts them together. Configuration sections, CLI output, the Excel mirror, the tables, the
+  figures, the report and the desktop application use the same names.
+- The configuration has `schema_version: 2` with the sections `dataset`, `rips`,
+  `local_context`, `admissible_k`, `synthetic_features`, `additional_features`,
+  `meta_algorithm`, `evaluation`, `seed`, `output`. A file of schema 1 is rejected with a message;
+  nothing converts it (*author: no reader, a clean break*).
+- The workbooks' own sheet names are quoted in one module
+  (`services/validation/sheets.py`); the Excel mirror names its sheets in the article's terms
+  (for example *Additional Feature j*, *Ψ(r) Contributions*, *Meta-description*, *New Object*,
+  *Switches*, *Switch Sensitivity*, *Zhuravlyov Distances*), and a map between the two lets one
+  validation map check the workbook and an exported mirror alike.
+- The renaming and the restructuring changed no number: five cases — the experiment and
+  Heart-Disease (270, 13, 2) under both former settings, leave-one-out included, and the
+  large-data configuration — were compared field by field before and after: no difference.
+
+## ADR-060 — The author's source material stays outside the repository (author)
+
+*Accepted, 2026-11-22.*
+
+- The folders `resources/` and `docs/handoff/` are no longer tracked: they stay on the author's
+  disk, ignored by `.gitignore`. Git history, tags and published releases are unchanged.
+- The four workbooks used as acceptance tests are copied byte for byte to `tests/data/workbooks/`
+  under neutral names: *Excel experiment*, *Synthetic features by k-NN*, *Additional features* and
+  *Meta-algorithm* (each `[Heart-Disease (10, 13, 2)].xlsx`); a test pins their SHA-256 checksums.
+- The independent re-implementation used as a test oracle lives in `tests/golden/independent/`,
+  with `tests/golden/golden_values.json` (*author: keep the cross-check*).
+- The draft article is not copied into the repository, and the folder it is kept in is not named
+  in the project.
+
+## ADR-061 — R-IPS: forming the precedent base for training and testing (author)
+
+*Accepted, 2026-11-22.*
+
+R-IPS is the first stage (`core/rips`, configuration section `rips`). For the working set
+E₁ = E₀ ∖ T — T an optional test sample given by object ids, empty by default (*author: over E₁,
+without T*): r(S) is the distance to the nearest object of the other class in E₁, g(S) the number
+of own-class objects of E₁ strictly inside that hypersphere (S included). Steps 2–6 queue E₁ by
+1/r(S), take the first object Sᵢ, form L, block Sᵢ (r(Sᵢ) = −r(Sᵢ)), move Sᵢ to D when |L| = 1, and
+otherwise lower g(Sⱼ) by one for every Sⱼ ∈ L and move Sⱼ to D at g(Sⱼ) = 1; the output is D.
+
+Conventions where the article is silent (flagged ⚠ in the code and the outputs):
+
+- equal radii are queued by the smaller index; an object with r(S) = 0 never enters the queue;
+  |L| = 0 leaves Sᵢ blocked in E₁;
+- **blocking** is read literally: a blocked object has a negative radius and covers nobody in
+  Step 4 (default). The switch `rips.keep_blocked_cover` (⚠) lets it cover with |r(S)|;
+- **the training sample** is the set of objects that remain in E₁; the rest of E₀ is the test
+  sample (default, `rips.training: remaining`). The switch `rips.training: moved` (⚠) takes D as the
+  training sample instead;
+- the quantitative features are normalized with constants estimated on E₁, so that T cannot shape
+  the selection; distances are rounded like those of the local contexts.
+
+Reproduced (pinned in `tests/test_rips.py`; Zhuravlyov metric on all features, min–max
+normalization):
+
+| Data | D | remaining in E₁ | remaining, blocked objects keep covering |
+|---|---|---|---|
+| Heart-Disease (270, 13, 2) | 108 (60, 48) | 162 (90, 72) | 77 (37, 40) |
+| Heart, slope x₁₁ quantitative (ADR-072) | 109 (61, 48) | 161 (89, 72) | 73 (36, 37) |
+| German (1000, 20, 2) | 476 (325, 151) | 524 (375, 149) | 335 (195, 140) |
+
+The article prints training samples of 76 (36, 40) objects for Heart and 336 (196, 140) for
+German. No reading of the algorithm reproduces them exactly; the object lists of the article's
+experiments (kept by the author outside the repository) are closest to the reading in which
+blocked objects keep covering, but differ in single objects. The gap is reported, not tuned
+(ADR-070).
+
+## ADR-062 — The agglomerative algorithm follows the article by default (author)
+
+*Accepted, 2026-11-22. Supersedes ADR-004 for the defaults.*
+
+- Defaults: θ and γ measured from the final class means M₁, M₂; one majorizing pass in Step 4
+  (R ← R + η_q, then φ once). The Excel experiment's calculations stay as switches:
+  `additional_features.class_means: running` (⚠, ADR-002) and
+  `additional_features.majorizing_passes: 2` (⚠, ADR-003); the preset `excel-experiment` turns on
+  both.
+- The change of the defaults (together with ADR-063) changes the results; the numbers before
+  (preset `excel-experiment`) and after (default configuration) are pinned in
+  `tests/test_defaults.py`:
+
+  | Data | Setting | Admissible k | r | Resubstitution | Leave-one-out |
+  |---|---|---|---|---|---|
+  | Heart-Disease (10, 13, 2) | before | 3, 5 | 6 | 70 % | 20 % (4 refusals) |
+  | Heart-Disease (10, 13, 2) | after | 3 | 3 | 50 % | 0 % (5 refusals) |
+  | Heart-Disease (270, 13, 2) | before | 3 … 237 (118 values) | 354 | 44.81 % | 7.04 % (8 refusals) |
+  | Heart-Disease (270, 13, 2) | after | 3 … 119 (59 values) | 177 | 84.44 % (4 refusals) | 80.74 % (10 refusals) |
+
+  On Heart-Disease (10, 13, 2), min|Kᵢ| = 4 leaves the single admissible k = 3.
+- The validation of the Excel experiment workbook is unaffected: it runs with the workbook's
+  settings (ADR-058).
+
+## ADR-063 — Admissible k: odd k = 3 … min|Kᵢ| (author)
+
+*Accepted, 2026-11-22. Supersedes ADR-005 and ADR-006 for the default.*
+
+- Default strategy `min-class`: odd k = 3, 5, …, k ≤ min(|K1|, |K2|), with the class sizes of the
+  training sample of the current fit (so every fold of a protocol has its own k). The model is
+  undefined when min|Kᵢ| < 3 (Definition 1).
+- The article states the condition as [k/2] − k/2 = 0, which selects the even k; section 1.3 starts
+  the odd k at 3 and formula (5) needs a majority, so the odd k are meant. ⚠ Recorded as a probable
+  misprint.
+- The strategies `twice-min-class` (odd k = 3 … 2·min|Kᵢ| − 3, the Excel experiment's rule, with
+  the optional cap and step of ADR-006), `range` (the article's experiments: 3 … 41) and `explicit`
+  stay available.
+
+## ADR-064 — The zero value of the article's experiments (author)
+
+*Accepted, 2026-11-22.*
+
+- Formula (5) gives the values {1, 2}. The article's experiments also use 0. Reading (*author*):
+  a training object takes 0 where the classes cannot be told apart at its gradation
+  (f_k(μ) = 0.5, tested exactly as d₁·|K2| = d₂·|K1| in integers), and every synthetic feature
+  that takes 0 on a training object is left out, so that the remaining features keep the values
+  {1, 2}.
+- Switch `synthetic_features.zero_value` (off by default: formula (5) alone). The features left
+  out are listed with the reason "zero" in the trace, the outputs and the *Parameters* sheet.
+- It is a plain switch, not one of the settings that deviate from the article: no ⚠ badge or
+  warning (*author*, after the Step 8 report).
+
+## ADR-065 — Original nominal features combined with the synthetic ones (author)
+
+*Accepted, 2026-11-22.*
+
+- `synthetic_features.original_features`: `nominal` (every feature of J) or feature names. Each
+  acts as a feature of Ψ(r) whose gradations are its codes (non-negative integers): membership,
+  stability, informativeness and contributions are computed over its codes, and an unseen code of
+  a new object contributes 0. Quantitative features are rejected (*author: nominal originals as
+  gradations*). Empty by default.
+- A plain switch, not one of the settings that deviate from the article: no ⚠ badge or warning
+  (*author*, after the Step 8 report).
+
+## ADR-066 — Normalization per base operator
+
+*Accepted, 2026-11-22.*
+
+- `local_context.normalizer` is the default for every base operator; `operators[].normalizer`
+  overrides it for one operator (for example `none` for the Euclidean or Chebyshev metric on the
+  raw quantitative features). Each normalizer is fitted on the training objects only; operators
+  that share a normalizer share one fitted scaling.
+
+## ADR-067 — Bit representations as training-side analysis (author)
+
+*Accepted, 2026-11-22.*
+
+- Section 1.2 (class-sequence bit masks) and section 1.3 (majority chains) are computed for every
+  operator on the training sample, with membership (1) and stability (2) over their gradations
+  (*author: as training-side analysis*); neither enters Ψ(r).
+- Class-sequence mask for one k: bit j is 1 when the j-th nearest neighbour belongs to K1, the
+  nearest neighbour the most significant bit; 2ᵏ gradations, β = 2ᵏ − 1. The article prints
+  "β = 2k − 1": ⚠ a probable misprint. The article does not say which class is the bit 1; K1 = 1 is
+  this project's convention. Masks are formed for k ≤ 62 (int64).
+- Majority chain: bit i is 1 when the own-class count for the i-th admissible k is a majority; the
+  first admissible k is the most significant bit; β = 2^|K̂| − 1.
+- The metaobject — the vector of stabilities g_k of the synthetic features (Theorem) — is part of
+  the trace (ADR-074).
+
+## ADR-068 — The majorizing function φ
+
+*Accepted, 2026-11-22.*
+
+- The article uses φ in Steps 3–4 of the agglomerative algorithm without defining it. The logistic
+  sigmoid of the Excel experiment stays the default (`additional_features.majorizing_function:
+  sigmoid`); the other built-ins of ADR-026 stay available. ⚠ Open for the author.
+
+## ADR-069 — Definition 3: accuracy on the R-IPS split; nested cross-validation (author)
+
+*Accepted, 2026-11-22.*
+
+- Protocol `rips` (aliases `r-ips`, `definition-3`): R-IPS on the whole sample (ADR-061), the
+  CS-model fitted on the training sample, the test sample classified without its class. Reported:
+  the accuracy with refusals counted as errors (Definition 3), the accuracy on the answered
+  objects, the refusals and the class split of both samples.
+- Protocol `nested-cross-validation`: in every outer fold R-IPS splits the training part into an
+  inner training and test sample; the candidate settings (by default α ∈ {0.1, 0.2}, the article's
+  values) are compared on the inner test sample, and the best one is fitted on the inner training
+  sample and scores the outer fold.
+- Resubstitution (Definition 2), leave-one-out, k-fold and hold-out stay.
+
+## ADR-070 — The article's computational experiment, rebuilt from real runs (author)
+
+*Accepted, 2026-11-22.*
+
+- `scripts/run_experiments.py` rebuilds Tables 1–6 and the k-NN comparison of the article from
+  runs of the package and writes `experiments/results/` with `experiments/checksums.sha256`;
+  `tests/test_experiments.py` checks the checksums and that a new run reproduces every file byte for
+  byte. The numbers the article prints are kept in the script only for the comparison.
+- Nothing is tuned. Settings the article leaves open are chosen once, before any run, and listed
+  in the results (normalization of the Euclidean, Chebyshev and Canberra CS-models, the features of
+  the Canberra metric, the k-NN of the comparison, both values of α for Table 6).
+- The results do not reach the article's: the best test accuracy is 79.7 % (Heart, Zhuravlyov
+  split with blocked objects covering, α = 0.1) against 100 % printed; no training accuracy reaches
+  90 %; no synthetic feature takes the value 0 on these training samples with k = 3 … 41, so
+  Table 1 has 20 binary features per metric where the article prints 21 to 30 (of 31).
+
+## ADR-071 — Presets
+
+*Accepted, 2026-11-22. Supersedes ADR-004 for the presets.*
+
+- `default` (the article: ADR-062, ADR-063), `alpha-0.1` and `alpha-0.2` (the article's
+  experiments), `excel-experiment` (the workbook's settings: twice-min-class k, running class
+  means, two passes, α = 0.3). Configuration files of the same names are in `configs/`.
+
+## ADR-072 — Heart-Disease: slope as a quantitative feature (author)
+
+*Accepted, 2026-11-22.*
+
+- The article's experiments treat 7 features of Heart-Disease (270, 13, 2) as quantitative; the
+  data file marks 6. The slope of the peak exercise ST segment (x₁₁) is the seventh: the study of
+  the article's experiments (ADR-070) and the R-IPS tests set it through
+  `dataset.feature_types: {x₁₁: quantitative}`; the data file is unchanged, and any configuration
+  can do the same.
+
+## ADR-073 — German (1000, 20, 2) (author)
+
+*Accepted, 2026-11-22.*
+
+- The German credit data of the article's experiments are added byte for byte to
+  `datasets/raw/German/` (`.dat`, `.csv` and the read-me); a test pins their checksums. Like every
+  other dataset they are used under their own names; the article's names of its tables' files are
+  not reproduced (*author*).
+
+## ADR-074 — The metaobject in every output
+
+*Accepted, 2026-11-22.*
+
+- The metaobject (the stabilities g_k of the synthetic features, the Theorem) is in the trace, the
+  run's JSON, the tables (`metaobject`), the Excel mirror and the report, next to the class-sequence
+  masks and majority chains (ADR-067).
+
+## ADR-075 — The *Switches* sheet of the Excel mirror works on the run's own data
+
+*Accepted, 2026-11-22. Supersedes ADR-043.*
+
+- The mirror's *Switches* sheet lists every setting that deviates from the article and is on in
+  the run (four possible, ADR-061, ADR-002, ADR-003). The worked examples of the two switches of
+  the agglomerative algorithm — θ, γ and θ/γ of the first candidates with final and with running
+  class means, the first additional feature with one and with two majorizing passes — and the
+  effect table of the four settings are computed on the run's own data by the package's
+  agglomerative algorithm at export time.
+- The data file that held the check workbook's input for these examples is gone; that workbook is
+  checked by `csr validate` and the golden tests instead (ADR-029, ADR-060).
+
+## ADR-076 — The large-data configuration on the article's settings (author)
+
+*Accepted, 2026-11-22. Amends ADR-030.*
+
+- `configs/heart-disease-270-large-data.yaml` keeps the correction of ADR-030
+  (`synthetic_features.skip_constant: true`) and otherwise follows the article: odd k = 3 …
+  min|Kᵢ|, final class means, one majorizing pass. Before, it capped k at 21 (`twice-min-class`)
+  with running class means and two passes: leave-one-out 81.5 %, AUC 0.862 (ADR-030).
+- With the article's k range no synthetic feature of Heart-Disease (270, 13, 2) is constant, so
+  the configuration gives the default's model and results: r = 177, leave-one-out 80.7 % with 10
+  refusals, AUC 0.867 (pinned in `tests/test_defaults.py`).
+
+## ADR-077 — Every command reads the configuration's dataset (author)
+
+*Accepted, 2026-11-22.*
+
+- Without a dataset argument, `csr fit`, `csr classify`, `csr data info` and `csr run` load the
+  configuration's `dataset.path` (relative to the configuration file; none: the default dataset).
+- With a dataset argument the command line names the data; the configuration's reading options
+  (format, sheet, class and id column) fill in what the command line leaves out, and its
+  `feature_types` apply. Before, only `csr run` without an argument read the section, so the
+  slope of Heart-Disease (ADR-072) was lost whenever a dataset was named.
+
+## ADR-078 — Stage names in the results tree and the tables (author)
+
+*Accepted, 2026-11-22.*
+
+- The groups of the tables and figures — the results tree of the desktop application, the
+  Markdown and LaTeX tables, the titles of the figures — are named by the article's stages:
+  *Input data*, *Local contexts · …*, *Synthetic features · …*, *Additional features · …*,
+  *Meta-algorithm · …*, then *Evaluation* and *Checks*.
+- The Excel mirror keeps the Excel experiment's Steps 1–12, because it copies that workbook's
+  layout; the groups of the *Configure* page are unchanged.
+- The additional features are named d₁ … d_p wherever they are shown (CLI, run results, Excel
+  mirror, validation report); the earlier r₁ … r_p are gone.
+
+## Open questions for the author
+
+*Open, 2026-11-22.* Each is flagged where it is used; none is decided silently.
+
+- α, δ, ϰ and cr1₀ are not given in the article (defaults 0.3, 0.1, 5, 10); ϰ ≤ n − 1 is not
+  enforced.
+- φ is not defined (ADR-068).
+- The admissible-k condition and β are probably misprinted (ADR-063, ADR-067).
+- The training samples of R-IPS differ from the printed ones by one to three objects (ADR-061).
+- Tables 1–6: 31 synthetic features are printed for k = 3 … 41, which has 20 odd values; Table 6
+  gives one pair of accuracies for two values of α; the normalization of the Euclidean and
+  Chebyshev CS-models and the features of the Canberra metric are not stated; the k-NN settings of
+  the comparison are not stated (ADR-070).

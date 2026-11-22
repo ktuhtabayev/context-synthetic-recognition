@@ -8,20 +8,21 @@ A dataset is a classified sample E₀ = {S₁ … Sₘ} with heterogeneous featu
 | Format | Files | Layout |
 |---|---|---|
 | `cs-workbook` | `.xlsx` | The *Dataset* sheet of the Excel experiment: a header row with `Class` above the class column, one row per object, then the feature-type row (1 = quantitative, 0 = nominal). |
-| `template-extended` (alias `extended`) | `.csv`, `.dat` | The author's layout (see [below](#the-extended-layout)): first row `m, n, c`; m rows of n values and the class label; last row of n type flags. `.dat` is whitespace-separated and may use decimal commas. |
+| `extended` | `.csv`, `.dat` | The author's layout (see [below](#the-extended-layout)): first row `m, n, c`; m rows of n values and the class label; last row of n type flags. `.dat` is whitespace-separated and may use decimal commas. |
 | `csv` | `.csv`, `.txt` | A table with a header row; the delimiter (`,` `;` tab `\|`) is detected. |
 | `xlsx` | `.xlsx` | A table with a header row (first sheet by default). |
 | `parquet` | `.parquet` | A table; needs `pip install "context-synthetic-recognition[parquet]"`. |
 
 `format: auto` (the default) picks the format from the extension and the content: an Excel file
 with a *Dataset* sheet in the experiment's layout is `cs-workbook`, a CSV whose first row is
-`m, n, c` is `template-extended`.
+`m, n, c` is `extended`.
 
 For tables with a header row, the class column is the last column unless `class_column` names
-another; `id_column` names an optional column of object ids. Feature types come from
-`feature_types` in the configuration; features not listed there are inferred — numeric columns
-as quantitative, the others as nominal — and a warning lists the inferred types. Nominal text
-values become category codes (alphabetical order of the categories).
+another; `id_column` names an optional column of object ids. Feature types come from the file
+(the type row or flags) or from `feature_types` in the configuration, which overrides them;
+features of a table without types are inferred — numeric columns as quantitative, the others as
+nominal — and a warning lists the inferred types. Nominal text values become category codes
+(alphabetical order of the categories).
 
 ```yaml
 dataset:
@@ -38,8 +39,7 @@ Missing values are rejected with an error that names their positions.
 
 ## The dataset folder
 
-The project keeps the author's datasets in `datasets/`, in the layout of the template project
-(ADR-035):
+The project keeps the author's datasets in `datasets/` (ADR-035):
 
 ```text
 datasets/
@@ -48,13 +48,16 @@ datasets/
     Heart-Disease/
       Heart-Disease (270, 13, 2).dat        original datasets, one folder per family,
       Heart-Disease (270, 13, 2).csv        named <Name> (m, n, c)
+    German/
+      German (1000, 20, 2).dat, .csv        German (1000, 20, 2), with the author's ReadMe.txt
   synthetic/                                reserved for pre-existing synthetic datasets — not read
 ```
 
 The files are the author's, byte for byte (Git stores them unchanged, the hooks leave them alone),
-so their SHA-256 checksums are the same on every machine. The synthetic-feature datasets this
-project generates from raw data — normalized values, Ψ(r), the meta-dataset Y — are written to
-run folders by the exporters, with the manifest that says how they were produced.
+so their SHA-256 checksums are the same on every machine; German was added in the same way
+(ADR-073). The synthetic-feature datasets this project generates from raw data — normalized
+values, Ψ(r), the meta-description Y — are written to run folders by the exporters, with the
+manifest that says how they were produced.
 
 ### The extended layout
 
@@ -78,7 +81,7 @@ checks the header against the rows: m rows of n + 1 values, n flags, c classes.
 | You write | Means |
 |---|---|
 | nothing / `default` | the default dataset, `datasets/default.dat` |
-| `heart-disease-270` | a dataset by id (`<name>-<m>`; `-<n>` is added when two datasets would share it) |
+| `heart-disease-270`, `german-1000` | a dataset by id (`<name>-<m>`; `-<n>` is added when two datasets would share it) |
 | `Heart-Disease (270, 13, 2)` | the same, by display name |
 | `datasets/raw/Heart-Disease/Heart-Disease (270, 13, 2).csv` | a file, in any supported format |
 | `builtin:heart-disease-270` | the package's built-in copy |
@@ -110,30 +113,46 @@ Class labels may be integers or text. They are sorted — numbers numerically, t
 — and the first class is **K1**, the second **K2** (ADR-018). For the author's data (labels 1 and
 2) this is the article's numbering. Class 1 is also the positive class of the evaluation.
 
-## Built-in datasets
+## The author's datasets
 
-| Name | Content |
+| Dataset | Content |
 |---|---|
-| `heart-disease-10` | Heart-Disease (10, 13, 2): the 10 objects of the Excel experiment (\|K1\| = 4, \|K2\| = 6) |
-| `heart-disease-270` | Heart-Disease (270, 13, 2): UCI Statlog (Heart), 6 quantitative + 7 nominal features, \|K1\| = 150, \|K2\| = 120 |
+| `heart-disease-10` (built in; `default` in the folder) | Heart-Disease (10, 13, 2): the 10 objects of the Excel experiment (\|K1\| = 4, \|K2\| = 6) |
+| `heart-disease-270` (built in and in the folder) | Heart-Disease (270, 13, 2): UCI Statlog (Heart), 6 quantitative + 7 nominal features as flagged in the file, \|K1\| = 150, \|K2\| = 120 |
+| `german-1000` (in the folder) | German (1000, 20, 2): UCI Statlog (German Credit Data), 7 quantitative + 13 nominal features, \|K1\| = 700, \|K2\| = 300 |
+
+### Heart: the slope as a quantitative feature
+
+In the article's experiments Heart has 7 quantitative and 6 nominal features: the slope x₁₁ is
+quantitative, while the file flags it nominal. The file stays as it is; the configuration sets the
+type (ADR-072):
+
+```yaml
+dataset:
+  path: heart-disease-270
+  feature_types:
+    x₁₁: quantitative
+```
+
+`feature_types` applies wherever a configuration is given: every command reads the dataset of
+the configuration when no dataset argument names one, and applies the configuration's
+`feature_types` and reading options to a dataset named on the command line too (ADR-077); so do
+`load_from_config` in Python and `scripts\run_experiments.py`.
 
 ```python
-from context_synthetic_recognition.data import load_builtin, load_dataset
+from context_synthetic_recognition.config import DatasetConfig
+from context_synthetic_recognition.data import load_builtin, load_dataset, load_from_config
 
 heart = load_builtin("heart-disease-270")
-experiment = load_dataset(
-    "resources/Experiments/Context-Synthetic Recognition Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
+heart_7 = load_from_config(
+    DatasetConfig(path="heart-disease-270", feature_types={"x₁₁": "quantitative"})
 )
+experiment = load_dataset("tests/data/workbooks/Excel experiment [Heart-Disease (10, 13, 2)].xlsx")
 ```
 
 The built-ins are copies of the dataset folder's Heart-Disease files (the same data, checked by
 the tests). A configuration names a dataset of the folder by id, or a built-in with the prefix
-`builtin:`; no path means the default dataset. The configured `feature_types` apply in every case:
-
-```yaml
-dataset:
-  path: heart-disease-270        # datasets/raw/Heart-Disease/Heart-Disease (270, 13, 2).dat
-```
+`builtin:`; no path means the default dataset.
 
 ## Inspecting a dataset
 
@@ -142,16 +161,16 @@ dataset:
 ```text
 > csr data info heart-disease-270
 Heart-Disease (270, 13, 2)
-  source:    built-in dataset 'heart-disease-270'
+  source:    …\datasets\raw\Heart-Disease\Heart-Disease (270, 13, 2).dat
   objects:   m = 270
   features:  n = 13
     I (quantitative) 6: x₁, x₄, x₅, x₈, x₁₀, x₁₂
     J (nominal)      7: x₂, x₃, x₆, x₇, x₉, x₁₁, x₁₃
   classes:   K1 = 1: 150, K2 = 2: 120
   hash:      bf78a86ebd7478a48a0a013f28765be5145e451f84d84e92a0c2dcd49e315456
-  k (formula): 3, 5, 7, …, 237  (118 values; k_max = 2·120 − 3 = 237)
+  k (min-class): 3, 5, 7, …, 119  (59 values; k ≤ min|Kᵢ| = 120)
   operators: ρ (13 features), ρ_I (6 features), ρ_J (7 features)
-  r = |Ψ(r)| = 354 synthetic features
+  r = |Ψ(r)| = 177 synthetic features
 ```
 
 Options: `--format`, `--sheet`, `--class-column`, `--id-column` and `--config` (for another k

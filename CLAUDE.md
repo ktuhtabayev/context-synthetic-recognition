@@ -1,16 +1,35 @@
 # context-synthetic-recognition — project memory for Claude Code
 
-Python implementation (library + CLI + desktop GUI) of the context-synthetic model of recognition algorithms (CS-model)
-from the author's draft article, built on the full Excel experiment.
+Python implementation (library + CLI + desktop GUI) of the context-synthetic model of recognition
+algorithms (CS-model) of the author's article (an unpublished draft, kept outside the repository).
 
-Start here: `docs/handoff/PROMPT_FOR_CLAUDE_CODE.md` (task), `docs/handoff/CONTEXT_HANDOFF.md` (authoritative decisions and
-golden values), `docs/handoff/CHAT_TRANSCRIPT.md` (design conversation).
+Start here: `docs/glossary.md` (the article's terms, symbols and code names), `docs/DECISIONS.md`
+(ADR log; ADR-058 onwards rebuild the project on the article), `docs/architecture.md`.
 
-Non-negotiables (details in CONTEXT_HANDOFF.md):
-- Specification = `resources/Experiments/Context-Synthetic Recognition Model – Full Experiment [...] - Opus 5.5.xlsx`; its Validation sheet values are acceptance tests (tolerance 1e-9).
-- Permitted k: odd, k_min = 3 fixed, k_max = 2·min_i|K_i| − 3 from the training classes — never hard-coded.
-- Distances rounded to 10 decimals; ties → smaller original index; normalization fitted on training data only.
-- A new object is represented and classified without its class (Theorem); LOO re-fits the whole pipeline per fold.
-- Two template deviations are switches (default = template): running vs final class centres in θ/γ; STEP 4 majorizer applied twice vs once. Highlight them in docs and GUI.
-- Never modify `../hag-regularized-stacking-boosting-meta` (template project, read-only), `resources/Experiments/` or `docs/handoff/`.
-- Record decisions in `docs/DECISIONS.md`; ask the author before changing anything that alters numerical results.
+Non-negotiables (details in DECISIONS.md):
+- Specification = the article (ADR-058). Its stages give the structure: R-IPS → local contexts →
+  synthetic features Ψ(r) → additional features (hierarchical agglomerative algorithm) →
+  meta-algorithm → evaluation. Names come from `docs/glossary.md`.
+- The Excel experiment workbook (`tests/data/workbooks/Excel experiment [Heart-Disease (10, 13, 2)].xlsx`)
+  and the three check workbooks beside it are acceptance tests (tolerance 1e-9), run with the
+  preset `excel-experiment`; `csr validate` must pass.
+- Admissible k: odd, k_min = 3, by default k ≤ min|Kᵢ| of the training classes — never hard-coded.
+- Distances rounded to 10 decimals; ties → smaller original index; normalization fitted on the
+  training objects only (for R-IPS on E₁ = E₀ ∖ T).
+- A new object is represented and classified without its class (Theorem); every protocol re-fits
+  the whole pipeline per fold.
+- Defaults follow the article. Four switches deviate from it when on and are flagged ⚠ in docs,
+  outputs and GUI: `rips.keep_blocked_cover`, `rips.training: moved`,
+  `additional_features.class_means: running`, `additional_features.majorizing_passes: 2`.
+- Nothing in the project may mention or point to the author's earlier projects or their code — no
+  names, paths, "ported from" or legacy identifiers in code, comments, docs, commit messages or
+  file names.
+- The draft article and the author's source folders (`resources/`, `docs/handoff/`: untracked,
+  ADR-060) stay outside the repository and are never modified; the path of the manuscripts is never
+  written into the project.
+- One ADR per decision in `docs/DECISIONS.md`, in the article's terms. Ask the author before
+  anything that changes numerical results. Never invent results: every number comes from a real
+  run and is pinned by a test.
+- The core is pure (no I/O); CLI and GUI share the services; the GUI computes nothing.
+- Windows only (ADR-049); Python 3.12 `.venv`; quality gates: ruff, mypy --strict, pytest with
+  coverage ≥ 90 %, `csr validate`.

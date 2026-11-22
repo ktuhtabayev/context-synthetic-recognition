@@ -15,9 +15,10 @@ The virtual environment stores absolute paths; if the project folder moves, crea
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest --cov              # tests + coverage (≥ 90 %)
-.\.venv\Scripts\python.exe -m pytest -m golden          # acceptance tests against the workbook
+.\.venv\Scripts\python.exe -m pytest -m golden          # acceptance tests against the workbooks
 .\.venv\Scripts\python.exe -m pytest -m "not slow"      # skip the long tests
 .\.venv\Scripts\python.exe -m pytest -m gui             # the desktop application (no window appears)
+.\.venv\Scripts\python.exe scripts\run_experiments.py   # the article's computational experiment
 .\.venv\Scripts\python.exe scripts\gui_screenshots.py   # the screenshots of docs/gui.md
 .\.venv\Scripts\ruff.exe check .                         # lint
 .\.venv\Scripts\ruff.exe format .                        # format
@@ -34,12 +35,16 @@ The virtual environment stores absolute paths; if the project folder moves, crea
   CI is green; each milestone is tagged `v0.<n>.0` and recorded in `CHANGELOG.md`.
 - **Decisions:** every decision goes into [DECISIONS.md](DECISIONS.md). Anything that changes
   numerical results is agreed with the author first.
-- **Protected material:** `resources/Experiments/` and `docs/handoff/` are never modified;
-  linters and hooks exclude them and Git stores them byte for byte.
-- **Template workbooks:** `tests/data/templates/` holds byte-for-byte copies of the HAG and
-  meta-algorithm templates of `../hag-regularized-stacking-boosting-meta` (read-only), so CI can
-  replicate them; a test compares the copies with the originals when that project is present
-  (ADR-029).
+- **The specification:** the article. The author's manuscripts and original workbooks are not
+  part of the repository (ADR-060); the tests use byte-for-byte copies of the workbooks in
+  `tests/data/workbooks/` and pin their checksums.
+- **Data stored byte for byte:** `datasets/`, `tests/data/` and `experiments/` are stored
+  unchanged by Git (`.gitattributes`) and left alone by the hooks. The results in `experiments/`
+  are written by `scripts/run_experiments.py` only; commit them together with
+  `experiments/checksums.sha256`, which `tests/test_experiments.py` checks.
+- **Names:** modules, configuration keys and documentation use the article's terms
+  ([Glossary](glossary.md)); a setting that deviates from the article is a switch, off by default
+  and marked ⚠ (`config.presets.DEVIATIONS`).
 - **Docstrings:** Google style; every public function names the article formula or step it
   implements.
 
