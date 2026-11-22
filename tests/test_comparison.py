@@ -441,9 +441,20 @@ def test_the_project_folders(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     assert default_output(ROOT) == OUT
     with pytest.raises(DatasetError, match="no datasets folder"):
         splits_folder(tmp_path)
+    with pytest.raises(DatasetError, match="no datasets folder"):
+        default_output(tmp_path)
     (tmp_path / "datasets").mkdir()
     with pytest.raises(DatasetError, match="no 'splits' folder"):
         splits_folder(tmp_path)
+    assert default_output(tmp_path) == tmp_path / "experiments" / "comparison"
+    # an installation from source carries no copy; the Windows build does (ADR-081)
+    assert service.bundled_splits() is None
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    monkeypatch.setattr(service, "bundled_splits", lambda: bundle)
+    assert splits_folder(tmp_path) == bundle
+    (tmp_path / "datasets" / "splits").mkdir()
+    assert splits_folder(tmp_path) == tmp_path / "datasets" / "splits"  # the project's first
 
 
 def test_a_missing_library_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:

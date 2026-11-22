@@ -18,11 +18,13 @@ exporters write, so the screen, the Excel mirror and the article's tables cannot
 **Without Python.** Each release has a Windows build, `csr-gui-<version>-windows.zip`
 ([Releases](https://github.com/ktuhtabayev/context-synthetic-recognition/releases)): unpack it
 anywhere and start `csr-gui.exe` — nothing is installed. The built-in Heart-Disease datasets are
-included; your own datasets are opened from their files. Two optional extras are not part of the
-build — Parquet files and the scikit-learn baselines — and the application says so when one is
-asked for. `csr-gui.exe --self-test report.txt` checks an installation without showing a window:
-it loads every language, runs the default experiment, draws a table and a figure, exports the
-run and writes what it found to the report (exit code 0 = everything works).
+included; your own datasets are opened from their files. The build also carries scikit-learn and
+the article's split files, so the *Classifiers* page works there (ADR-081). Only Parquet files
+need an extra the build leaves out, and the application says so when one is opened.
+`csr-gui.exe --self-test report.txt` checks an installation without showing a window: it loads
+every language, runs the default experiment, draws a table and a figure, exports the run,
+computes Tables 7 and 8 and writes what it found to the report (exit code 0 = everything
+works).
 
 !!! warning "Four switches deviate from the article"
     The defaults follow the article. Four switches deviate from it when on: in R-IPS, blocked
@@ -192,8 +194,10 @@ their checksums to the results folder (`experiments/comparison`). *Check the wri
 compares a results folder with its checksums and a new run, byte for byte. These are the same
 files and checks as `csr compare run` and `csr compare check`.
 
-The page needs scikit-learn, and the split files are in the project's folder. The Windows build
-includes neither, so it shows what is missing.
+The page needs scikit-learn and the split files. The Windows build carries both, and without a
+project folder it writes to `experiments\comparison` under the folder it runs in (ADR-081).
+From source, install the `[sklearn]` extra and start the application in the project, whose
+`datasets\splits` it reads.
 
 ## Appearance and what is remembered
 

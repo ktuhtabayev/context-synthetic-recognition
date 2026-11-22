@@ -23,6 +23,7 @@ import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from importlib import metadata
+from importlib.resources import files
 from pathlib import Path
 
 from context_synthetic_recognition.comparison import SPLITS, SplitResult, compare_split
@@ -46,6 +47,9 @@ from context_synthetic_recognition.export.text import (
 
 SPLITS_DIR = "splits"
 """Sub-folder of the dataset folder with the split files."""
+BUNDLED_DIR = "split_files"
+"""Folder of the package's data with the copy of the split files the Windows build carries
+(ADR-081); an installation from source has none."""
 OUTPUT_DIR = ("experiments", "comparison")
 """The output folder, relative to the project root (the dataset folder's parent)."""
 CHECKSUMS = "checksums.sha256"
@@ -92,28 +96,41 @@ class ComparisonCheck:
         return dict(self.recorded_versions) == dict(self.installed_versions)
 
 
+def bundled_splits() -> Path | None:
+    """The copy of the split files the Windows build carries; ``None`` from source."""
+    folder = Path(str(files("context_synthetic_recognition.data") / BUNDLED_DIR))
+    return folder if folder.is_dir() else None
+
+
 def splits_folder(start: Path | None = None) -> Path:
-    """``datasets/splits`` of the project (searched from ``start``, the working directory).
+    """``datasets/splits`` of the project, else the copy the Windows build carries.
+
+    The project's dataset folder is searched from ``start`` (the working directory).
 
     Raises:
-        DatasetError: There is no dataset folder or it has no ``splits`` sub-folder.
+        DatasetError: The project has no split files and the installation carries none.
     """
     root = find_datasets_root(start)
+    if root is not None and (root / SPLITS_DIR).is_dir():
+        return root / SPLITS_DIR
+    bundled = bundled_splits()
+    if bundled is not None:
+        return bundled
     if root is None:
         raise DatasetError("no datasets folder found (the split files are in datasets/splits)")
-    folder = root / SPLITS_DIR
-    if not folder.is_dir():
-        raise DatasetError(f"{root}: no '{SPLITS_DIR}' folder with the split files")
-    return folder
+    raise DatasetError(f"{root}: no '{SPLITS_DIR}' folder with the split files")
 
 
 def default_output(start: Path | None = None) -> Path:
     """``experiments/comparison`` beside the project's dataset folder.
 
     Raises:
-        DatasetError: There is no dataset folder.
+        DatasetError: There is no dataset folder (give the results folder).
     """
-    return splits_folder(start).parent.parent.joinpath(*OUTPUT_DIR)
+    root = find_datasets_root(start)
+    if root is None:
+        raise DatasetError("no datasets folder found: give the results folder")
+    return root.parent.joinpath(*OUTPUT_DIR)
 
 
 def library_versions() -> dict[str, str]:

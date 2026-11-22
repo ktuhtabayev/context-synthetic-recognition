@@ -19,6 +19,11 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   It is written to a separate `cs-model` table beside Tables 7 and 8, and its rows are added to the
   results and the summary. Its balanced accuracy stays between 48 % and 57 %.
 
+### Changed
+
+- The Windows build carries scikit-learn and the article's split files, so the *Classifiers*
+  page works in `csr-gui.exe`. Its self-test also computes Tables 7 and 8 (ADR-081).
+
 ## [0.9.0] — 2026-11-22 — rebuild on the article
 
 The project is rebuilt on the author's article (ADR-058): its stages, its names and its defaults.

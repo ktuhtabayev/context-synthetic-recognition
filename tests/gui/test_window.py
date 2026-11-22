@@ -20,6 +20,7 @@ from context_synthetic_recognition.config import (
     save_config,
 )
 from context_synthetic_recognition.config.presets import PresetName
+from context_synthetic_recognition.errors import ConfigError, DatasetError
 from context_synthetic_recognition.gui import app as gui_app
 from context_synthetic_recognition.gui.settings import (
     RECENT_CONFIGS,
@@ -30,7 +31,7 @@ from context_synthetic_recognition.gui.settings import (
 from context_synthetic_recognition.gui.theme import DARK, LIGHT
 from context_synthetic_recognition.gui.window import SHORTCUTS, MainWindow
 
-from ..conftest import article_switches, workbook_config
+from ..conftest import ROOT, article_switches, workbook_config
 from .conftest import RUN_TIMEOUT, Run
 
 pytestmark = pytest.mark.gui
@@ -547,6 +548,8 @@ def test_the_self_test(
     assert "ok    experiment: TUPLAM = {a₁, a₃, a₂}" in lines  # the default preset
     assert "ok    results: a table and a figure" in lines
     assert any(line.startswith("ok    export: excel, csv, json") for line in lines)
+    # from source and away from the project there are no split files to compute Tables 7, 8
+    assert "ok    comparison: not checked here — no datasets folder found" in lines[-2]
     assert lines[-1] == "passed"
     assert sorted(path.name for path in tmp_path.iterdir()) == ["self-test.txt"]  # nothing else
     assert settings.language == "system"  # the user's settings are not touched
@@ -557,6 +560,31 @@ def test_the_self_test(
         gui_app.main(["--self-test", str(again)])
     assert exit_info.value.code == 0
     assert again.read_text(encoding="utf-8").splitlines()[-1] == "passed"
+
+
+def test_the_self_test_computes_tables_7_and_8(monkeypatch: pytest.MonkeyPatch) -> None:
+    lines: list[tuple[str, bool]] = []
+
+    def check(what: str, ok: bool) -> None:
+        lines.append((what, ok))
+
+    def nowhere() -> Path:
+        raise DatasetError("no datasets folder found")
+
+    monkeypatch.setattr(gui_app, "splits_folder", nowhere)
+    monkeypatch.setattr(gui_app.sys, "frozen", True, raising=False)
+    gui_app._check_comparison(check)  # the Windows build must carry the split files
+    assert lines[-1] == ("comparison: not checked here — no datasets folder found", False)
+    monkeypatch.setattr(gui_app, "splits_folder", lambda: ROOT / "datasets" / "splits")
+    gui_app._check_comparison(check)
+    assert lines[-1] == ("comparison: 3 splits, SVM 74.85 / 50.68 / 61.14", True)
+
+    def no_sklearn(folder: Path) -> None:
+        raise ConfigError("baseline 'svm' needs scikit-learn")
+
+    monkeypatch.setattr(gui_app, "comparison_job", no_sklearn)
+    gui_app._check_comparison(check)
+    assert lines[-1] == ("comparison: baseline 'svm' needs scikit-learn", False)
 
 
 def test_the_self_test_reports_a_failure_instead_of_crashing(

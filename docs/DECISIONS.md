@@ -1521,6 +1521,22 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   range from 21.33 % to 78.36 %, while the balanced accuracy stays between 48 % and 57 %, near
   chance; SVM reaches 70.63 % on the 336 split.
 
+## ADR-081 — The Windows build carries scikit-learn and the article's split files (author)
+
+*Accepted, 2026-11-22. Amends ADR-055.*
+
+- So that the *Classifiers* page (ADR-079, ADR-080) works in `csr-gui.exe`, the build no longer
+  leaves out scikit-learn and scipy. It also carries a copy of `datasets/splits` in the
+  package's data (`data/split_files`). Only pyarrow (Parquet) stays out.
+- The comparison reads the project's `datasets/splits` when there is one and the bundled copy
+  otherwise. Without a project folder its default results folder is `experiments\comparison`
+  under the folder the application runs in.
+- `scripts/build_exe.py` stops when scikit-learn is not installed, and CI installs the
+  `[sklearn]` extra for the executable, so a build cannot silently lack it.
+- The frozen application's self-test also computes Tables 7 and 8 and fails when scikit-learn
+  or the split files are missing. Run from source, it checks them only where the project's split
+  files are found.
+
 ## Open questions for the author
 
 *Open, 2026-11-22.* Each is flagged where it is used; none is decided silently.

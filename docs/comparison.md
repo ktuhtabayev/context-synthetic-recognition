@@ -146,7 +146,8 @@ This repeats `experiments/comparison/cs-model.md`.
 ```
 
 `--splits` names another folder of split files. In the desktop application, the *Classifiers* page
-runs, writes and checks the same files ([Desktop application](gui.md)).
+runs, writes and checks the same files ([Desktop application](gui.md)). The Windows build carries
+scikit-learn and a copy of the split files, so the page works there too (ADR-081).
 
 The folder `experiments/comparison/` holds:
 
