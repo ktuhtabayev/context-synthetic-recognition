@@ -1186,7 +1186,9 @@ repository.*
 *Accepted, 2026-11-22.*
 
 - The folders `resources/` and `docs/handoff/` are no longer tracked: they stay on the author's
-  disk, ignored by `.gitignore`. Git history, tags and published releases are unchanged.
+  disk, ignored by `.gitignore`. The Git history and the tags are unchanged. (The GitHub Release
+  v0.8.0 was deleted later the same day at the author's request; its tag `v0.8.0` is kept, and
+  v0.9.0 is the only published release.)
 - The four workbooks used as acceptance tests are copied byte for byte to `tests/data/workbooks/`
   under neutral names: *Excel experiment*, *Synthetic features by k-NN*, *Additional features* and
   *Meta-algorithm* (each `[Heart-Disease (10, 13, 2)].xlsx`); a test pins their SHA-256 checksums.
