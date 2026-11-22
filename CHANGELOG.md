@@ -5,6 +5,8 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-11-22 — rebuild on the article
+
 The project is rebuilt on the author's article (ADR-058): its stages, its names and its defaults.
 
 ### Added
