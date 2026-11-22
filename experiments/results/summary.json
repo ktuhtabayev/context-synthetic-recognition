@@ -1,0 +1,1631 @@
+{
+ "article": {
+  "accuracy": {
+   "German/canberra": [
+    [
+     100.0,
+     100.0
+    ],
+    [
+     100.0,
+     100.0
+    ]
+   ],
+   "German/chebyshev": [
+    [
+     100.0,
+     100.0
+    ],
+    [
+     100.0,
+     100.0
+    ]
+   ],
+   "German/euclidean": [
+    [
+     100.0,
+     100.0
+    ],
+    [
+     100.0,
+     100.0
+    ]
+   ],
+   "German/zhuravlyov": [
+    [
+     97.32,
+     100.0
+    ],
+    [
+     100.0,
+     100.0
+    ]
+   ],
+   "Heart/canberra": [
+    [
+     98.68,
+     100.0
+    ],
+    [
+     100.0,
+     100.0
+    ]
+   ],
+   "Heart/chebyshev": [
+    [
+     96.05,
+     100.0
+    ],
+    [
+     100.0,
+     100.0
+    ]
+   ],
+   "Heart/euclidean": [
+    [
+     97.37,
+     100.0
+    ],
+    [
+     100.0,
+     100.0
+    ]
+   ],
+   "Heart/zhuravlyov": [
+    [
+     97.37,
+     100.0
+    ],
+    [
+     100.0,
+     100.0
+    ]
+   ]
+  },
+  "binary_features": {
+   "German/canberra": 27,
+   "German/chebyshev": 23,
+   "German/euclidean": 25,
+   "German/zhuravlyov": 21,
+   "Heart/canberra": 29,
+   "Heart/chebyshev": 30,
+   "Heart/euclidean": 30,
+   "Heart/zhuravlyov": 30
+  },
+  "knn": "k-NN not above 80 %",
+  "samples": {
+   "German/chebyshev": [
+    367,
+    190,
+    177
+   ],
+   "German/euclidean": [
+    341,
+    173,
+    168
+   ],
+   "German/zhuravlyov": [
+    336,
+    196,
+    140
+   ],
+   "Heart/zhuravlyov": [
+    76,
+    36,
+    40
+   ]
+  },
+  "table6": {
+   "chebyshev": [
+    100.0,
+    100.0
+   ],
+   "euclidean": [
+    100.0,
+    100.0
+   ]
+  }
+ },
+ "open_settings": [
+  "Normalization of the CS-model for the Euclidean, Chebyshev and Canberra metrics: none (the article states it only for the R-IPS splits).",
+  "Features of the Canberra metric: the quantitative ones (the metric is defined on them).",
+  "k-NN of the comparison: majority vote with k = 1, 3, 5 and the same metric as the CS-model.",
+  "Table 6 gives one pair of accuracies for two values of α; both α are computed here.",
+  "The article reports 31 synthetic features for k ∈ {3, …, 41}, which has 20 values; the 20 values give 20 synthetic features per metric here.",
+  "R-IPS: both readings of blocking are computed; the training sample is the remaining set E₁."
+ ],
+ "runs": [
+  {
+   "alpha": 0.1,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "zhuravlyov",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 77.06,
+    "accuracy_answered": 83.17,
+    "n": 109,
+    "refusals": 8
+   },
+   "training": {
+    "accuracy": 82.61,
+    "accuracy_answered": 84.18,
+    "n": 161,
+    "refusals": 3
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·3",
+    "ρ·7",
+    "ρ·11",
+    "ρ·9"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "zhuravlyov",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 77.06,
+    "accuracy_answered": 83.17,
+    "n": 109,
+    "refusals": 8
+   },
+   "training": {
+    "accuracy": 82.61,
+    "accuracy_answered": 84.18,
+    "n": 161,
+    "refusals": 3
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·3",
+    "ρ·7",
+    "ρ·11",
+    "ρ·9"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 60.55,
+    "accuracy_answered": 62.86,
+    "n": 109,
+    "refusals": 4
+   },
+   "training": {
+    "accuracy": 67.7,
+    "accuracy_answered": 70.78,
+    "n": 161,
+    "refusals": 7
+   },
+   "tuplam": [
+    "ρ·39",
+    "ρ·5",
+    "ρ·27",
+    "ρ·3",
+    "ρ·33"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 62.39,
+    "accuracy_answered": 66.02,
+    "n": 109,
+    "refusals": 6
+   },
+   "training": {
+    "accuracy": 69.57,
+    "accuracy_answered": 70.89,
+    "n": 161,
+    "refusals": 3
+   },
+   "tuplam": [
+    "ρ·39",
+    "ρ·5",
+    "ρ·3",
+    "ρ·37",
+    "ρ·19"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 57.8,
+    "accuracy_answered": 65.62,
+    "n": 109,
+    "refusals": 13
+   },
+   "training": {
+    "accuracy": 67.08,
+    "accuracy_answered": 72.0,
+    "n": 161,
+    "refusals": 11
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·23",
+    "ρ·3",
+    "ρ·19",
+    "ρ·39"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 62.39,
+    "accuracy_answered": 66.02,
+    "n": 109,
+    "refusals": 6
+   },
+   "training": {
+    "accuracy": 68.32,
+    "accuracy_answered": 71.43,
+    "n": 161,
+    "refusals": 7
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·23",
+    "ρ·3",
+    "ρ·39",
+    "ρ·19"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 78.9,
+    "accuracy_answered": 80.37,
+    "n": 109,
+    "refusals": 2
+   },
+   "training": {
+    "accuracy": 71.43,
+    "accuracy_answered": 75.16,
+    "n": 161,
+    "refusals": 8
+   },
+   "tuplam": [
+    "ρ·33",
+    "ρ·5",
+    "ρ·15",
+    "ρ·3",
+    "ρ·37"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 77.98,
+    "accuracy_answered": 78.7,
+    "n": 109,
+    "refusals": 1
+   },
+   "training": {
+    "accuracy": 73.29,
+    "accuracy_answered": 74.68,
+    "n": 161,
+    "refusals": 3
+   },
+   "tuplam": [
+    "ρ·33",
+    "ρ·5",
+    "ρ·17",
+    "ρ·3",
+    "ρ·15"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "zhuravlyov",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 79.7,
+    "accuracy_answered": 89.2,
+    "n": 197,
+    "refusals": 21
+   },
+   "training": {
+    "accuracy": 64.38,
+    "accuracy_answered": 75.81,
+    "n": 73,
+    "refusals": 11
+   },
+   "tuplam": [
+    "ρ·25",
+    "ρ·9",
+    "ρ·3",
+    "ρ·41",
+    "ρ·33"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "zhuravlyov",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 78.68,
+    "accuracy_answered": 86.59,
+    "n": 197,
+    "refusals": 18
+   },
+   "training": {
+    "accuracy": 71.23,
+    "accuracy_answered": 74.29,
+    "n": 73,
+    "refusals": 3
+   },
+   "tuplam": [
+    "ρ·25",
+    "ρ·9",
+    "ρ·3",
+    "ρ·41",
+    "ρ·5"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 54.31,
+    "accuracy_answered": 66.88,
+    "n": 197,
+    "refusals": 37
+   },
+   "training": {
+    "accuracy": 60.27,
+    "accuracy_answered": 62.86,
+    "n": 73,
+    "refusals": 3
+   },
+   "tuplam": [
+    "ρ·13",
+    "ρ·3",
+    "ρ·11",
+    "ρ·7",
+    "ρ·27"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 54.82,
+    "accuracy_answered": 67.5,
+    "n": 197,
+    "refusals": 37
+   },
+   "training": {
+    "accuracy": 61.64,
+    "accuracy_answered": 64.29,
+    "n": 73,
+    "refusals": 3
+   },
+   "tuplam": [
+    "ρ·13",
+    "ρ·3",
+    "ρ·7",
+    "ρ·11",
+    "ρ·27"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 47.72,
+    "accuracy_answered": 59.87,
+    "n": 197,
+    "refusals": 40
+   },
+   "training": {
+    "accuracy": 54.79,
+    "accuracy_answered": 59.7,
+    "n": 73,
+    "refusals": 6
+   },
+   "tuplam": [
+    "ρ·17",
+    "ρ·9",
+    "ρ·7",
+    "ρ·15",
+    "ρ·5"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 50.76,
+    "accuracy_answered": 57.14,
+    "n": 197,
+    "refusals": 22
+   },
+   "training": {
+    "accuracy": 67.12,
+    "accuracy_answered": 67.12,
+    "n": 73,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·17",
+    "ρ·9",
+    "ρ·7",
+    "ρ·15",
+    "ρ·5"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 63.96,
+    "accuracy_answered": 81.82,
+    "n": 197,
+    "refusals": 43
+   },
+   "training": {
+    "accuracy": 60.27,
+    "accuracy_answered": 70.97,
+    "n": 73,
+    "refusals": 11
+   },
+   "tuplam": [
+    "ρ·35",
+    "ρ·5",
+    "ρ·3",
+    "ρ·19",
+    "ρ·17"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "Heart",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 67.51,
+    "accuracy_answered": 76.44,
+    "n": 197,
+    "refusals": 23
+   },
+   "training": {
+    "accuracy": 73.97,
+    "accuracy_answered": 73.97,
+    "n": 73,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·35",
+    "ρ·5",
+    "ρ·19",
+    "ρ·17",
+    "ρ·21"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "zhuravlyov",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 69.75,
+    "accuracy_answered": 70.04,
+    "n": 476,
+    "refusals": 2
+   },
+   "training": {
+    "accuracy": 71.95,
+    "accuracy_answered": 71.95,
+    "n": 524,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·39"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "zhuravlyov",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 69.75,
+    "accuracy_answered": 70.04,
+    "n": 476,
+    "refusals": 2
+   },
+   "training": {
+    "accuracy": 71.95,
+    "accuracy_answered": 71.95,
+    "n": 524,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·39"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 67.44,
+    "accuracy_answered": 67.44,
+    "n": 476,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 71.95,
+    "accuracy_answered": 71.95,
+    "n": 524,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·27"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 67.44,
+    "accuracy_answered": 67.44,
+    "n": 476,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 71.95,
+    "accuracy_answered": 71.95,
+    "n": 524,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·27"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 67.44,
+    "accuracy_answered": 67.44,
+    "n": 476,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 71.95,
+    "accuracy_answered": 71.95,
+    "n": 524,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·27"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 67.44,
+    "accuracy_answered": 67.44,
+    "n": 476,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 71.95,
+    "accuracy_answered": 71.95,
+    "n": 524,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·27"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 67.86,
+    "accuracy_answered": 68.0,
+    "n": 476,
+    "refusals": 1
+   },
+   "training": {
+    "accuracy": 71.76,
+    "accuracy_answered": 71.76,
+    "n": 524,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·35"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "literal",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 67.86,
+    "accuracy_answered": 68.0,
+    "n": 476,
+    "refusals": 1
+   },
+   "training": {
+    "accuracy": 71.76,
+    "accuracy_answered": 71.76,
+    "n": 524,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·35"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "zhuravlyov",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 70.98,
+    "accuracy_answered": 72.17,
+    "n": 665,
+    "refusals": 11
+   },
+   "training": {
+    "accuracy": 64.18,
+    "accuracy_answered": 64.37,
+    "n": 335,
+    "refusals": 1
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·3",
+    "ρ·5",
+    "ρ·15",
+    "ρ·13"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "zhuravlyov",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 67.97,
+    "accuracy_answered": 67.97,
+    "n": 665,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 63.88,
+    "accuracy_answered": 63.88,
+    "n": 335,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·3",
+    "ρ·5"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 70.38,
+    "accuracy_answered": 71.56,
+    "n": 665,
+    "refusals": 11
+   },
+   "training": {
+    "accuracy": 60.6,
+    "accuracy_answered": 61.33,
+    "n": 335,
+    "refusals": 4
+   },
+   "tuplam": [
+    "ρ·39",
+    "ρ·11",
+    "ρ·41",
+    "ρ·3",
+    "ρ·9"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 60.45,
+    "accuracy_answered": 61.0,
+    "n": 665,
+    "refusals": 6
+   },
+   "training": {
+    "accuracy": 61.79,
+    "accuracy_answered": 61.79,
+    "n": 335,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·39",
+    "ρ·11",
+    "ρ·41",
+    "ρ·3",
+    "ρ·9"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 69.92,
+    "accuracy_answered": 71.65,
+    "n": 665,
+    "refusals": 16
+   },
+   "training": {
+    "accuracy": 58.51,
+    "accuracy_answered": 60.49,
+    "n": 335,
+    "refusals": 11
+   },
+   "tuplam": [
+    "ρ·39",
+    "ρ·3",
+    "ρ·9",
+    "ρ·41",
+    "ρ·5"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 45.41,
+    "accuracy_answered": 45.41,
+    "n": 665,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 56.72,
+    "accuracy_answered": 56.72,
+    "n": 335,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·39",
+    "ρ·3",
+    "ρ·9",
+    "ρ·41"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 67.67,
+    "accuracy_answered": 70.53,
+    "n": 665,
+    "refusals": 27
+   },
+   "training": {
+    "accuracy": 60.9,
+    "accuracy_answered": 62.96,
+    "n": 335,
+    "refusals": 11
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·9",
+    "ρ·17",
+    "ρ·21",
+    "ρ·37"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "zhuravlyov",
+   "test": {
+    "accuracy": 62.56,
+    "accuracy_answered": 65.1,
+    "n": 665,
+    "refusals": 26
+   },
+   "training": {
+    "accuracy": 61.79,
+    "accuracy_answered": 62.54,
+    "n": 335,
+    "refusals": 4
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·9",
+    "ρ·17",
+    "ρ·21",
+    "ρ·5"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "literal",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 73.96,
+    "accuracy_answered": 73.96,
+    "n": 503,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 66.0,
+    "accuracy_answered": 66.0,
+    "n": 497,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·35",
+    "ρ·31"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "literal",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 73.96,
+    "accuracy_answered": 73.96,
+    "n": 503,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 66.0,
+    "accuracy_answered": 66.0,
+    "n": 497,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·35",
+    "ρ·31"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "literal",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 73.96,
+    "accuracy_answered": 73.96,
+    "n": 503,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 65.79,
+    "accuracy_answered": 65.79,
+    "n": 497,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·35",
+    "ρ·31"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "literal",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 73.96,
+    "accuracy_answered": 73.96,
+    "n": 503,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 65.79,
+    "accuracy_answered": 65.79,
+    "n": 497,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·35",
+    "ρ·31"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "literal",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 72.96,
+    "accuracy_answered": 73.84,
+    "n": 503,
+    "refusals": 6
+   },
+   "training": {
+    "accuracy": 66.4,
+    "accuracy_answered": 66.4,
+    "n": 497,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·39",
+    "ρ·37",
+    "ρ·3"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "literal",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 73.36,
+    "accuracy_answered": 73.36,
+    "n": 503,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 66.2,
+    "accuracy_answered": 66.2,
+    "n": 497,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·39"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 47.88,
+    "accuracy_answered": 49.53,
+    "n": 660,
+    "refusals": 22
+   },
+   "training": {
+    "accuracy": 56.18,
+    "accuracy_answered": 56.18,
+    "n": 340,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·25",
+    "ρ·33",
+    "ρ·27",
+    "ρ·29"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 46.97,
+    "accuracy_answered": 46.97,
+    "n": 660,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 51.47,
+    "accuracy_answered": 51.47,
+    "n": 340,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·25"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 48.18,
+    "accuracy_answered": 49.61,
+    "n": 660,
+    "refusals": 19
+   },
+   "training": {
+    "accuracy": 56.18,
+    "accuracy_answered": 56.18,
+    "n": 340,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·25",
+    "ρ·33",
+    "ρ·27",
+    "ρ·29"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 46.97,
+    "accuracy_answered": 46.97,
+    "n": 660,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 50.88,
+    "accuracy_answered": 50.88,
+    "n": 340,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·25"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 66.82,
+    "accuracy_answered": 66.82,
+    "n": 660,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 53.82,
+    "accuracy_answered": 53.82,
+    "n": 340,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·17",
+    "ρ·9",
+    "ρ·5"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "euclidean",
+   "test": {
+    "accuracy": 41.82,
+    "accuracy_answered": 41.82,
+    "n": 660,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 52.06,
+    "accuracy_answered": 52.06,
+    "n": 340,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·17",
+    "ρ·9"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "literal",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 24.07,
+    "accuracy_answered": 24.07,
+    "n": 482,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 36.1,
+    "accuracy_answered": 36.1,
+    "n": 518,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·39"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "literal",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 24.07,
+    "accuracy_answered": 24.07,
+    "n": 482,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 36.1,
+    "accuracy_answered": 36.1,
+    "n": 518,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·39"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "literal",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 24.07,
+    "accuracy_answered": 24.07,
+    "n": 482,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 35.91,
+    "accuracy_answered": 35.91,
+    "n": 518,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·39"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "literal",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 24.07,
+    "accuracy_answered": 24.07,
+    "n": 482,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 35.91,
+    "accuracy_answered": 35.91,
+    "n": 518,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·31",
+    "ρ·39"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "literal",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 74.69,
+    "accuracy_answered": 74.84,
+    "n": 482,
+    "refusals": 1
+   },
+   "training": {
+    "accuracy": 64.67,
+    "accuracy_answered": 64.67,
+    "n": 518,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·27",
+    "ρ·29"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "literal",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 74.48,
+    "accuracy_answered": 74.48,
+    "n": 482,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 65.25,
+    "accuracy_answered": 65.25,
+    "n": 518,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·41",
+    "ρ·27"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 57.59,
+    "accuracy_answered": 58.8,
+    "n": 632,
+    "refusals": 13
+   },
+   "training": {
+    "accuracy": 67.66,
+    "accuracy_answered": 67.66,
+    "n": 368,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·29",
+    "ρ·3",
+    "ρ·35",
+    "ρ·41",
+    "ρ·11"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "euclidean",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 55.06,
+    "accuracy_answered": 55.86,
+    "n": 632,
+    "refusals": 9
+   },
+   "training": {
+    "accuracy": 65.49,
+    "accuracy_answered": 65.49,
+    "n": 368,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·29",
+    "ρ·7",
+    "ρ·35",
+    "ρ·41",
+    "ρ·11"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 51.74,
+    "accuracy_answered": 52.66,
+    "n": 632,
+    "refusals": 11
+   },
+   "training": {
+    "accuracy": 65.22,
+    "accuracy_answered": 65.4,
+    "n": 368,
+    "refusals": 1
+   },
+   "tuplam": [
+    "ρ·27",
+    "ρ·3",
+    "ρ·35",
+    "ρ·41",
+    "ρ·15"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "chebyshev",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 55.7,
+    "accuracy_answered": 57.14,
+    "n": 632,
+    "refusals": 16
+   },
+   "training": {
+    "accuracy": 63.86,
+    "accuracy_answered": 64.74,
+    "n": 368,
+    "refusals": 5
+   },
+   "tuplam": [
+    "ρ·27",
+    "ρ·7",
+    "ρ·41",
+    "ρ·35",
+    "ρ·39"
+   ]
+  },
+  {
+   "alpha": 0.1,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 78.01,
+    "accuracy_answered": 78.01,
+    "n": 632,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 53.8,
+    "accuracy_answered": 53.8,
+    "n": 368,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·29",
+    "ρ·31"
+   ]
+  },
+  {
+   "alpha": 0.2,
+   "dataset": "German",
+   "left_out_zero": 0,
+   "metric": "canberra",
+   "r": 20,
+   "reading": "keep-covering",
+   "split": "chebyshev",
+   "test": {
+    "accuracy": 78.01,
+    "accuracy_answered": 78.01,
+    "n": 632,
+    "refusals": 0
+   },
+   "training": {
+    "accuracy": 53.8,
+    "accuracy_answered": 53.8,
+    "n": 368,
+    "refusals": 0
+   },
+   "tuplam": [
+    "ρ·29",
+    "ρ·31"
+   ]
+  }
+ ],
+ "version": "0.9.0"
+}

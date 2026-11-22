@@ -138,19 +138,19 @@ def test_auc_is_the_mann_whitney_statistic(pairs: list[tuple[float, int]]) -> No
 
 def test_the_margin_analysis_of_the_workbook(experiment_cs_model: CSModel) -> None:
     analysis = margin_analysis(experiment_cs_model)
-    widths = [m.width for m in analysis.with_majorizer]
+    widths = [m.width for m in analysis.with_majorizing_function]
     assert widths == pytest.approx(
         [0.148177267098285, 0.649596904180235, 1.12009851552738, 1.57431737159627]
     )
-    assert [m.width for m in analysis.without_majorizer] == pytest.approx([-0.4] * 4)
+    assert [m.width for m in analysis.without_majorizing_function] == pytest.approx([-0.4] * 4)
     assert analysis.gains[0] == pytest.approx(0.548177267098285)
-    r1 = analysis.with_majorizer[0]
+    r1 = analysis.with_majorizing_function[0]
     assert r1.boundary == pytest.approx(0.186150880520446)
     assert (r1.left_object, r1.right_object) == (0, 1)  # S₁ (max K2), S₂ (min K1)
     assert r1.correct == 10
     assert r1.object_margins[0] == pytest.approx(0.0740886335491426)
     assert r1.predictions.tolist() == TRUTH
-    assert analysis.without_majorizer[0].correct == 7
+    assert analysis.without_majorizing_function[0].correct == 7
 
 
 def test_margin_edge_cases() -> None:

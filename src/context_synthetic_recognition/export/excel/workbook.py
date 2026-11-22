@@ -1,15 +1,15 @@
 """The Excel mirror: a workbook with the sheet structure and style of the author's experiment.
 
 :func:`build_workbook` lays out a run like the workbook *Context-Synthetic Model – Full
-Experiment*: an overview with the workbook map, the parameters with both template/article
-switches, the data, Steps 1–12 table by table, the evaluation and the model-property checks —
-every cell a value computed by the package (no formulas, so the file reads the same in Excel,
+Experiment*: an overview with the workbook map, the parameters with the switches that deviate
+from the article, the data, Steps 1–12 table by table, the evaluation and the model-property checks
+— every cell a value computed by the package (no formulas, so the file reads the same in Excel,
 LibreOffice, pandas and ``csr validate``).
 
-The layout is generated for the data: one *Sorted Neighbors* sheet per base operator, one *Greedy
-upon Weight* sheet per HAG iteration, a table column per permitted k. For Heart-Disease
-(10, 13, 2) with the default configuration every computed cell sits where it sits in the author's
-workbook.
+The layout is generated for the data: one neighbour sheet per base operator, one *Additional
+Feature j* sheet per iteration of the agglomerative algorithm, a table column per admissible k. For
+Heart-Disease (10, 13, 2) with the ``excel-experiment`` preset every computed cell sits where it
+sits in the author's workbook.
 """
 
 from __future__ import annotations
@@ -22,10 +22,10 @@ from openpyxl.workbook import Workbook
 
 from context_synthetic_recognition import __version__
 from context_synthetic_recognition.export.excel import (
+    sheets_additional,
     sheets_checks,
     sheets_context,
     sheets_evaluation,
-    sheets_hag,
     sheets_input,
     sheets_meta,
 )
@@ -103,15 +103,16 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
         SheetEntry(
             PARAMETERS,
             "0 · Parameters",
-            "k range (k_min = 3, k_max = 2·min|Kᵢ| − 3 from the class sizes), HAG parameters "
-            "α, δ, ϰ, cr1, majorizer, the two template/article switches, base operators and rules.",
+            "Admissible k from the class sizes, the parameters of the hierarchical agglomerative "
+            "algorithm (α, δ, ϰ, cr1, majorizing function φ, its two switches), the base "
+            "operators.",
             sheets_input.parameters,
         ),
         SheetEntry(
             DEVIATIONS,
-            "0 · Template deviations",
-            "⚠1 running class centres in θ/γ and ⚠2 double majorizer in STEP 4: exact template "
-            "cells, worked examples on the template data, fixes, and the effect of both switches.",
+            "0 · Switches",
+            "The settings that deviate from the article: what each one changes, worked examples on "
+            "this run's data, and the effect of the two switches of the agglomerative algorithm.",
             sheets_checks.deviations,
         ),
         SheetEntry(
@@ -147,7 +148,7 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
     entries += [
         SheetEntry(
             NORMALIZED,
-            "Step 1 · Scale unification",
+            "Step 1 · Normalization",
             "Quantitative features mapped to [0, 1] by (x − min)/(max − min); nominal codes "
             "unchanged; type, min and max rows.",
             sheets_input.normalized,
@@ -167,7 +168,7 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
         if index == 0:
             text = (
                 f"Rank matrix and one block per object under {operator.label}: neighbours with "
-                "original index, distance, class, same-class count μ and K1 count χ₁; permitted "
+                "original index, distance, class, same-class count μ and K1 count χ₁; admissible "
                 "k marked."
             )
         elif kind == "quantitative":
@@ -191,9 +192,9 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
         SheetEntry(
             MU,
             "Step 4 · Same-class counts μ",
-            "Synthetic Features based on k-NN: μ = same-class neighbours for every permitted k "
+            "Synthetic Features based on k-NN: μ = same-class neighbours for every admissible k "
             "and operator (training-side gradations).",
-            sheets_context.same_class_counts,
+            sheets_context.own_class_counts,
         ),
         SheetEntry(
             PSI,
@@ -205,7 +206,7 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
         SheetEntry(
             MEMBERSHIP,
             "Step 6 · Formulas (1), (2)",
-            "Membership f_k(μ) and stability g_k per feature, the meta-object vector, and Task 2 "
+            "Membership f_k(μ) and stability g_k per feature, the metaobject vector, and Task 2 "
             "— bit representations with their stability.",
             sheets_context.membership,
         ),
@@ -219,23 +220,23 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
         SheetEntry(
             CONTRIBUTION,
             "Step 8 · Formula (6)",
-            "Gradation counts, weights ω, contributions η(1), η(2), Ψ(r) as contribution values "
-            "and ranks — the HAG input (template: Dataset (Contribution & Weight)).",
+            "Gradation counts, informativeness ω, contributions η(1), η(2), Ψ(r) as contribution "
+            "values and ranks — the input of the hierarchical agglomerative algorithm.",
             sheets_context.contribution,
         ),
     ]
     blocks = (
-        "STEP 3 candidate blocks (b, majorizer, centres, θ, γ, θ/γ), STEP 3 summary, STEP 4 "
-        "update and stopping rule"
+        "STEP 3 candidate blocks (b, majorizing function, class means, θ, γ, θ/γ), STEP 3 summary, "
+        "STEP 4 update and stopping rule"
     )
     for j, name in enumerate(plan.greedy, start=1):
         start = "STEP 1–2 (first feature = max ω), " if j == 1 else ""
         entries.append(
             SheetEntry(
                 name,
-                f"Step 9 · Latent feature {j}",
+                f"Step 9 · Additional feature {j}",
                 f"{start}{blocks} → r{subscript(j)}.",
-                lambda b, j=j: sheets_hag.greedy(b, j),  # type: ignore[misc]
+                lambda b, j=j: sheets_additional.greedy(b, j),  # type: ignore[misc]
             )
         )
     protocols = [protocol_title(p.protocol) for p in view.result.protocols]
@@ -245,9 +246,9 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
         SheetEntry(
             META_DATASET,
             "Step 10 · Meta-dataset",
-            "TUPLAM order, initial features y₀ … y_p (contribution values) and latent features "
-            "r₁ … r_p; Y = (y, r).",
-            sheets_meta.meta_dataset,
+            "TUPLAM order, initial features y₀ … y_p (contribution values) and additional features "
+            "d₁ … d_p; Y = (y, d).",
+            sheets_meta.meta_table,
         ),
         SheetEntry(
             BRACE,
@@ -260,7 +261,7 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
             META,
             "Step 12 · Classification",
             "Meta-algorithm Steps 1–5 for the new object: B1/B2 with original-feature and "
-            "latent-sign conditions, Step 3 checks, Step 4 class, Step 5 end.",
+            "additional-sign conditions, Step 3 checks, Step 4 class, Step 5 end.",
             sheets_meta.meta,
         ),
         SheetEntry(
@@ -273,8 +274,8 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
         SheetEntry(
             MARGINS,
             "Evaluation · Margins",
-            "Margins of r₁ … r_p with and without majorizer: boundary b, left/right boundaries, "
-            "widths, object margins, comparison.",
+            "Margins of d₁ … d_p with and without majorizing function: boundary b, left/right "
+            "boundaries, widths, object margins, comparison.",
             sheets_evaluation.margins,
         ),
         SheetEntry(
@@ -305,13 +306,13 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
     for protocol in view.cross_validations:
         if protocol.protocol == LEAVE_ONE_OUT:
             text = (
-                f"Leave-one-out folds (whole pipeline re-fitted on {m - 1} objects): permitted k, "
+                f"Leave-one-out folds (whole pipeline re-fitted on {m - 1} objects): admissible k, "
                 "TUPLAM, description, scores, prediction; the baselines."
             )
         else:
             text = (
                 f"The folds of the {protocol_title(protocol.protocol)} (whole pipeline re-fitted "
-                "per fold): permitted k, TUPLAM, description, scores, prediction; the baselines."
+                "per fold): admissible k, TUPLAM, description, scores, prediction; the baselines."
             )
         entries.append(
             SheetEntry(
@@ -326,8 +327,8 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
             SheetEntry(
                 SENSITIVITY,
                 "Evaluation · Sensitivity",
-                "The two template-vs-article switches: results of all four combinations and the "
-                "package’s replication of the templates.",
+                "The two switches of the agglomerative algorithm: the results of all four "
+                "combinations.",
                 sheets_evaluation.sensitivity,
             )
         )
@@ -342,8 +343,8 @@ def sheet_entries(book: Book) -> list[SheetEntry]:
         SheetEntry(
             VALIDATION,
             "Checks · Validation",
-            "The key values of the run as computed by the package; the highlighted template "
-            "deviations; how to re-validate this file.",
+            "The key values of the run as computed by the package; the switches that deviate "
+            "from the article; how to re-validate this file.",
             sheets_checks.validation,
         ),
     ]

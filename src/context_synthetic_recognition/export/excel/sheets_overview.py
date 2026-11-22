@@ -1,7 +1,7 @@
 """The *Overview* sheet.
 
-The workbook map, the pipeline specification, the key results, the two template deviations, the
-colour legend and the notes.
+The workbook map, the pipeline specification, the key results, the switches that deviate from
+the article, the colour legend and the notes.
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from context_synthetic_recognition import __version__
+from context_synthetic_recognition.config.presets import deviation
 from context_synthetic_recognition.export.excel.common import (
     ACCURACY,
     BRACE,
@@ -74,11 +75,11 @@ def _specification(book: Book) -> list[tuple[str, str, str]]:
             ),
         ),
         (
-            "Scale unification",
+            "Normalization",
             NORMALIZED,
             (
                 "x′ = (x − min)/(max − min) for j ∈ I, training min/max   →   "
-                "core.normalizers.minmax → Scaling.transform"
+                "core.local_context.normalizers.minmax → Scaling.transform"
             ),
         ),
         (
@@ -86,7 +87,8 @@ def _specification(book: Book) -> list[tuple[str, str, str]]:
             plan.distances,
             (
                 "Zhuravlyov metric on I ∪ J, on I and on J (article: variants of Ψ)   →   "
-                "core.metrics.zhuravlyov, core.operators.BaseOperator.distances"
+                "core.local_context.metrics.zhuravlyov, "
+                "core.local_context.operators.BaseOperator.distances"
             ),
         ),
         (
@@ -94,25 +96,26 @@ def _specification(book: Book) -> list[tuple[str, str, str]]:
             plan.neighbours[0],
             (
                 "order by (ρ, original index), self excluded; μ and χ₁ per rank   →   "
-                "core.neighbours.neighbour_order, core.encoders.k1_counts"
+                "core.local_context.neighbours.neighbour_order, "
+                "core.synthetic_features.encoders.k1_counts"
             ),
         ),
         (
-            "Permitted k",
+            "Admissible k",
             PARAMETERS,
-            "k = 3, 5, …, 2·min|Kᵢ| − 3   →   core.k_strategies.permitted_k",
+            "odd k = 3, 5, …, k ≤ min|Kᵢ|   →   core.local_context.admissible_k.min_class",
         ),
         (
             "Formula (5) — Ψ(r)",
             PSI,
-            "aᵤ = 1 if χ₁ > [k/2], 2 if χ₂ > [k/2]   →   core.encoders (formula-5)",
+            "aᵤ = 1 if χ₁ > [k/2], 2 if χ₂ > [k/2]   →   core.synthetic_features.encoders",
         ),
         (
             "Formulas (1), (2)",
             MEMBERSHIP,
             (
-                "f_k(μ), stability g_k (β = k), meta-object, bit masks   →   "
-                "core.membership.membership_table, stability, bit_masks"
+                "f_k(μ), stability g_k (β = k), metaobject, majority chains   →   "
+                "core.synthetic_features.membership.membership_table, stability, bit_masks"
             ),
         ),
         (
@@ -120,7 +123,7 @@ def _specification(book: Book) -> list[tuple[str, str, str]]:
             OMEGA,
             (
                 "G_k = (q₁ + q₂)/2, ω = share of objects on the correct side   →   "
-                "core.membership.boundary, informativeness"
+                "core.synthetic_features.membership.boundary, informativeness"
             ),
         ),
         (
@@ -128,22 +131,23 @@ def _specification(book: Book) -> list[tuple[str, str, str]]:
             CONTRIBUTION,
             (
                 "η(j) = ω(α¹ⱼ/|K1| − α²ⱼ/|K2|), Ψ(r) as contribution values   →   "
-                "core.contributions.contributions"
+                "core.synthetic_features.contributions.contributions"
             ),
         ),
         (
-            "HAG, Steps 1–5",
+            "hierarchical agglomerative algorithm, Steps 1–5",
             plan.greedy[0] if plan.greedy else CONTRIBUTION,
             (
-                "u = argmax ω, b = R + η, majorizer, θ/γ, q = argmin, stop rule   →   "
-                "core.hag.hag(C, w, y, config.hag)"
+                "u = argmax ω, b = R + η, majorizing function, θ/γ, q = argmin, stop rule   →   "
+                "core.additional_features.agglomerative.agglomerative(C, ω, y, "
+                "config.additional_features)"
             ),
         ),
         (
             "Meta-description Y",
             META_DATASET,
             (
-                "Y = (y₀ … y_p, r₁ … r_p), aᵢ and dᵢ   →   core.model.fit_model → "
+                "Y = (y₀ … y_p, d₁ … d_p), aᵢ and dᵢ   →   core.model.fit_model → "
                 "CSModel.meta_dataset, CSModel.description"
             ),
         ),
@@ -156,8 +160,8 @@ def _specification(book: Book) -> list[tuple[str, str, str]]:
             "Meta-algorithm, Steps 1–5",
             META,
             (
-                "B1, B2 filtering, score comparison, refusal   →   core.meta.meta_classify, "
-                "CSModel.classify(x)"
+                "B1, B2 filtering, score comparison, refusal   →   "
+                "core.meta_algorithm.algorithm.meta_classify, CSModel.classify(x)"
             ),
         ),
         (
@@ -171,35 +175,35 @@ def _specification(book: Book) -> list[tuple[str, str, str]]:
         (
             "Validation",
             VALIDATION,
-            (
-                "workbook vs package; template replication   →   "
-                "services.validation.validate_workbook (csr validate)"
-            ),
+            ("workbook vs package   →   services.validation.validate_workbook (csr validate)"),
         ),
     ]
 
 
 def _key_results(view: RunView) -> list[tuple[str, Any, str, str]]:
     """Figure, value, sheet, value style."""
-    trace, hag, result = view.trace, view.hag, view.result
-    formula = trace.permitted_k.rule == "formula"
+    trace, agglomerative, result = view.trace, view.agglomerative, view.result
+    ranges = {
+        "min-class": "Admissible k  (k_min = 3, k_max = min|Kᵢ|, the article)",
+        "twice-min-class": "Admissible k  (k_min = 3, k_max = 2·min|Kᵢ| − 3)",
+    }
     rows: list[tuple[str, Any, str, str]] = [
         (
-            "Permitted k  (k_min = 3, k_max = 2·min|Kᵢ| − 3)"
-            if formula
-            else f"Permitted k  (strategy “{trace.permitted_k.rule}”)",
-            trace.permitted_k.label,
+            ranges.get(
+                trace.admissible_k.rule, f"Admissible k  (strategy “{trace.admissible_k.rule}”)"
+            ),
+            trace.admissible_k.label,
             PARAMETERS,
             "overview_value",
         ),
         ("Synthetic features r = |Ψ(r)|", trace.r, PARAMETERS, "overview_value"),
         (
             "TUPLAM (selected synthetic features, in order)",
-            hag.label,
+            agglomerative.label,
             META_DATASET,
             "overview_value",
         ),
-        ("Latent (additional) features p", hag.p, META_DATASET, "overview_value"),
+        ("Additional (latent) features p", agglomerative.p, META_DATASET, "overview_value"),
     ]
     definitions = {"resubstitution": " (Definition 2)", "leave-one-out": " (Definition 3)"}
     for protocol in result.protocols:
@@ -257,8 +261,8 @@ def overview(book: Book, entries: Sequence[SheetEntry]) -> None:
     sheet.put(
         3,
         2,
-        f"{data.name}  ·  {operators}  ·  Ψ(r) by (5)  ·  ω by (4)  ·  η by (6)  ·  HAG  ·  "
-        "meta-algorithm  ·  evaluation",
+        f"{data.name}  ·  {operators}  ·  Ψ(r) by (5)  ·  ω by (4)  ·  η by (6)  ·  agglomerative "
+        "algorithm  ·  meta-algorithm  ·  evaluation",
         "overview_subtitle",
     )
     sheet.join(3, 2, 4)
@@ -317,22 +321,18 @@ def overview(book: Book, entries: Sequence[SheetEntry]) -> None:
         row += 1
     sheet.height(row, GAP_HEIGHT)
 
-    # ---- the two template deviations
+    # ---- the switches of the agglomerative algorithm
     row += 1
     _section(
         sheet,
         row,
-        "⚠ Template calculations that differ from the article (default = template; configuration "
-        "switches, shown on the Parameters sheet)",
+        "⚠ Two switches of the agglomerative algorithm deviate from the article when on "
+        "(configuration switches, shown on the Parameters sheet)",
     )
     effect = switch_effect(view)
     lines = [
-        (
-            "•  θ and γ are measured from running partial class means instead of the final class "
-            "means "
-            "M₁ and M₂;"
-        ),
-        "•  in STEP 4 the majorizer is applied twice instead of once.",
+        f"•  {deviation('class_means').statement};",
+        f"•  {deviation('majorizing_passes').statement}.",
         f"   Effect on this dataset — {effect}.",
     ]
     row += 1
@@ -343,7 +343,7 @@ def overview(book: Book, entries: Sequence[SheetEntry]) -> None:
     sheet.link(
         row,
         2,
-        "→  Template Deviations: exact template cells, worked examples, fixes and effect",
+        f"→  {DEVIATIONS}: what each switch changes, worked examples and the effect",
         DEVIATIONS,
     )
     for column, style in ((3, "tail"), (4, "tail"), (5, "tail_end")):
@@ -367,14 +367,20 @@ def overview(book: Book, entries: Sequence[SheetEntry]) -> None:
         ("legend_nominal", "Nominal feature values"),
         ("legend_class", f"Class label ({trace.classes[0]} / {trace.classes[1]})"),
         ("legend_synthetic", "Synthetic feature values (μ, aᵤ, f, masks)"),
-        ("legend_latent_header", "Permitted-k neighbourhood (Step 3) / latent header"),
+        ("legend_additional_header", "Admissible-k neighbourhood (Step 3) / additional header"),
         ("legend_good", "Selected / same-class / correct"),
         ("legend_initial", "Initial features y in the meta-dataset"),
-        ("legend_latent", "Additional (latent) features r"),
+        ("legend_additional", "Additional (latent) features r"),
         ("legend_key", "Key label / parameter"),
         ("legend_input", "Input value (blue) — Parameters, new object"),
-        ("legend_warn1", "Warning / ⚠1 running class centres (HAG columns I–L)"),
-        ("legend_warn2", "⚠2 STEP 4 majorizer applied twice (HAG STEP 4 columns H–I)"),
+        (
+            "legend_warn1",
+            "Warning / ⚠1 running class means (hierarchical agglomerative algorithm columns I–L)",
+        ),
+        (
+            "legend_warn2",
+            "⚠2 STEP 4 majorizing function applied twice (agglomerative STEP 4 columns H–I)",
+        ),
     ]
     row += 1
     for style, text in legend:
@@ -388,7 +394,7 @@ def overview(book: Book, entries: Sequence[SheetEntry]) -> None:
     row += 1
     _section(sheet, row, "Notes")
     run = f"the run {view.run_id}" if view.run_id else "a run that was not saved"
-    decimals = view.config.context.distance_decimals
+    decimals = view.config.local_context.distance_decimals
     notes = [
         (
             f"•  This workbook was generated by context-synthetic-recognition {__version__} from "
@@ -404,13 +410,11 @@ def overview(book: Book, entries: Sequence[SheetEntry]) -> None:
         ),
         (
             f"•  Distances are rounded to {decimals} decimals; ties are broken by the smaller "
-            "original index — the rules of the Excel experiment and of its reference engine."
+            "original index — the rules of the Excel experiment."
         ),
         (
-            "•  The template workbooks (k-NN synthetic features, HAG, meta-algorithm, model "
-            "evaluation) define the calculations this layout follows; the two template "
-            "calculations "
-            "that differ from the article are switches."
+            "•  The layout follows the Excel experiment workbook of the CS-model; the settings "
+            "that deviate from the article are configuration switches (see “Switches”)."
         ),
         *(f"•  Left out for size — {message}" for message in book.omitted),
     ]

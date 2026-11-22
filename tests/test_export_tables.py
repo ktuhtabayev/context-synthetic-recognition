@@ -67,14 +67,16 @@ EXPERIMENT_TABLES = [
     "chi1",
     "psi",
     "membership",
-    "bit-masks",
+    "metaobject",
+    "class-sequence-masks",
+    "majority-chains",
     "synthetic-features",
     "object-membership",
     "correct-side",
     "contributions",
-    "hag-iterations",
-    "hag-candidates",
-    "hag-chosen-blocks",
+    "agglomerative-iterations",
+    "agglomerative-candidates",
+    "agglomerative-chosen-blocks",
     "meta-dataset",
     "training-description",
     "new-object",
@@ -113,7 +115,7 @@ def test_the_view_of_the_experiment(experiment_view: RunView, experiment: Datase
     assert view.dataset is experiment
     assert view.labels == (2, 1, 2, 1, 1, 1, 2, 2, 2, 2)
     assert view.slots == 5  # min(ϰ, r) = min(5, 6)
-    assert view.hag.label == "{a₆, a₃, a₁, a₂, a₄}"
+    assert view.agglomerative.label == "{a₆, a₃, a₁, a₂, a₄}"
     # the default demonstration: S₁ left out of its own context reproduces its training row
     demo = view.new_object
     assert demo.exclude == 0
@@ -200,15 +202,15 @@ def test_the_tables_of_the_experiment(experiment_view: RunView, tables: TableSet
     summary = dict(tables["summary"].rows)
     assert summary["Dataset"] == experiment_view.dataset.name
     assert summary["Features n"] == "13 (6 quantitative, 7 nominal)"
-    assert summary["Permitted k (formula)"] == "3, 5"
+    assert summary["Admissible k (twice-min-class)"] == "3, 5"
     assert summary["TUPLAM (selected synthetic features, in order)"] == "{a₆, a₃, a₁, a₂, a₄}"
     assert summary["crit per iteration"] == "0.4282, 0.3053, 0.2734, 0.2710"
     assert summary["Accuracy — leave-one-out"] == 0.2
     assert summary["AUC — leave-one-out"] == pytest.approx(0.2708333333333333)
     assert summary["New object (S₁ left out of its context): class"] == "Class 1"
     assert [k for k in summary if k.startswith("⚠")] == [
-        "⚠ Template calculation (ADR-002)",
-        "⚠ Template calculation (ADR-003)",
+        "⚠ Deviates from the article (ADR-002)",
+        "⚠ Deviates from the article (ADR-003)",
     ]
     psi = tables["psi"]
     assert psi.columns[1] == "a₁ (ρ, k = 3)"
@@ -216,8 +218,8 @@ def test_the_tables_of_the_experiment(experiment_view: RunView, tables: TableSet
     assert tables["features"].rows[1] == ("x₂", "nominal (J)", 0, None, None, 2)
     assert tables["distances-rho-j"].rows[0][:4] == ("S₁", 0, 3, 4)
     assert tables["neighbours-rho"].rows[0][:4] == ("S₁", 1, "S₉", 9)
-    assert tables["hag-iterations"].rows[0][:3] == (0, "STEP 2 · u = argmax ω", "a₆")
-    assert tables["hag-iterations"].rows[0][3] is None
+    assert tables["agglomerative-iterations"].rows[0][:3] == (0, "Step 2 · u = argmax ω", "a₆")
+    assert tables["agglomerative-iterations"].rows[0][3] is None
     assert tables["resubstitution"].rows[0][:4] == ("S₁", "(2, 1, 2, 2, 2)", 2, 0)
     assert tables["new-object-steps"].title.endswith("— Class 1")
     assert tables["roc-leave-one-out"].rows[0] == ("+∞", 0.0, 0.0)
@@ -274,7 +276,7 @@ def test_tables_of_other_shapes(name: str) -> None:
         assert csv_text(table).count("\n") == len(table.rows) + 1
         assert markdown_text(table)
         assert_plain_latex(latex_table(table), f"{name}/{table.key}")
-    assert ("margins" in keys) == (view.hag.p > 0)
+    assert ("margins" in keys) == (view.agglomerative.p > 0)
     assert "sensitivity" not in keys
     for protocol in view.result.protocols:
         assert f"folds-{protocol.protocol}" in keys
@@ -293,11 +295,11 @@ def test_tables_of_the_other_shapes_in_detail() -> None:
     assert not [k for k in summary if k.startswith("⚠")]  # the article's switches
     nominal = run_tables(shape("nominal"))
     assert nominal.get("margins") is None
-    assert nominal["hag-candidates"].rows == ()
-    assert dict(nominal["summary"].rows)["Latent (additional) features p"] == 0
+    assert nominal["agglomerative-candidates"].rows == ()
+    assert dict(nominal["summary"].rows)["Additional (latent) features p"] == 0
     assert {row[1] for row in nominal["predictions-repeated-k-fold"].rows} == {0, 1}
     literal = dict(run_tables(shape("literal"), keys=["summary"])["summary"].rows)
-    assert literal["Permitted k (formula)"] == "3, 5, 7, …, 237 (118 values)"
+    assert literal["Admissible k (twice-min-class)"] == "3, 5, 7, …, 237 (118 values)"
 
 
 def test_a_table_checks_its_rows() -> None:

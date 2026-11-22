@@ -1,10 +1,9 @@
 """The experiment workbook's map, the evaluation sheets.
 
 *Margin Analysis*, *Accuracy*, *Confusion Matrix*, *Precision, Recall, F1 Score*, *ROC Curve & AUC*,
-*Leave-One-Out*, *Sensitivity (Switches)* (the experiment's four switch settings), *Model
-Properties* and *Validation*. The template-replication rows of *Sensitivity (Switches)* and the
-template tables of *Template Deviations* need the template workbooks; they are checked by
-validating those workbooks themselves.
+*Leave-One-Out*, the switch sensitivity (the experiment's four switch settings), *Model
+Properties* and *Validation*. The worked examples on the check workbooks' data are checked by
+validating those workbooks themselves; text cells that only word the switches are not compared.
 """
 
 from __future__ import annotations
@@ -21,7 +20,14 @@ from context_synthetic_recognition.evaluation.metrics import (
     classification_metrics,
 )
 from context_synthetic_recognition.evaluation.roc import roc_curve
-from context_synthetic_recognition.notation import DASH, join_values, object_name, synthetic_name
+from context_synthetic_recognition.notation import (
+    DASH,
+    additional_name,
+    join_values,
+    object_name,
+    synthetic_name,
+)
+from context_synthetic_recognition.services.validation import sheets
 from context_synthetic_recognition.services.validation.checks import (
     Cell,
     Check,
@@ -36,8 +42,8 @@ from context_synthetic_recognition.services.validation.subject import (
     at,
 )
 
-LATENT_SLOTS = 4
-"""The workbook shows r₁ … r₄."""
+ADDITIONAL_SLOTS = 4
+"""The workbook shows d₁ … d₄."""
 BASELINE_ROWS = 6
 """k-NN vote ρ, ρ_I, ρ_J with k = 3 and 5."""
 POSITIVE = 1
@@ -73,14 +79,18 @@ def _percent(value: float) -> str:
 # ---------------------------------------------------------------- Margin Analysis
 
 
-def _margins(s: ExperimentSubject, with_majorizer: bool) -> tuple[Margin, ...]:
+def _margins(s: ExperimentSubject, with_majorizing_function: bool) -> tuple[Margin, ...]:
     analysis = s.evaluation.margins
-    return analysis.with_majorizer if with_majorizer else analysis.without_majorizer
+    return (
+        analysis.with_majorizing_function
+        if with_majorizing_function
+        else analysis.without_majorizing_function
+    )
 
 
-def _margin_rows(s: ExperimentSubject, j: int, with_majorizer: bool) -> Grid:
+def _margin_rows(s: ExperimentSubject, j: int, with_majorizing_function: bool) -> Grid:
     classes = _classes(s)
-    margins = _margins(s, with_majorizer)
+    margins = _margins(s, with_majorizing_function)
     if j >= len(margins):
         return [[DASH, classes[t], DASH, DASH] for t in range(s.trace.m)]
     m = margins[j]
@@ -90,8 +100,8 @@ def _margin_rows(s: ExperimentSubject, j: int, with_majorizer: bool) -> Grid:
     ]
 
 
-def _margin_summary(s: ExperimentSubject, j: int, with_majorizer: bool) -> Grid:
-    margins = _margins(s, with_majorizer)
+def _margin_summary(s: ExperimentSubject, j: int, with_majorizing_function: bool) -> Grid:
+    margins = _margins(s, with_majorizing_function)
     if j >= len(margins):
         return [[DASH, None] for _ in range(5)]
     m = margins[j]
@@ -108,40 +118,45 @@ def _margin_comparison(s: ExperimentSubject) -> Grid:
     analysis = s.evaluation.margins
 
     def widths(margins: tuple[Margin, ...]) -> list[Cell]:
-        return [margins[j].width if j < len(margins) else DASH for j in range(LATENT_SLOTS)]
+        return [margins[j].width if j < len(margins) else DASH for j in range(ADDITIONAL_SLOTS)]
 
     gains: list[Cell] = [
-        analysis.gains[j] if j < len(analysis.gains) else DASH for j in range(LATENT_SLOTS)
+        analysis.gains[j] if j < len(analysis.gains) else DASH for j in range(ADDITIONAL_SLOTS)
     ]
-    return [widths(analysis.with_majorizer), widths(analysis.without_majorizer), gains]
+    return [
+        widths(analysis.with_majorizing_function),
+        widths(analysis.without_majorizing_function),
+        gains,
+    ]
 
 
 def _margin_grid(
-    fn: Callable[[ExperimentSubject, int, bool], Grid], j: int, with_majorizer: bool
+    fn: Callable[[ExperimentSubject, int, bool], Grid], j: int, with_majorizing_function: bool
 ) -> Callable[[ExperimentSubject], Grid]:
-    return lambda s: fn(s, j, with_majorizer)
+    return lambda s: fn(s, j, with_majorizing_function)
 
 
 def _margin_checks() -> list[ExperimentCheck]:
     sheet = "Margin Analysis"
     checks: list[ExperimentCheck] = []
-    for j in range(LATENT_SLOTS):
+    for j in range(ADDITIONAL_SLOTS):
         first = 1 + 6 * j
         a, b, name = col(first), col(first + 3), col(first + 1)
-        for with_majorizer, top, summary in ((True, 10, 21), (False, 29, 40)):
-            what = f"r{j + 1} {'with' if with_majorizer else 'without'} majorizer"
+        for with_majorizing_function, top, summary in ((True, 10, 21), (False, 29, 40)):
+            mode = "with" if with_majorizing_function else "without"
+            what = f"{additional_name(j)} {mode} majorizing function"
             checks += [
                 Check(
                     sheet,
                     f"{a}{top}:{b}{top + 9}",
                     f"{what}: d, class, margin, ŷ",
-                    _margin_grid(_margin_rows, j, with_majorizer),
+                    _margin_grid(_margin_rows, j, with_majorizing_function),
                 ),
                 Check(
                     sheet,
                     f"{a}{summary}:{name}{summary + 4}",
                     f"{what}: b, max K2, min K1, width, correct",
-                    _margin_grid(_margin_summary, j, with_majorizer),
+                    _margin_grid(_margin_summary, j, with_majorizing_function),
                 ),
             ]
     checks.append(Check(sheet, "B48:E50", "widths with, without, gain", _margin_comparison))
@@ -288,7 +303,7 @@ def _loo_rows(s: ExperimentSubject) -> Grid:
             [
                 classes[i],
                 *sizes,
-                join_values(fold.permitted_k) if fold.permitted_k else DASH,
+                join_values(fold.admissible_k) if fold.admissible_k else DASH,
                 fold.r if fold.r is not None else DASH,
                 "{" + ", ".join(fold.tuplam_names or ()) + "}",
                 description,
@@ -306,12 +321,11 @@ def _loo_rows(s: ExperimentSubject) -> Grid:
 
 
 def _deviation_effects(s: ExperimentSubject) -> Grid:
-    """*Template Deviations* rows 53–56: the switches' effect on this experiment."""
+    """The workbook's switch sheet, rows 53–56 from column B: the switches' effect here."""
     return [
         [
-            v.label,
-            v.centres.value,
-            v.step4_passes,
+            v.class_means.value,
+            v.majorizing_passes,
             v.tuplam,
             v.resubstitution,
             v.leave_one_out,
@@ -322,12 +336,20 @@ def _deviation_effects(s: ExperimentSubject) -> Grid:
     ]
 
 
-def _sensitivity_rows(s: ExperimentSubject) -> Grid:
+def _sensitivity_switches(s: ExperimentSubject) -> Grid:
     return [
         [
-            f"{1 if v.centres.value == 'running' else 2} · {v.centres.value}",
-            v.step4_passes,
-            v.label,
+            f"{1 if v.class_means.value == 'running' else 2} · {v.class_means.value}",
+            v.majorizing_passes,
+        ]
+        for v in s.evaluation.sensitivity
+    ]
+
+
+def _sensitivity_rows(s: ExperimentSubject) -> Grid:
+    """Columns D–I of the four switch settings (column C holds the workbook's own wording)."""
+    return [
+        [
             v.tuplam,
             ", ".join(f"{c:.4f}" for c in v.crit),
             v.resubstitution,
@@ -344,7 +366,7 @@ def _sensitivity_rows(s: ExperimentSubject) -> Grid:
 
 def _determinacy(s: ExperimentSubject) -> Grid:
     d = s.evaluation.properties.determinacy
-    k_max = s.trace.permitted_k.k_max if s.trace.permitted_k.k_max is not None else d.k_max
+    k_max = s.trace.admissible_k.k_max if s.trace.admissible_k.k_max is not None else d.k_max
     return [
         [
             f"{d.neighbours} ≥ {k_max}",
@@ -388,7 +410,7 @@ _PAIRS = ((0, 1), (0, 2), (1, 2))
 
 
 def _equal_sets(s: ExperimentSubject) -> Grid:
-    ks = s.trace.permitted_k.ks
+    ks = s.trace.admissible_k.ks
     columns = [equal_neighbour_sets(s.trace, a, b, k).astype(int) for a, b in _PAIRS for k in ks]
     return [[int(c[t]) for c in columns] for t in range(s.trace.m)]
 
@@ -418,7 +440,7 @@ def _sufficiency(s: ExperimentSubject) -> Grid:
 
 
 def _equivalence(s: ExperimentSubject) -> Grid:
-    ks = s.trace.permitted_k.ks
+    ks = s.trace.admissible_k.ks
     m = s.trace.m
     counts = {
         (p.first, p.second, p.k): p.equal_sets for p in s.evaluation.properties.operator_pairs
@@ -438,7 +460,7 @@ def _identical(s: ExperimentSubject) -> Grid:
 
 
 def _ties(s: ExperimentSubject) -> Grid:
-    ks = s.trace.permitted_k.ks
+    ks = s.trace.admissible_k.ks
     m = s.trace.m
     ties = s.evaluation.properties.boundary_ties
     grid: Grid = [[f"objects with a tie, k = {k}" for k in ks]]
@@ -496,7 +518,7 @@ def _property_checks() -> list[ExperimentCheck]:
 
 
 def _validation_rows(s: ExperimentSubject) -> Grid:
-    trace, hag = s.trace, s.hag
+    trace, agglomerative = s.trace, s.agglomerative
     grid: Grid = []
 
     def text(value: str) -> None:
@@ -505,18 +527,20 @@ def _validation_rows(s: ExperimentSubject) -> Grid:
     def number(value: float) -> None:
         grid.append([value, value, 0.0, "✓"])
 
-    text(trace.permitted_k.label)
-    number(trace.permitted_k.k_max or max(trace.permitted_k.ks))
+    text(trace.admissible_k.label)
+    number(trace.admissible_k.k_max or max(trace.admissible_k.ks))
     number(trace.r)
     for f in trace.features:
         number(f.omega)
     number(0.0)
-    text(hag.label)
-    for j in range(LATENT_SLOTS):
+    text(agglomerative.label)
+    for j in range(ADDITIONAL_SLOTS):
         grid.append(
-            [hag.crit[j], hag.crit[j], 0.0, "✓"] if j < len(hag.crit) else [DASH, DASH, DASH, "✓"]
+            [agglomerative.crit[j], agglomerative.crit[j], 0.0, "✓"]
+            if j < len(agglomerative.crit)
+            else [DASH, DASH, DASH, "✓"]
         )
-    for _ in range(LATENT_SLOTS):
+    for _ in range(ADDITIONAL_SLOTS):
         number(0.0)
     text(", ".join(str(int(d)) for d in s.training.decisions))
     number(0.0)
@@ -524,13 +548,14 @@ def _validation_rows(s: ExperimentSubject) -> Grid:
     return grid
 
 
-def _engine_table(s: ExperimentSubject) -> Grid:
-    latent = s.model.meta_dataset.latent
+def _package_table(s: ExperimentSubject) -> Grid:
+    additional = s.model.meta_table.additional
     meta = s.training.meta
     rows_: Grid = []
     for t in range(s.trace.m):
         r: list[Cell] = [
-            float(latent[t, j]) if j < latent.shape[1] else DASH for j in range(LATENT_SLOTS)
+            float(additional[t, j]) if j < additional.shape[1] else DASH
+            for j in range(ADDITIONAL_SLOTS)
         ]
         rows_.append([*r, float(meta.scores1[t]), float(meta.scores2[t])])
     return rows_
@@ -540,23 +565,14 @@ def _validation_checks() -> list[ExperimentCheck]:
     sheet = "Validation"
     return [
         Check(
-            sheet,
-            "A8",
-            "switch state",
-            lambda s: [
-                ["Switches at the default (template) setting — the engine reference below applies"]
-            ],
-            when=lambda s: (
-                s.hag.settings.centres.value == "running" and s.hag.settings.step4_passes == 2
-            ),
+            sheet, "B11:E32", "package value, workbook value, difference, pass", _validation_rows
         ),
-        Check(sheet, "B11:E32", "engine value, workbook value, difference, pass", _validation_rows),
-        Check(sheet, "I12:N21", "engine table: r₁ … r₄, score₁, score₂", _engine_table),
-        Check(sheet, "I22:N22", "engine table: ω", lambda s: row(list(s.trace.omegas))),
+        Check(sheet, "I12:N21", "package table: d₁ … d₄, score₁, score₂", _package_table),
+        Check(sheet, "I22:N22", "package table: ω", lambda s: row(list(s.trace.omegas))),
         Check(
             sheet,
             "I23:N24",
-            "engine table: η(1), η(2)",
+            "package table: η(1), η(2)",
             lambda s: [
                 [float(f.eta[0]) for f in s.trace.features],
                 [float(f.eta[1]) for f in s.trace.features],
@@ -577,10 +593,11 @@ def evaluation_checks() -> list[ExperimentCheck]:
             "folds: fold data, held-out description, scores, baselines",
             _loo_rows,
         ),
-        Check("Sensitivity (Switches)", "A9:I12", "the four switch settings", _sensitivity_rows),
+        Check(sheets.SENSITIVITY, "A9:B12", "the four switch settings", _sensitivity_switches),
+        Check(sheets.SENSITIVITY, "D9:I12", "their results", _sensitivity_rows),
         Check(
-            "Template Deviations",
-            "A53:H56",
+            sheets.SWITCHES,
+            "B53:H56",
             "effect of the switches on this experiment",
             _deviation_effects,
         ),

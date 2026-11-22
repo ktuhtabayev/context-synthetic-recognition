@@ -1,0 +1,9 @@
+dataset,split_metric,reading,training,training_K1,training_K2,test,test_K1,test_K2,article_training,article_K1,article_K2
+Heart,zhuravlyov,literal,161,89,72,109,61,48,76,36,40
+Heart,zhuravlyov,keep-covering,73,36,37,197,114,83,76,36,40
+German,zhuravlyov,literal,524,375,149,476,325,151,336,196,140
+German,zhuravlyov,keep-covering,335,195,140,665,505,160,336,196,140
+German,euclidean,literal,497,327,170,503,373,130,341,173,168
+German,euclidean,keep-covering,340,173,167,660,527,133,341,173,168
+German,chebyshev,literal,518,337,181,482,363,119,367,190,177
+German,chebyshev,keep-covering,368,189,179,632,511,121,367,190,177

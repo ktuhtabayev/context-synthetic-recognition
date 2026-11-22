@@ -1,9 +1,10 @@
-"""The experiment workbook's map, Steps 9–12: HAG, meta-dataset, new object, meta-algorithm.
+"""The experiment workbook's map, Steps 9–12: additional features, new object, meta-algorithm.
 
-Sheets *Greedy upon Weight (1–4-Latent)*, *Dataset for Meta-algorithm*, *Brace for Meta-algorithm*,
-*Meta-algorithm* and *Meta-algorithm (All Objects)*. Every cell the workbook computes is covered,
-including the states of an iteration that was not executed and the positions of TUPLAM that the
-HAG did not fill ("—"), so shorter groupings validate too.
+The four step sheets of the agglomerative algorithm, the meta-description, the new object,
+*Meta-algorithm* and *Meta-algorithm (All Objects)* (sheet names in :mod:`.sheets`). Every cell the
+workbook computes is covered, including the states of an iteration that was not executed and the
+positions of TUPLAM that the hierarchical agglomerative algorithm did not fill ("—"), so shorter
+groupings validate too.
 """
 
 from __future__ import annotations
@@ -12,12 +13,19 @@ from collections.abc import Callable
 
 import numpy as np
 
-from context_synthetic_recognition.config.models import CentreMode
+from context_synthetic_recognition.config.models import ClassMeans
+from context_synthetic_recognition.core.additional_features.agglomerative import (
+    AgglomerativeIteration,
+)
 from context_synthetic_recognition.core.arrays import FloatArray
-from context_synthetic_recognition.core.hag import HAGIteration
-from context_synthetic_recognition.core.meta import K1_DECISION, K2_DECISION, MetaSteps
+from context_synthetic_recognition.core.meta_algorithm.algorithm import (
+    K1_DECISION,
+    K2_DECISION,
+    MetaSteps,
+)
 from context_synthetic_recognition.core.model import CSModel, Representation
 from context_synthetic_recognition.notation import DASH, object_name, subscript, synthetic_name
+from context_synthetic_recognition.services.validation import sheets
 from context_synthetic_recognition.services.validation.checks import (
     Cell,
     Check,
@@ -40,9 +48,9 @@ from context_synthetic_recognition.services.validation.subject import (
     at,
 )
 
-HAG_SHEETS = 4
-"""The workbook has four *Greedy upon Weight* sheets: at most p = 4 latent features."""
-TUPLAM_SLOTS = HAG_SHEETS + 1
+AGGLOMERATIVE_SHEETS = 4
+"""The workbook has four step sheets: at most p = 4 additional features."""
+TUPLAM_SLOTS = AGGLOMERATIVE_SHEETS + 1
 """Positions y₀ … y₄ (a₀ … a₄) of the meta-dataset and the meta-algorithm."""
 EXCLUDED_RANK = 999
 """The rank the *Brace* sheet shows for the training object left out of the new object's context."""
@@ -57,8 +65,8 @@ def _classes(s: ExperimentSubject) -> list[Cell]:
 
 
 def _slot_feature(s: ExperimentSubject, position: int) -> int | None:
-    """The TUPLAM feature at ``position`` (0 = y₀), or ``None`` if the HAG did not fill it."""
-    tuplam = s.hag.tuplam
+    """The TUPLAM feature at ``position`` (0 = y₀), or ``None`` if the algorithm did not fill it."""
+    tuplam = s.agglomerative.tuplam
     return tuplam[position] if position < len(tuplam) else None
 
 
@@ -78,30 +86,30 @@ def _tuplam_label(tuplam: tuple[int, ...]) -> str:
     return "{" + ", ".join(synthetic_name(u) for u in tuplam) + "}"
 
 
-# ---------------------------------------------------------------- Greedy upon Weight (j-Latent)
+# ---------------------------------------------------------------- the step sheets
 
 
-def _iteration(s: ExperimentSubject, j: int) -> HAGIteration | None:
+def _iteration(s: ExperimentSubject, j: int) -> AgglomerativeIteration | None:
     """The j-th iteration (1-based) if it was executed."""
-    iterations = s.hag.iterations
+    iterations = s.agglomerative.iterations
     return iterations[j - 1] if j <= len(iterations) else None
 
 
 def _tuplam_after(s: ExperimentSubject, i: int) -> tuple[int, ...]:
     """TUPLAM after the first ``i`` iterations (an unexecuted iteration changes nothing)."""
-    added = [it.q for it in s.hag.iterations[:i] if it.q is not None]
-    return (s.hag.first, *added)
+    added = [it.q for it in s.agglomerative.iterations[:i] if it.q is not None]
+    return (s.agglomerative.first, *added)
 
 
 def _crit_after(s: ExperimentSubject, i: int) -> float:
-    done = s.hag.iterations[: min(i, len(s.hag.iterations))]
-    return done[-1].crit if done else s.hag.settings.cr1
+    done = s.agglomerative.iterations[: min(i, len(s.agglomerative.iterations))]
+    return done[-1].crit if done else s.agglomerative.settings.cr1
 
 
 def _pool_after(s: ExperimentSubject, i: int) -> int:
     """|P| after iteration ``i`` (0 after an unexecuted one, as the workbook's cell shows)."""
     if i == 0:
-        return s.hag.r - 1
+        return s.agglomerative.r - 1
     it = _iteration(s, i)
     return 0 if it is None else it.candidates.size - (it.q is not None)
 
@@ -111,7 +119,7 @@ def _entering(s: ExperimentSubject, j: int) -> FloatArray:
     if it is not None:
         return it.entering
     if j == 1:
-        return s.hag.contributions[:, s.hag.first]
+        return s.agglomerative.contributions[:, s.agglomerative.first]
     return np.zeros(s.trace.m)
 
 
@@ -140,7 +148,7 @@ def _available(s: ExperimentSubject, j: int, u: int) -> bool:
 
 
 def _candidate_block(s: ExperimentSubject, j: int, u: int) -> Grid:
-    scan = s.hag.scan_from(_entering(s, j), u)
+    scan = s.agglomerative.scan_from(_entering(s, j), u)
     classes = _classes(s)
     return [
         [
@@ -163,7 +171,7 @@ def _candidate_block(s: ExperimentSubject, j: int, u: int) -> Grid:
 
 
 def _candidate_totals(s: ExperimentSubject, j: int, u: int) -> Grid:
-    scan = s.hag.scan_from(_entering(s, j), u)
+    scan = s.agglomerative.scan_from(_entering(s, j), u)
     ratio: Cell = scan.ratio if _available(s, j, u) else DASH
     return [[scan.theta, scan.gamma, "θ / γ", ratio]]
 
@@ -172,7 +180,7 @@ def _summary(s: ExperimentSubject, j: int) -> Grid:
     grid: Grid = []
     for u in range(WORKBOOK_SYNTHETIC):
         if _available(s, j, u):
-            scan = s.hag.scan_from(_entering(s, j), u)
+            scan = s.agglomerative.scan_from(_entering(s, j), u)
             grid.append([synthetic_name(u), 1, scan.theta, scan.gamma, scan.ratio])
         else:
             grid.append([synthetic_name(u), 0, DASH, DASH, DASH])
@@ -194,14 +202,16 @@ def _step4_block(s: ExperimentSubject, j: int) -> Grid:
     entering = _entering(s, j)
     classes = _classes(s)
     q = _added(s, j)
-    eta = np.zeros(s.trace.m) if q is None else s.hag.contributions[:, q]
+    eta = np.zeros(s.trace.m) if q is None else s.agglomerative.contributions[:, q]
     grid: Grid = []
     for t in range(s.trace.m):
         once: Cell = DASH
-        latent: Cell = DASH
-        if it is not None and it.once is not None and it.latent is not None:
-            once, latent = float(it.once[t]), float(it.latent[t])
-        grid.append([entering[t], "+", eta[t], "=", entering[t] + eta[t], classes[t], once, latent])
+        additional: Cell = DASH
+        if it is not None and it.once is not None and it.additional is not None:
+            once, additional = float(it.once[t]), float(it.additional[t])
+        grid.append(
+            [entering[t], "+", eta[t], "=", entering[t] + eta[t], classes[t], once, additional]
+        )
     return grid
 
 
@@ -209,7 +219,7 @@ def _step4_summary(s: ExperimentSubject, j: int) -> Grid:
     it = _iteration(s, j)
     q = _added(s, j)
     after = _tuplam_after(s, j)
-    settings = s.hag.settings
+    settings = s.agglomerative.settings
     return column(
         [
             _crit_after(s, j),
@@ -225,32 +235,34 @@ def _step4_summary(s: ExperimentSubject, j: int) -> Grid:
 
 
 def _greedy_checks(j: int) -> list[ExperimentCheck]:
-    sheet = f"Greedy upon Weight ({j}-Latent)"
+    sheet = sheets.agglomerative_step(j)
     before = j - 1
 
     def first_or_added(s: ExperimentSubject) -> Grid:
         if j == 1:
-            return [[s.hag.first + 1]]
+            return [[s.agglomerative.first + 1]]
         q = _added(s, before)
         return [[DASH if q is None else q + 1]]
 
     def ninth(s: ExperimentSubject) -> Grid:
-        return [[float(s.hag.weights.max()) if j == 1 else _pool_after(s, before)]]
+        return [
+            [float(s.agglomerative.informativeness.max()) if j == 1 else _pool_after(s, before)]
+        ]
 
     def flags(members: Callable[[ExperimentSubject], tuple[int, ...]]) -> Callable[..., Grid]:
         return lambda s: row([flag(u in members(s)) for u in range(WORKBOOK_SYNTHETIC)])
 
     def parameters(s: ExperimentSubject) -> Grid:
-        h = s.hag.settings
-        centres = 1 if h.centres is CentreMode.RUNNING else 2
+        h = s.agglomerative.settings
+        class_means = 1 if h.class_means is ClassMeans.RUNNING else 2
         return [
             [h.alpha, "δ", h.delta, "ϰ", h.kappa],
-            [centres, "passes", h.step4_passes, "cr1₀", h.cr1],
+            [class_means, "passes", h.majorizing_passes, "cr1₀", h.cr1],
         ]
 
     checks: list[ExperimentCheck] = [
         Check(sheet, "D4", "iteration executed", lambda s: [[flag(_iteration(s, j))]]),
-        Check(sheet, "D5", "feature added before (STEP 2: u = argmax ω)", first_or_added),
+        Check(sheet, "D5", "feature added before (Step 2: u = argmax ω)", first_or_added),
         Check(
             sheet,
             "D6:D8",
@@ -289,7 +301,7 @@ def _greedy_checks(j: int) -> list[ExperimentCheck]:
             Check(
                 sheet,
                 f"B{top + 2}:N{top + 11}",
-                f"{name}: b = R + η, majorizer, centres, |b − M| (STEP 3)",
+                f"{name}: b = R + η, majorizing function, class means, |b − M| (Step 3)",
                 _at(lambda s, u: _candidate_block(s, j, u), u),
             ),
             Check(
@@ -300,13 +312,13 @@ def _greedy_checks(j: int) -> list[ExperimentCheck]:
             ),
         ]
     checks += [
-        Check(sheet, "H104:L109", "STEP 3 summary: θ, γ, θ/γ", lambda s: _summary(s, j)),
+        Check(sheet, "H104:L109", "Step 3 summary: θ, γ, θ/γ", lambda s: _summary(s, j)),
         Check(sheet, "J111", "cr1 = min θ/γ", lambda s: _cr1_cell(s, j)),
         Check(sheet, "J112:K112", "q = argmin θ/γ", lambda s: _q_cells(s, j)),
         Check(
             sheet,
             "B117:I126",
-            f"STEP 4: R + η_q, majorizer ⇒ r{subscript(j)}",
+            f"Step 4: R + η_q, majorizing function ⇒ d{subscript(j)}",
             lambda s: _step4_block(s, j),
         ),
         Check(
@@ -315,7 +327,7 @@ def _greedy_checks(j: int) -> list[ExperimentCheck]:
             "crit, q, |TUPLAM|, TUPLAM, |P|, δ, ϰ, continue",
             lambda s: _step4_summary(s, j),
         ),
-        Check(sheet, "K124", "STEP 5: continue or stop", lambda s: [[_step5_text(s, j)]]),
+        Check(sheet, "K124", "Step 5: continue or stop", lambda s: [[_step5_text(s, j)]]),
         Check(sheet, "L127:Q127", "in TUPLAM after", flags(lambda s: _tuplam_after(s, j))),
     ]
     return checks
@@ -325,7 +337,7 @@ def _greedy_checks(j: int) -> list[ExperimentCheck]:
 
 
 def _meta_dataset_checks() -> list[ExperimentCheck]:
-    sheet = "Dataset for Meta-algorithm"
+    sheet = sheets.META_DESCRIPTION
 
     def indices(s: ExperimentSubject) -> Grid:
         features = [_slot_feature(s, k) for k in range(TUPLAM_SLOTS)]
@@ -335,15 +347,17 @@ def _meta_dataset_checks() -> list[ExperimentCheck]:
         return row([f"y{subscript(k)} ({_slot_name(s, k)})" for k in range(TUPLAM_SLOTS)])
 
     def initial(s: ExperimentSubject) -> Grid:
-        y = s.model.meta_dataset.initial
+        y = s.model.meta_table.initial
         return rows(np.array([_slot_values(s, y, k) for k in range(TUPLAM_SLOTS)], dtype=object).T)
 
-    def latent(s: ExperimentSubject) -> Grid:
-        r = s.model.meta_dataset.latent
-        return rows(np.array([_slot_values(s, r, k) for k in range(HAG_SHEETS)], dtype=object).T)
+    def additional(s: ExperimentSubject) -> Grid:
+        r = s.model.meta_table.additional
+        return rows(
+            np.array([_slot_values(s, r, k) for k in range(AGGLOMERATIVE_SHEETS)], dtype=object).T
+        )
 
     def meta_y(s: ExperimentSubject) -> Grid:
-        return [a + b for a, b in zip(initial(s), latent(s), strict=True)]
+        return [a + b for a, b in zip(initial(s), additional(s), strict=True)]
 
     return [
         Check(sheet, "B5:B9", "TUPLAM feature indices", indices),
@@ -357,15 +371,17 @@ def _meta_dataset_checks() -> list[ExperimentCheck]:
             sheet,
             "C11:C13",
             "|TUPLAM|, p, TUPLAM",
-            lambda s: column([len(s.hag.tuplam), s.hag.p, s.hag.label]),
+            lambda s: column(
+                [len(s.agglomerative.tuplam), s.agglomerative.p, s.agglomerative.label]
+            ),
         ),
         Check(sheet, "B16:F16", "headers y₀ … y₄", headers),
         Check(sheet, "B17:F26", "initial features y (contribution values)", initial),
         Check(sheet, "G17:G26", "class", lambda s: column(_classes(s))),
-        Check(sheet, "J17:M26", "latent features r₁ … r₄", latent),
+        Check(sheet, "J17:M26", "additional features d₁ … d₄", additional),
         Check(sheet, "N17:N26", "class", lambda s: column(_classes(s))),
         Check(sheet, "B29:F29", "headers of Y", headers),
-        Check(sheet, "B30:J39", "Y = (y₀ … y₄, r₁ … r₄)", meta_y),
+        Check(sheet, "B30:J39", "Y = (y₀ … y₄, d₁ … d₄)", meta_y),
         Check(sheet, "K30:K39", "class", lambda s: column(_classes(s))),
     ]
 
@@ -380,9 +396,9 @@ def _gradation_headers(s: ExperimentSubject) -> Grid:
 def _training_rows(s: ExperimentSubject) -> list[list[Cell]]:
     """A (5 slots), d (4 slots), class of every training object — the *Brace* table."""
     a = s.model.description.gradations
-    d = s.model.description.latent
+    d = s.model.description.additional
     grads = np.array([_slot_values(s, a, k) for k in range(TUPLAM_SLOTS)], dtype=object).T
-    lats = np.array([_slot_values(s, d, k) for k in range(HAG_SHEETS)], dtype=object).T
+    lats = np.array([_slot_values(s, d, k) for k in range(AGGLOMERATIVE_SHEETS)], dtype=object).T
     classes = _classes(s)
     return [[*rows(grads[t])[0], *rows(lats[t])[0], classes[t]] for t in range(s.trace.m)]
 
@@ -419,7 +435,7 @@ def _new_context(s: ExperimentSubject) -> Representation:
 
 
 def _brace_checks() -> list[ExperimentCheck]:
-    sheet = "Brace for Meta-algorithm"
+    sheet = sheets.NEW_OBJECT
 
     def description(s: ExperimentSubject) -> list[Cell]:
         values = _new_context(s).description[0]
@@ -441,7 +457,7 @@ def _brace_checks() -> list[ExperimentCheck]:
         Check(
             sheet,
             "B5:K14",
-            "training description: aᵢ (gradations), dᵢ (latent), class",
+            "training description: aᵢ (gradations), dᵢ (additional), class",
             lambda s: list(_training_rows(s)),
         ),
         Check(sheet, "L5:L14", "sort key (class·100 + №)", lambda s: column(_sort_keys(s))),
@@ -518,7 +534,7 @@ def _meta_step(s: ExperimentSubject, j: int) -> Grid:
     b1_before, b2_before = _step_flags(steps, j - 1)
     b1_after, b2_after = _step_flags(steps, j)
     a = s.model.description.gradations
-    d = s.model.description.latent
+    d = s.model.description.additional
     classes = _classes(s)
     in_k1 = s.trace.class_index == 0
     grid: Grid = []
@@ -527,16 +543,16 @@ def _meta_step(s: ExperimentSubject, j: int) -> Grid:
         after = bool(b1_after[t] if in_k1[t] else b2_after[t])
         if executed:
             value: Cell = int(a[t, j])
-            latent: Cell = float(d[t, j - 1])
+            additional: Cell = float(d[t, j - 1])
             match = "✅" if steps.match[j, t] else "❌"
             ok = bool(steps.sign[j - 1, t])
             positive, negative = ("✅ (+)", "❌ (−)") if in_k1[t] else ("✅ (−)", "❌ (+)")
             sign = positive if ok else negative
             keep = ("✅" if steps.match[j, t] and ok else "❌") if before else DASH
         else:
-            value = latent = match = sign = DASH
+            value = additional = match = sign = DASH
             keep = "✅" if before else DASH
-        grid.append([classes[t], flag(before), value, match, latent, sign, keep, flag(after)])
+        grid.append([classes[t], flag(before), value, match, additional, sign, keep, flag(after)])
     return grid
 
 
@@ -598,7 +614,7 @@ def _meta_checks() -> list[ExperimentCheck]:
         Check(sheet, "B10:F19", "Step 1: B1(a₀), B2(a₀)", _meta_step1),
         Check(sheet, "B20:F20", "B1(a₀), B2(a₀)", sets(0)),
     ]
-    for j in range(1, HAG_SHEETS + 1):
+    for j in range(1, AGGLOMERATIVE_SHEETS + 1):
         base = 25 + 15 * (j - 1)
         checks += [
             Check(
@@ -610,7 +626,7 @@ def _meta_checks() -> list[ExperimentCheck]:
             Check(
                 sheet,
                 f"B{base}:I{base + 9}",
-                f"Step 2, j = {j}: original-feature and latent-sign conditions",
+                f"Step 2, j = {j}: original-feature and additional-sign conditions",
                 _at(_meta_step, j),
             ),
             Check(
@@ -700,7 +716,7 @@ def _all_objects_checks() -> list[ExperimentCheck]:
 
 def model_checks() -> list[ExperimentCheck]:
     """The map of the experiment workbook, Steps 9–12, in sheet order."""
-    greedy = [check for j in range(1, HAG_SHEETS + 1) for check in _greedy_checks(j)]
+    greedy = [check for j in range(1, AGGLOMERATIVE_SHEETS + 1) for check in _greedy_checks(j)]
     return [
         *greedy,
         *_meta_dataset_checks(),
@@ -716,10 +732,13 @@ def model_layout_problems(model: CSModel) -> list[str]:
     n = len(model.trace.feature_names)
     if n != WORKBOOK_FEATURES:
         problems.append(f"{n} features (the new-object row has {WORKBOOK_FEATURES})")
-    iterations = model.hag.iterations
-    if len(iterations) > HAG_SHEETS or (len(iterations) == HAG_SHEETS and iterations[-1].go_on):
+    iterations = model.agglomerative.iterations
+    if len(iterations) > AGGLOMERATIVE_SHEETS or (
+        len(iterations) == AGGLOMERATIVE_SHEETS and iterations[-1].go_on
+    ):
         problems.append(
-            f"the HAG needs more than {HAG_SHEETS} iterations (the workbook has {HAG_SHEETS} "
-            "Greedy upon Weight sheets)"
+            "the hierarchical agglomerative algorithm needs more than "
+            f"{AGGLOMERATIVE_SHEETS} iterations (the workbook has {AGGLOMERATIVE_SHEETS} step "
+            "sheets)"
         )
     return problems

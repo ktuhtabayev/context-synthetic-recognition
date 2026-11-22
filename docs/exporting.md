@@ -1,14 +1,14 @@
 # Exporting
 
-A run can be written out as an Excel workbook that mirrors the author's experiment, as tables
-(CSV, JSON, Markdown, LaTeX), as figures (PNG, SVG) and as a report (HTML, PDF). Every format
-reads the same run, so they cannot disagree.
+A run can be written out as an Excel workbook in the layout of the author's Excel experiment, as
+tables (CSV, JSON, Markdown, LaTeX), as figures (PNG, SVG) and as a report (HTML, PDF). Every
+format reads the same run, so they cannot disagree.
 
-!!! warning "Two template calculations differ from the article"
-    Every export highlights them: a warning block first in the report, the ⚠ rows of the
-    *Parameters* sheet, the sheets *Template Deviations* and *Sensitivity (Switches)*, the
-    `summary` table and the `sensitivity` figure. See [DECISIONS.md](DECISIONS.md) (ADR-002 –
-    ADR-004).
+!!! warning "Settings that deviate from the article are marked ⚠"
+    Every export says which of the four switches of [the algorithm reference](algorithm-reference.md)
+    are on: a box first in the report ("this run follows the article" when none is), the ⚠ rows of
+    the *Parameters* sheet, the sheets *Switches* and *Switch Sensitivity*, the `summary` table and
+    the `sensitivity` figure (ADR-002, ADR-003, ADR-061).
 
 ## Commands
 
@@ -16,8 +16,8 @@ reads the same run, so they cannot disagree.
 .\.venv\Scripts\csr.exe run heart-disease-10 --export all          # run, save, export every format
 .\.venv\Scripts\csr.exe run heart-disease-10 -e excel -e csv,json  # only some formats
 .\.venv\Scripts\csr.exe export                                     # the latest run in runs\
-.\.venv\Scripts\csr.exe export 20261001_120000_5a0c7b92 -f html,pdf
-.\.venv\Scripts\csr.exe export runs\20261001_120000_5a0c7b92 --out article\tables -f latex --decimals 3
+.\.venv\Scripts\csr.exe export 20261122_040213_babf263b -f html,pdf
+.\.venv\Scripts\csr.exe export runs\20261122_040213_babf263b --out article\tables -f latex --decimals 3
 .\.venv\Scripts\csr.exe export --object 4                          # demonstrate S₄ left out of its context
 .\.venv\Scripts\csr.exe export --values "58 1 3 125 250 0 2 150 0 1 2 1 7"   # … or a new object
 ```
@@ -43,7 +43,7 @@ results differ from the stored ones (another package version), the command says 
 
 | Format (aliases) | Files | Content |
 |---|---|---|
-| `excel` (`xlsx`, `workbook`) | `workbook.xlsx` | the mirror of the Excel experiment |
+| `excel` (`xlsx`, `workbook`) | `workbook.xlsx` | the run in the layout of the Excel experiment |
 | `csv` (`tables`) | `tables/<key>.csv`, `tables/index.csv` | every table at full precision |
 | `json` (`trace`) | `trace.json` | the same tables in one file, with the configuration and the hashes |
 | `markdown` (`md`) | `markdown/<key>.md`, `markdown/tables.md` | tables that fit a page, rounded |
@@ -55,30 +55,34 @@ results differ from the stored ones (another package version), the command says 
 Text files are UTF-8 with LF line endings; the SVG and PDF files carry no time stamp. The same run
 exports to the same bytes on every platform.
 
-## The Excel mirror
+## The Excel workbook
 
-`workbook.xlsx` has the sheets, the layout and the style of *Context-Synthetic Model – Full
-Experiment*: the overview with the workbook map, *Parameters* with both switches, the data,
-Steps 1–12 table by table, the evaluation sheets and the model-property checks.
+`workbook.xlsx` has the layout and the style of the author's Excel experiment: the overview with
+the workbook map, *Parameters*, *Switches* (every switch that deviates from the article, the
+settings the article leaves open, and the effect of the two switches of the agglomerative
+algorithm, computed on the run's own data, ADR-075), the data, the steps of the method table by
+table, the evaluation sheets and the model-property checks.
 
 - **Values, no formulas.** Every cell is a number or a text computed by the package, so the file
   reads the same in Excel, LibreOffice and pandas.
-- **Generated for the data.** One *Sorted Neighbors* sheet per base operator, one *Greedy upon
-  Weight* sheet per possible HAG iteration, a column per permitted k and per synthetic feature, a
-  fold sheet per hold-out protocol (*Leave-One-Out*, *Stratified K-Fold*, *Repeated K-Fold*,
-  *Hold-Out*).
-- **The experiment is reproduced cell for cell.** For Heart-Disease (10, 13, 2) with the default
-  configuration every computed cell sits at its original address:
+- **Generated for the data.** One *Sorted Neighbors* sheet per base operator, one *Additional
+  Feature j* sheet per iteration of the agglomerative algorithm, a column per admissible k and per
+  synthetic feature, a fold sheet per protocol that holds objects out (*Leave-One-Out*,
+  *Stratified K-Fold*, …).
+- **The Excel experiment is reproduced cell for cell.** For Heart-Disease (10, 13, 2) with the
+  `excel-experiment` preset every computed cell sits at its original address:
 
     ```powershell
-    .\.venv\Scripts\csr.exe run heart-disease-10 --export excel
-    .\.venv\Scripts\csr.exe validate --against runs\<run>\workbook.xlsx   # 11,631 cells in 29 sheets
+    .\.venv\Scripts\csr.exe run heart-disease-10 -c configs\excel-experiment.yaml --export excel
+    .\.venv\Scripts\csr.exe validate --against runs\<run>\workbook.xlsx   # 11,622 cells in 579 checks
     ```
 
-- **Differences from the original** (all intended): the distance sheet is named *Zhuravlyov
-  Distances*; labels that the original shows as equation drawings are written as text; texts
-  about live formulas are reworded; *Parameters* has one more block, "This run", with what
-  identifies the run.
+- **Differences from the original** (all intended): sheets carry the article's terms — *Zhuravlyov
+  Distances*, *Switches*, *Ψ(r) Contributions*, *Additional Feature 1* …, *Meta-description*,
+  *New Object*, *Switch Sensitivity*; *Membership & Stability* also shows the metaobject
+  (ADR-074); labels that the original shows as equation
+  drawings are written as text; texts about live formulas are reworded; *Parameters* has one more
+  block, "This run", with what identifies the run.
 
 ### Large data
 
@@ -89,7 +93,7 @@ CSV tables hold everything.
 | Limit | Default | Effect when exceeded |
 |---|---|---|
 | `max_matrix_cells` | 250,000 | an object × object table (distances, ranks) is replaced by a note naming its CSV table — beyond about 500 objects |
-| `max_sheet_cells` | 150,000 | repeated blocks are written for as many objects or candidates as fit: neighbour blocks, HAG candidate blocks (the chosen feature q only), B1/B2 flags per object, membership tables (TUPLAM features only) |
+| `max_sheet_cells` | 150,000 | repeated blocks are written for as many objects or candidates as fit: neighbour blocks, candidate blocks of the agglomerative algorithm (the chosen feature q only), B1/B2 flags per object, membership tables (TUPLAM features only) |
 
 ## Tables
 
@@ -98,10 +102,10 @@ The tables follow the pipeline. `tables/index.csv` lists them with their titles 
 | Stage | Keys |
 |---|---|
 | Summary, input | `summary`, `dataset`, `features` |
-| Steps 1–3 | `normalized`, `distances-<operator>`, `neighbours-<operator>` |
-| Steps 4–8 | `same-class-counts`, `chi1`, `psi`, `membership`, `bit-masks`, `synthetic-features`, `object-membership`, `correct-side`, `contributions` |
-| Step 9 (HAG) | `hag-iterations`, `hag-candidates`, `hag-chosen-blocks` |
-| Steps 10–12 | `meta-dataset`, `training-description`, `new-object`, `new-object-features`, `resubstitution`, `new-object-steps` |
+| Local contexts | `normalized`, `distances-<operator>`, `neighbours-<operator>` |
+| Synthetic features Ψ(r) | `same-class-counts`, `chi1`, `psi`, `membership`, `metaobject`, `class-sequence-masks`, `majority-chains`, `synthetic-features`, `object-membership`, `correct-side`, `contributions` |
+| Additional features | `agglomerative-iterations`, `agglomerative-candidates`, `agglomerative-chosen-blocks` |
+| Meta-algorithm | `meta-dataset`, `training-description`, `new-object`, `new-object-features`, `resubstitution`, `new-object-steps` |
 | Evaluation | `metrics`, `class-metrics`, `confusion-<protocol>`, `roc-<protocol>`, `predictions-<protocol>`, `folds-<protocol>`, `margins`, `object-margins`, `sensitivity` |
 | Checks | `properties`, `operator-pairs`, `boundary-ties` |
 
@@ -124,14 +128,14 @@ the notation is set in math mode (a₆ → `$a_{6}$`, ρ_I → `$\rho_{I}$`), ea
 | Key | Shows |
 |---|---|
 | `distances` | the distance matrix of every base operator, objects grouped by class |
-| `neighbourhoods` | the class of the neighbour at every rank, with the permitted k |
+| `neighbourhoods` | the class of the neighbour at every rank, with the admissible k |
 | `synthetic-features` | informativeness ω and stability g of Ψ(r); the TUPLAM features emphasised |
-| `hag-candidates`, `hag-criterion` | θ/γ of every candidate per iteration with the chosen q; crit against δ |
-| `margins`, `margin-widths` | the latent features on a line with and without the majorizer; margin widths |
+| `agglomerative-candidates`, `agglomerative-criterion` | θ/γ of every candidate per iteration with the chosen q; crit against δ |
+| `margins`, `margin-widths` | the additional features on a line with and without the majorizing function; margin widths |
 | `roc`, `confusion` | ROC of score₁ − score₂ and the confusion matrix per protocol |
 | `outcomes-<protocol>` | correct, wrong and refused decisions of every method |
 | `prediction-map-<protocol>` | the decision of every method for every held-out object (up to 40 objects) |
-| `sensitivity` | ⚠ accuracy under the four settings of the two switches |
+| `sensitivity` | ⚠ accuracy under the four settings of the two switches of the agglomerative algorithm |
 
 K1 and K2 have the same two colours in every figure; correct / wrong / refused are always named in
 the legend, never shown by colour alone.
@@ -153,7 +157,7 @@ summary.files["excel"]  # (out/workbook.xlsx,)
 summary.notes  # what was left out because of its size
 
 view = build_view(result)  # what every exporter reads
-run_tables(view)["psi"].rows[0]  # ('S₁', 2, 2, 1, 2, 2, 2, 2)
+run_tables(view)["psi"].rows[0]  # ('S₁', 2, 1, 2, 2)
 figure = render(figure_specs(view)[0])  # a matplotlib Figure
 ```
 

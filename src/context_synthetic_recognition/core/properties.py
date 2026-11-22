@@ -1,7 +1,7 @@
 """Model-property checks: Definitions 1, 4, 6, Property 1, the Theorem (*Model Properties*).
 
 - **Definition 1 / Property 1 (determinacy):** every stage is defined for every object — enough
-  neighbours for every permitted k, f_k(μ) defined at every object's gradation (formula (1)), q₁
+  neighbours for every admissible k, f_k(μ) defined at every object's gradation (formula (1)), q₁
   and q₂ exist for every synthetic feature (formula (3); otherwise G = 0.5), formula (5) defined
   for every object, and the meta-algorithm gives a class or an explicit refusal.
 - **Definition 4 (sufficiency):** no two objects share a description but differ in class; the
@@ -27,7 +27,7 @@ import numpy.typing as npt
 
 from context_synthetic_recognition.core.arrays import BoolArray, freeze_fields
 from context_synthetic_recognition.core.model import CSModel
-from context_synthetic_recognition.core.trace import ContextTrace
+from context_synthetic_recognition.core.trace import PsiTrace
 
 
 @dataclass(frozen=True)
@@ -37,7 +37,7 @@ class Determinacy:
     neighbours: int
     """m − 1: the neighbours of a training object."""
     k_max: int
-    """The largest permitted k."""
+    """The largest admissible k."""
     undefined_memberships: int
     """Objects × synthetic features whose f_k(μ) is undefined."""
     missing_sides: int
@@ -95,11 +95,11 @@ class ModelProperties:
     psi_conflicts: int
     """Definition 4: pairs with the same Ψ(r) and different classes."""
     operator_pairs: tuple[OperatorPair, ...]
-    """Definition 6: equal k-neighbour sets, every operator pair and permitted k."""
+    """Definition 6: equal k-neighbour sets, every operator pair and admissible k."""
     identical_features: BoolArray
     """(r × r) whether two synthetic features take the same value on every object."""
     boundary_ties: tuple[BoundaryTies, ...]
-    """Ties at the k boundary, every operator and permitted k."""
+    """Ties at the k boundary, every operator and admissible k."""
 
     def __post_init__(self) -> None:
         """Freeze the matrix."""
@@ -124,20 +124,20 @@ def conflicting_pairs(descriptions: npt.ArrayLike, class_index: npt.ArrayLike) -
     return pairs
 
 
-def equal_neighbour_sets(trace: ContextTrace, first: int, second: int, k: int) -> BoolArray:
+def equal_neighbour_sets(trace: PsiTrace, first: int, second: int, k: int) -> BoolArray:
     """(m,) whether the k nearest neighbours of each object are the same set under two operators."""
     a = np.sort(trace.operators[first].order[:, :k], axis=1)
     b = np.sort(trace.operators[second].order[:, :k], axis=1)
     return np.asarray((a == b).all(axis=1))
 
 
-def identical_features(trace: ContextTrace) -> BoolArray:
+def identical_features(trace: PsiTrace) -> BoolArray:
     """(r × r) synthetic features that take the same value on every object."""
     values = trace.values
     return np.asarray((values[:, :, None] == values[:, None, :]).all(axis=0))
 
 
-def boundary_ties(trace: ContextTrace, operator: int, k: int) -> int | None:
+def boundary_ties(trace: PsiTrace, operator: int, k: int) -> int | None:
     """Objects whose k-th and (k + 1)-th neighbours are at the same distance (None if k = m − 1)."""
     distances = trace.operators[operator].sorted_distances
     if k >= distances.shape[1]:
@@ -151,7 +151,7 @@ def determinacy(model: CSModel) -> Determinacy:
     features = trace.features
     return Determinacy(
         neighbours=trace.m - 1,
-        k_max=max(trace.permitted_k.ks),
+        k_max=max(trace.admissible_k.ks),
         undefined_memberships=sum(int(np.isnan(f.object_membership).sum()) for f in features),
         missing_sides=sum((f.boundary.q1 is None) + (f.boundary.q2 is None) for f in features),
         undefined_features=int(np.count_nonzero(~np.isin(trace.values, (1, 2)))),
@@ -162,7 +162,7 @@ def determinacy(model: CSModel) -> Determinacy:
 def model_properties(model: CSModel) -> ModelProperties:
     """Definitions 1, 4 and 6 for a fitted model (sheet *Model Properties*)."""
     trace = model.trace
-    ks = trace.permitted_k.ks
+    ks = trace.admissible_k.ks
     operators = range(len(trace.operators))
     return ModelProperties(
         determinacy=determinacy(model),

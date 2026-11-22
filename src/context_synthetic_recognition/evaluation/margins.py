@@ -1,14 +1,16 @@
-"""Margins of the latent features with and without the majorizer (sheet *Margin Analysis*).
+"""Margins of the additional features with and without the majorizing function.
 
-For a latent feature d on the training objects, with yᵢ = +1 for K1 and −1 for K2:
+Sheet *Margin Analysis*. For an additional feature d on the training objects, with yᵢ = +1 for K1
+and −1 for K2:
 
 - boundary b = (min over K1 of d + max over K2 of d)/2;
 - margin width = min over K1 of d − max over K2 of d (> 0: the classes are separated);
 - object margin mᵢ = yᵢ·(dᵢ − b) (> 0: on its correct side); rule ŷ = K1 if d > b, K2 otherwise.
 
-*With majorizer*: the latent features r₁ … r_p of the HAG. *Without*: the generalized estimate
-R(Sₜ) = y₀ + … + yⱼ — the contribution values of the same TUPLAM features summed, no majorizing
-function. The gain (width with − width without) shows how the regularisation widens the margin.
+*With majorizing function*: the additional features d₁ … d_p of the agglomerative algorithm.
+*Without*: the generalized estimate R(Sₜ) = y₀ + … + yⱼ — the contribution values of the same
+TUPLAM features summed, no majorizing function. The gain (width with − width without) shows how
+much the majorizing function widens the margin.
 """
 
 from __future__ import annotations
@@ -19,13 +21,13 @@ import numpy as np
 import numpy.typing as npt
 
 from context_synthetic_recognition.core.arrays import FloatArray, IntArray, freeze_fields
-from context_synthetic_recognition.core.meta import K1_DECISION, K2_DECISION
+from context_synthetic_recognition.core.meta_algorithm.algorithm import K1_DECISION, K2_DECISION
 from context_synthetic_recognition.core.model import CSModel
 
 
 @dataclass(frozen=True, eq=False)
 class Margin:
-    """The margin of one latent feature on the training objects."""
+    """The margin of one additional feature on the training objects."""
 
     values: FloatArray
     """(m,) the feature d."""
@@ -97,28 +99,30 @@ def margin(values: npt.ArrayLike, class_index: npt.ArrayLike) -> Margin:
 
 @dataclass(frozen=True)
 class MarginAnalysis:
-    """Every latent feature's margin with and without the majorizer."""
+    """Every additional feature's margin with and without the majorizing function."""
 
-    with_majorizer: tuple[Margin, ...]
-    """r₁ … r_p of the HAG."""
-    without_majorizer: tuple[Margin, ...]
+    with_majorizing_function: tuple[Margin, ...]
+    """d₁ … d_p of the hierarchical agglomerative algorithm."""
+    without_majorizing_function: tuple[Margin, ...]
     """y₀ + … + yⱼ for j = 1 … p."""
 
     @property
     def gains(self) -> tuple[float, ...]:
-        """Width with − width without, per latent feature."""
+        """Width with − width without, per additional feature."""
         return tuple(
             a.width - b.width
-            for a, b in zip(self.with_majorizer, self.without_majorizer, strict=True)
+            for a, b in zip(
+                self.with_majorizing_function, self.without_majorizing_function, strict=True
+            )
         )
 
 
 def margin_analysis(model: CSModel) -> MarginAnalysis:
     """The sheet *Margin Analysis* for a fitted model (empty when p = 0)."""
-    data = model.meta_dataset
+    data = model.meta_table
     summed = np.cumsum(data.initial, axis=1)  # y₀ + … + yⱼ, left to right as the workbook's SUM
     y = data.class_index
     return MarginAnalysis(
-        with_majorizer=tuple(margin(data.latent[:, j], y) for j in range(data.p)),
-        without_majorizer=tuple(margin(summed[:, j + 1], y) for j in range(data.p)),
+        with_majorizing_function=tuple(margin(data.additional[:, j], y) for j in range(data.p)),
+        without_majorizing_function=tuple(margin(summed[:, j + 1], y) for j in range(data.p)),
     )

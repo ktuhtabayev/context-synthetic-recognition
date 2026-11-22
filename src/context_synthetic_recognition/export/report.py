@@ -1,11 +1,11 @@
 """The run report: one document that tells a run from the data to the evaluation.
 
 :func:`build_report` arranges the tables and figures of a run into sections — summary, data,
-local contexts, synthetic features, HAG, meta-algorithm, evaluation, model properties,
-reproducibility — with the two template deviations highlighted at the top. The document is plain
-data (:class:`Report`); :func:`html_text` renders it as one self-contained HTML file (figures
-embedded as SVG) and :func:`write_pdf` as a PDF (reportlab, optional extra ``[pdf]``; figures
-embedded as PNG).
+local contexts, synthetic features, agglomerative algorithm, meta-algorithm, evaluation, model
+properties, reproducibility — with the settings that deviate from the article highlighted at the
+top. The document is plain data (:class:`Report`); :func:`html_text` renders it as one
+self-contained HTML file (figures embedded as SVG) and :func:`write_pdf` as a PDF (reportlab,
+optional extra ``[pdf]``; figures embedded as PNG).
 
 Long tables are shortened in the report — it is for reading; the CSV tables hold every row.
 """
@@ -142,7 +142,7 @@ def build_report(view: RunView, tables: TableSet | None = None) -> Report:
     """Arrange the tables and figures of a run into the report."""
     found = tables if tables is not None else run_tables(view)
     figures = {spec.key: spec for spec in figure_specs(view)}
-    trace, hag, config, data = view.trace, view.hag, view.config, view.dataset
+    trace, agglomerative, config, data = view.trace, view.agglomerative, view.config, view.dataset
     blocks: list[Block] = []
 
     def table(key: str, **limits: int) -> None:
@@ -157,28 +157,21 @@ def build_report(view: RunView, tables: TableSet | None = None) -> Report:
     # ---- summary
     blocks.append(Heading("Summary"))
     active = active_deviations(config)
-    statements = "; ".join(d.statement for d in DEVIATIONS)
     if active:
         blocks.append(
             Paragraph(
-                "⚠ Two template calculations differ from the article: "
-                f"{statements}. Both are configuration switches. This run uses the template "
-                f"calculation for {join_and([f'{d.field} ({d.adr})' for d in active])}"
-                + (
-                    " — the default, which reproduces the template workbooks exactly."
-                    if len(active) == len(DEVIATIONS)
-                    else "."
-                ),
+                "⚠ This run deviates from the article: "
+                + "; ".join(f"{d.statement} ({d.field}, {d.adr})" for d in active)
+                + ". Each is a configuration switch.",
                 "warning",
             )
         )
     else:
         blocks.append(
             Paragraph(
-                "⚠ Two template calculations differ from the article: "
-                f"{statements}. This run follows the article for both (hag.centres = final, "
-                "hag.step4_passes = 1), so it does not reproduce the template workbooks.",
-                "warning",
+                f"This run follows the article: none of the {len(DEVIATIONS)} switches that "
+                "deviate from it is on.",
+                "note",
             )
         )
     table("summary", max_rows=60)
@@ -204,10 +197,10 @@ def build_report(view: RunView, tables: TableSet | None = None) -> Report:
     )
     blocks.append(
         Paragraph(
-            f"Scale unification: {trace.scaling.normalizer}, fitted on the training objects. "
+            f"Normalization: {trace.scaling.normalizer}, fitted on the training objects. "
             f"Base operators: {operators}. Distances are rounded to "
-            f"{config.context.distance_decimals} decimals; neighbours are ordered by (distance, "
-            "original index), the object itself excluded."
+            f"{config.local_context.distance_decimals} decimals; neighbours are ordered by "
+            "(distance, original index), the object itself excluded."
         )
     )
     figure("distances")
@@ -215,10 +208,10 @@ def build_report(view: RunView, tables: TableSet | None = None) -> Report:
 
     # ---- synthetic features
     blocks.append(Heading("Synthetic features Ψ(r) (Steps 4–8)"))
-    ks = trace.permitted_k
+    ks = trace.admissible_k
     blocks.append(
         Paragraph(
-            f"Permitted k ({ks.rule}): {ks.count} value(s), k = {ks.ks[0]} … {ks.ks[-1]}"
+            f"Admissible k ({ks.rule}): {ks.count} value(s), k = {ks.ks[0]} … {ks.ks[-1]}"
             + (f" ({ks.note})" if ks.note else "")
             + f"; r = |Ψ(r)| = {trace.r} synthetic features aᵤ ∈ {{1, 2}} by formula (5), each "
             "with its stability g (2), boundary G (3), informativeness ω (4) and contributions "
@@ -234,28 +227,28 @@ def build_report(view: RunView, tables: TableSet | None = None) -> Report:
     figure("synthetic-features")
     table("psi", max_rows=12)
 
-    # ---- HAG
-    settings = hag.settings
+    # ---- hierarchical agglomerative algorithm
+    settings = agglomerative.settings
     blocks.append(Heading("Hierarchical agglomerative grouping (Step 9)"))
     blocks.append(
         Paragraph(
             f"α = {settings.alpha:g}, δ = {settings.delta:g}, ϰ = {settings.kappa}, "
-            f"cr1₀ = {settings.cr1:g}, majorizer ϕ = {settings.majorizer}; ⚠ class centres = "
-            f"{settings.centres.value}, ⚠ STEP 4 passes = {settings.step4_passes}. "
-            f"TUPLAM = {hag.label}, p = {hag.p} latent feature(s); the grouping stopped because "
-            f"{hag.stop.text}."
+            f"cr1₀ = {settings.cr1:g}, majorizing function φ = {settings.majorizing_function}; ⚠ "
+            f"class means = {settings.class_means.value}, ⚠ majorizing passes = "
+            f"{settings.majorizing_passes}. TUPLAM = {agglomerative.label}, p = {agglomerative.p} "
+            f"additional feature(s); the grouping stopped because {agglomerative.stop.text}."
         )
     )
-    table("hag-iterations")
-    figure("hag-candidates")
-    figure("hag-criterion")
+    table("agglomerative-iterations")
+    figure("agglomerative-candidates")
+    figure("agglomerative-criterion")
 
     # ---- meta-algorithm
     blocks.append(Heading("Meta-algorithm (Steps 10–12)"))
     blocks.append(
         Paragraph(
-            "The meta-dataset Y = (y₀, …, y_p, r₁, …, r_p) holds the contribution values of the "
-            "TUPLAM features and the latent features. An object is classified from its "
+            "The meta-dataset Y = (y₀, …, y_p, d₁, …, d_p) holds the contribution values of the "
+            "TUPLAM features and the additional features. An object is classified from its "
             "gradations (a₀, …, a_p) alone: B1 and B2 are filtered step by step and the class "
             "follows from |B1|/|K1| against |B2|/|K2| (0 = refusal if equal)."
         )
@@ -270,8 +263,8 @@ def build_report(view: RunView, tables: TableSet | None = None) -> Report:
     blocks.append(
         Paragraph(
             f"Protocols: {names}. Hold-out protocols re-fit the whole pipeline — scaling, k "
-            "range, Ψ(r), ω, η, HAG, meta-algorithm — on the training part of every fold; the "
-            "baselines run on the same folds."
+            "range, Ψ(r), ω, η, agglomerative algorithm, meta-algorithm — on the training part of "
+            "every fold; the baselines run on the same folds."
         )
     )
     table("metrics", max_rows=40)
@@ -280,8 +273,8 @@ def build_report(view: RunView, tables: TableSet | None = None) -> Report:
         figure(f"prediction-map-{protocol.protocol}")
     figure("roc")
     figure("confusion")
-    if hag.p:
-        blocks.append(Heading("Margins of the latent features", 3))
+    if agglomerative.p:
+        blocks.append(Heading("Margins of the additional features", 3))
         table("margins")
         figure("margins")
         figure("margin-widths")

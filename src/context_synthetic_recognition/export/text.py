@@ -151,6 +151,7 @@ _LATEX_MATH = {
     "χ": r"\chi",
     "ϰ": r"\varkappa",
     "ϕ": r"\varphi",
+    "φ": r"\varphi",
     "Ψ": r"\Psi",
     "Σ": r"\Sigma",
     "∈": r"\in",

@@ -10,8 +10,10 @@ from typing import Any
 
 import numpy as np
 
-from context_synthetic_recognition.core.contributions import weight_ranks
-from context_synthetic_recognition.core.trace import OperatorContext, SyntheticFeature
+from context_synthetic_recognition.core.synthetic_features.contributions import (
+    informativeness_ranks,
+)
+from context_synthetic_recognition.core.trace import LocalContext, SyntheticFeature
 from context_synthetic_recognition.export.excel.common import (
     CONTRIBUTION,
     MEMBERSHIP,
@@ -70,13 +72,13 @@ def _object_rows(
 # ---------------------------------------------------------------- Sorted Neighbors
 
 
-def sorted_neighbours(book: Book, index: int, operator: OperatorContext) -> None:
+def sorted_neighbours(book: Book, index: int, operator: LocalContext) -> None:
     """Sheet *Sorted Neighbors (operator)* (Step 3): the rank matrix and one block per object."""
     view = book.view
     trace = view.trace
     m, label = trace.m, operator.label
     ids, labels, y = trace.object_ids, view.labels, trace.class_index
-    ks = set(trace.permitted_k.ks)
+    ks = set(trace.admissible_k.ks)
     sheet = book.sheet(book.plan.neighbours[index], "context")
     full = (m - 1) * 8 * m <= book.options.max_sheet_cells
     depth = m - 1 if full else neighbour_depth(view)
@@ -160,7 +162,7 @@ def sorted_neighbours(book: Book, index: int, operator: OperatorContext) -> None
             "the same distance with a smaller original index}; the target itself is excluded."
         ),
         (
-            "Yellow cells mark the nested neighbourhoods of the permitted k (odd, k_min … k_max "
+            "Yellow cells mark the nested neighbourhoods of the admissible k (odd, k_min … k_max "
             "from "
             "the Parameters sheet)."
         ),
@@ -177,7 +179,7 @@ def sorted_neighbours(book: Book, index: int, operator: OperatorContext) -> None
         notes.append(
             book.omit(
                 f"{sheet.title}: large sample — the blocks list ranks 1 … {depth} "
-                f"(the largest permitted k and one beyond) for {blocks} of {m} objects; "
+                f"(the largest admissible k and one beyond) for {blocks} of {m} objects; "
                 "the CSV tables neighbours-* hold every object."
             )
         )
@@ -187,11 +189,11 @@ def sorted_neighbours(book: Book, index: int, operator: OperatorContext) -> None
 # ---------------------------------------------------------------- Synthetic Features (k-NN)
 
 
-def same_class_counts(book: Book) -> None:
-    """Sheet *Synthetic Features (k-NN)* (Step 4): μ per operator and permitted k."""
+def own_class_counts(book: Book) -> None:
+    """Sheet *Synthetic Features (k-NN)* (Step 4): μ per operator and admissible k."""
     view = book.view
     trace = view.trace
-    m, ks = trace.m, trace.permitted_k
+    m, ks = trace.m, trace.admissible_k
     per_operator = [_features_of(view, o) for o in range(len(trace.operators))]
     width = max(1, *(len(features) for features in per_operator))
     side = width + 4
@@ -214,16 +216,17 @@ def same_class_counts(book: Book) -> None:
             sheet.put(top + 2 + t, 1, ids[t], "label")
             sheet.row(top + 2 + t, 2, [int(f.mu[t]) for f in features], "synthetic")
             sheet.put(top + 2 + t, width + 2, labels[t], "class_")
-    formula = ks.rule == "formula"
+    k_max_rules = {"min-class": "k_max = min |Kᵢ|", "twice-min-class": "k_max = 2 · min |Kᵢ| − 3"}
+    by_rule = ks.rule in k_max_rules
     sheet.bar(3, side, 2, "k range (Parameters sheet)")
     rows: list[tuple[str, Any, str]] = [
         ("|K1|", trace.class_sizes[0], "value"),
         ("|K2|", trace.class_sizes[1], "value"),
         ("min |Kᵢ|", min(trace.class_sizes), "value"),
-        ("k_min (fixed)" if formula else "k_min", DASH if ks.k_min is None else ks.k_min, "value"),
-        ("k_max = 2 · min |Kᵢ| − 3", DASH if ks.k_max is None else ks.k_max, "value"),
-        ("Permitted k", ks.label, "value"),
-        ("Layout check", "✓ the workbook has a column for every permitted k", "value_left"),
+        ("k_min (fixed)" if by_rule else "k_min", DASH if ks.k_min is None else ks.k_min, "value"),
+        (k_max_rules.get(ks.rule, "k_max"), DASH if ks.k_max is None else ks.k_max, "value"),
+        ("Admissible k", ks.label, "value"),
+        ("Layout check", "✓ the workbook has a column for every admissible k", "value_left"),
     ]
     for offset, (key, value, style) in enumerate(rows, start=4):
         sheet.put(offset, side, key, "key")
@@ -235,10 +238,10 @@ def same_class_counts(book: Book) -> None:
                 "Cell value μ = number of the k nearest neighbours (Step 3 order of the operator) "
                 "whose class equals the class of Sᵢ."
             ),
-            "Only the k permitted by k_max = 2 · min |Kᵢ| − 3 are used: odd k from k_min = 3 "
+            f"Only the k admissible by {k_max_rules[ks.rule]} are used: odd k from k_min = 3 "
             "(fixed) up to k_max; |K1| and |K2| are counted from the Dataset, so k_max follows "
             "the data."
-            if formula
+            if by_rule
             else f"The k are chosen by the strategy “{ks.rule}” (Parameters sheet).",
             (
                 "μ is the training-side gradation of formulas (1)–(4); the class-free synthetic "
@@ -269,8 +272,8 @@ def psi(book: Book) -> None:
         3,
         1,
         8,
-        "Feature map · one synthetic feature per (base operator, permitted k)   ·   "
-        f"r = |Ψ(r)| = {len(trace.operators)} × (number of permitted k)",
+        "Feature map · one synthetic feature per (base operator, admissible k)   ·   "
+        f"r = |Ψ(r)| = {len(trace.operators)} × (number of admissible k)",
     )
     sheet.row(
         4,
@@ -289,7 +292,7 @@ def psi(book: Book) -> None:
                 feature.name,
                 feature.operator_label,
                 feature.k,
-                book.plan.neighbours[feature.operator],
+                "its codes" if feature.is_original else book.plan.neighbours[feature.operator],
             ],
             ["label", "value", "header_k", "caption"],
         )
@@ -388,7 +391,7 @@ def _membership_table(
 
 
 def membership(book: Book) -> None:
-    """Sheet *Membership & Stability* (Step 6): formulas (1) and (2), the meta-object, Task 2."""
+    """Sheet *Membership & Stability* (Step 6): formulas (1) and (2), the metaobject, Task 2."""
     view = book.view
     trace = view.trace
     m, r = trace.m, trace.r
@@ -397,7 +400,7 @@ def membership(book: Book) -> None:
     cells = sum(8 * (f.membership.gradations.size + 3) for f in trace.features)
     reduced = cells > book.options.max_sheet_cells
     if reduced:
-        groups = [[trace.features[u] for u in view.hag.tuplam]]
+        groups = [[trace.features[u] for u in view.agglomerative.tuplam]]
     shown = [f for group in groups for f in group]
     rows = max(f.membership.gradations.size for f in shown)
     across = max(len(group) for group in groups)
@@ -428,7 +431,7 @@ def membership(book: Book) -> None:
         top,
         1,
         r + 1,
-        "Meta-object · the stability vector (g) of the training sample (section 1.4)",
+        "Metaobject · the stability vector (g) of the training sample (section 1.4)",
     )
     sheet.row(top + 1, 1, ["Feature", *(f.name for f in trace.features)], "header")
     sheet.put(top + 2, 1, "Operator", "caption")
@@ -439,7 +442,7 @@ def membership(book: Book) -> None:
     sheet.row(top + 4, 2, [f.stability for f in trace.features], "synthetic_num")
     top += 6
 
-    masks = trace.bit_masks
+    masks = trace.majority_chains
     notes = [
         (
             "Formula (1): f_k(μ) = (d₁ₖ(μ)/|K1|) / (d₁ₖ(μ)/|K1| + d₂ₖ(μ)/|K2|), where d₁ₖ(μ), "
@@ -459,7 +462,7 @@ def membership(book: Book) -> None:
         notes.append(
             book.omit(
                 f"{MEMBERSHIP}: Task 2 (bit representations) is not written — "
-                f"{trace.permitted_k.count} permitted k give too many bits for a sheet."
+                f"{trace.admissible_k.count} admissible k give too many bits for a sheet."
             )
         )
         sheet.notes(top, notes)
@@ -469,7 +472,7 @@ def membership(book: Book) -> None:
         1,
         bits + 2,
         "Task 2 · Bit representations by the majority rule (section 1.3): bit = 1 if μ > k/2, "
-        "one bit per permitted k, read as a binary number",
+        "one bit per admissible k, read as a binary number",
     )
     headers = ["№"]
     for b in masks:
@@ -483,12 +486,12 @@ def membership(book: Book) -> None:
     _object_rows(book, sheet, top + 2, matrix, styles, convert=int)
     top += m + 3
 
-    beta = (1 << trace.permitted_k.count) - 1
+    beta = (1 << trace.admissible_k.count) - 1
     sheet.bar(
         top,
         1,
         7 * len(masks) - 1,
-        "Membership (1) and stability (2) of the bit masks — gradations 0 … 2^r − 1 = "
+        "Membership (1) and stability (2) of the majority chains — gradations 0 … 2^r − 1 = "
         f"{beta}, β = {beta}",
     )
     mask_styles = ["label", "integer", "integer", "integer", "synthetic_num", "num"]
@@ -519,8 +522,8 @@ def membership(book: Book) -> None:
         sheet.merge(foot, left, 5, "g (2)", "key")
         sheet.put(foot, left + 5, b.stability, "value_num")
     notes.append(
-        "Bit masks: the first permitted k is the most significant bit. Stability does not depend "
-        "on this convention (it only relabels the gradations)."
+        "Majority chains: the first admissible k is the most significant bit. Stability does not "
+        "depend on this convention (it only relabels the gradations)."
     )
     sheet.notes(top + mask_rows + 4, notes)
 
@@ -562,7 +565,7 @@ def informativeness(book: Book) -> None:
             "integer",
         ),
         ("ω = correct / m  (4)", [f.omega for f in features], "value_num"),
-        ("Rank of ω", [int(v) for v in weight_ranks(trace.omegas)], "integer"),
+        ("Rank of ω", [int(v) for v in informativeness_ranks(trace.omegas)], "integer"),
     ]
     for offset, (caption, values, style) in enumerate(lines, start=5):
         sheet.put(offset, 1, caption, "caption")
@@ -642,7 +645,7 @@ def contribution(book: Book) -> None:
     ]
     for offset, (caption, j, c) in enumerate(counts, start=5):
         sheet.put(offset, 1, caption, "caption")
-        sheet.row(offset, 2, [int(f.alpha[j, c]) for f in features], "integer")
+        sheet.row(offset, 2, [f.alpha_at(j + 1, c) for f in features], "integer")
 
     sheet.bar(
         10,
@@ -654,11 +657,11 @@ def contribution(book: Book) -> None:
     sheet.put(11, 1, "Quantity", "header_left")
     sheet.row(11, 2, names, "header")
     sheet.put(12, 1, "ω  (informativeness)", "caption")
-    sheet.row(12, 2, [f.weight for f in features], "value_num")
+    sheet.row(12, 2, [f.informativeness for f in features], "value_num")
     sheet.put(13, 1, "η(1)", "caption")
-    sheet.row(13, 2, [float(f.eta[0]) for f in features], "num")
+    sheet.row(13, 2, [f.eta_at(1) for f in features], "num")
     sheet.put(14, 1, "η(2)", "caption")
-    sheet.row(14, 2, [float(f.eta[1]) for f in features], "num")
+    sheet.row(14, 2, [f.eta_at(2) for f in features], "num")
 
     top = 16
     sheet.bar(top, 1, width, f"Ψ(r) with contribution values  ηᵤ(a_tu)  [{view.dataset.name}]")
@@ -669,9 +672,9 @@ def contribution(book: Book) -> None:
     sheet.put(top + 1, 1, "Feature", "header_left")
     sheet.row(top + 1, 2, names, "header")
     sheet.put(top + 2, 1, "Weight ω", "caption")
-    sheet.row(top + 2, 2, [f.weight for f in features], "value_num")
+    sheet.row(top + 2, 2, [f.informativeness for f in features], "value_num")
     sheet.put(top + 3, 1, "Rank", "caption")
-    sheet.row(top + 3, 2, [int(v) for v in weight_ranks(trace.weights)], "integer")
+    sheet.row(top + 3, 2, [int(v) for v in informativeness_ranks(trace.informativeness)], "integer")
     sheet.highlight_equal(reference(top + 3, 2, 1, r), "1")
     sheet.notes(
         top + 5,
@@ -684,9 +687,8 @@ def contribution(book: Book) -> None:
                 "negative to K2."
             ),
             (
-                'This sheet plays the role of the template sheet "Dataset (Contribution & '
-                'Weight)": '
-                "the HAG works on these contribution values and weights."
+                "The hierarchical agglomerative algorithm works on these contribution values "
+                "and the informativeness ω."
             ),
         ],
     )
@@ -698,7 +700,7 @@ __all__ = [
     "informativeness",
     "membership",
     "object_span",
+    "own_class_counts",
     "psi",
-    "same_class_counts",
     "sorted_neighbours",
 ]

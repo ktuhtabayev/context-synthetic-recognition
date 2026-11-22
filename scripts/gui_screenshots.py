@@ -5,10 +5,11 @@ Run from the repository root::
     .\.venv\Scripts\python.exe scripts\gui_screenshots.py
     .\.venv\Scripts\python.exe scripts\gui_screenshots.py --target somewhere-else
 
-The application runs the experiment on Heart-Disease (10, 13, 2) for real — the template preset,
-then the article preset — and every page is grabbed at 1360 × 860; the window is then rebuilt in
-Russian and in Uzbek for the two language images. Nothing appears on screen: the window is laid
-out by the native Windows platform (for the system fonts) but never mapped.
+The application runs the experiment on Heart-Disease (10, 13, 2) for real — the default settings
+(the article), then the excel-experiment preset — and every page is grabbed at 1360 × 860; the
+window is then rebuilt in Russian and in Uzbek for the two language images. Nothing appears on
+screen: the window is laid out by the native Windows platform (for the system fonts) but never
+mapped.
 """
 
 from __future__ import annotations
@@ -100,8 +101,8 @@ def main() -> None:
         new_object.classify()
         new_object.tabs.setCurrentIndex(2)
         shot("new-object")
-        # a second run with the article's switches, to compare
-        window.configure_page.apply_preset("article")
+        # a second run with the Excel experiment's settings, to compare
+        window.configure_page.apply_preset("excel-experiment")
         window.go_to(window.run_page)
         run(app, window)
         compare = window.compare_page
@@ -113,7 +114,7 @@ def main() -> None:
         shot("export")
         window.set_theme("dark")
         window.go_to(results)
-        results.open("table", "hag-candidates")
+        results.open("table", "agglomerative-candidates")
         shot("dark-results")
         # the same work in the other languages of the interface (View → Language)
         window.set_theme("light")

@@ -50,22 +50,45 @@ def test_the_project_folder(no_override: None) -> None:
     assert catalog.root == DATASETS
     assert [(e.id, e.name, e.formats, e.shape) for e in catalog] == [
         ("default", "default", (".dat", ".csv"), (10, 13, 2)),
+        ("german-1000", "German (1000, 20, 2)", (".dat", ".csv"), (1000, 20, 2)),
         ("heart-disease-270", "Heart-Disease (270, 13, 2)", (".dat", ".csv"), (270, 13, 2)),
     ]
     assert catalog.default is not None
     assert catalog.default.path == DATASETS / "default.dat"
     assert catalog.find("Heart-Disease (270, 13, 2)") is catalog.find("heart-disease-270")
+    assert catalog.find("German (1000, 20, 2)") is catalog.find("german-1000")
 
 
 def test_the_project_datasets_are_consistent(no_override: None) -> None:
     catalog = project_catalog(ROOT)
     assert catalog is not None
-    checks = catalog.check()
-    assert all(c.passed for c in checks), [c.problems for c in checks]
+    checks = {c.entry.id: c for c in catalog.check()}
+    assert all(c.passed for c in checks.values()), [c.problems for c in checks.values()]
     # the .dat and .csv hold the same data; the package's built-in copies too
-    assert checks[0].content_hash == load_builtin("heart-disease-10").content_hash()
-    assert checks[1].content_hash == load_builtin("heart-disease-270").content_hash()
-    assert set(checks[1].sha256) == {".dat", ".csv"}
+    assert checks["default"].content_hash == load_builtin("heart-disease-10").content_hash()
+    heart = checks["heart-disease-270"]
+    assert heart.content_hash == load_builtin("heart-disease-270").content_hash()
+    assert set(heart.sha256) == {".dat", ".csv"}
+
+
+def test_the_draft_datasets_keep_their_bytes(no_override: None) -> None:
+    # Heart (270, 13, 2) and German (1000, 20, 2), the two datasets of the experiments
+    catalog = project_catalog(ROOT)
+    assert catalog is not None
+    checks = {c.entry.id: c for c in catalog.check()}
+    german = checks["german-1000"]
+    assert german.shape == (1000, 20, 2)
+    assert german.sha256 == {
+        ".dat": "ee6c75bcc239c7792eddb627a68b8040777587ef086853843ff1ed758e0a48b4",
+        ".csv": "6d9cdf0af7d85eb20d49f5a362cde0067e12d01607dec4fc6143783f514d75aa",
+    }
+    assert checks["heart-disease-270"].sha256 == {
+        ".dat": "309be5bc53d641781c212cd2e2da9b9e2e4728785b8438061aab4a27c7c02e94",
+        ".csv": "984cd77f05791472f55e77be279914941b0cf3fd598e36afaef9ba937bcbfb42",
+    }
+    data = load_from_config(DatasetConfig(path="german-1000"), ROOT)
+    assert data.class_sizes == (700, 300)
+    assert int(data.quantitative.sum()) == 7  # 7 quantitative, 13 nominal features
 
 
 def test_the_files_keep_the_authors_bytes() -> None:

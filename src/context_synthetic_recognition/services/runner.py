@@ -20,9 +20,9 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from context_synthetic_recognition.config.io import config_hash
-from context_synthetic_recognition.config.models import CentreMode, ExperimentConfig
+from context_synthetic_recognition.config.models import ClassMeans, ExperimentConfig
 from context_synthetic_recognition.config.presets import active_deviations
-from context_synthetic_recognition.core.meta import REFUSAL
+from context_synthetic_recognition.core.meta_algorithm.algorithm import REFUSAL
 from context_synthetic_recognition.core.model import CSModel, fit_model
 from context_synthetic_recognition.core.properties import ModelProperties, model_properties
 from context_synthetic_recognition.data.loaders import load_from_config
@@ -36,6 +36,7 @@ from context_synthetic_recognition.evaluation.protocols import (
     ProtocolResult,
     run_protocol,
 )
+from context_synthetic_recognition.notation import additional_name
 from context_synthetic_recognition.services.manifest import (
     RUN_ID_PATTERN,
     RunManifest,
@@ -190,7 +191,11 @@ def results_dict(
     extra: dict[str, Any] = {}
     if sensitivity is not None:
         extra["sensitivity"] = [
-            {**asdict(variant), "centres": variant.centres.value, "crit": list(variant.crit)}
+            {
+                **asdict(variant),
+                "class_means": variant.class_means.value,
+                "crit": list(variant.crit),
+            }
             for variant in sensitivity
         ]
     return {
@@ -203,13 +208,13 @@ def results_dict(
             "class_sizes": list(model.trace.class_sizes),
         },
         "config_hash": config_hash(result.config),
-        "template_deviations": [d.adr for d in active_deviations(result.config)],
+        "deviations": [d.adr for d in active_deviations(result.config)],
         "model": {
-            "permitted_k": list(model.trace.permitted_k.ks),
+            "admissible_k": list(model.trace.admissible_k.ks),
             "r": model.trace.r,
-            "tuplam": list(model.hag.names),
-            "crit": list(model.hag.crit),
-            "stop": model.hag.stop.value,
+            "tuplam": list(model.agglomerative.names),
+            "crit": list(model.agglomerative.crit),
+            "stop": model.agglomerative.stop.value,
             "p": model.p,
         },
         "positive_class": str(model.classes[result.positive - 1]),
@@ -221,9 +226,17 @@ def results_dict(
             for p in result.protocols
         },
         "margins": [
-            {"feature": f"r{j + 1}", "with_majorizer": a.width, "without_majorizer": b.width}
+            {
+                "feature": additional_name(j),
+                "with_majorizing_function": a.width,
+                "without_majorizing_function": b.width,
+            }
             for j, (a, b) in enumerate(
-                zip(result.margins.with_majorizer, result.margins.without_majorizer, strict=True)
+                zip(
+                    result.margins.with_majorizing_function,
+                    result.margins.without_majorizing_function,
+                    strict=True,
+                )
             )
         ],
         "properties": {
@@ -312,7 +325,7 @@ def save_run(
                         fold.split.repeat,
                         " ".join(ids[int(i)] for i in fold.split.test),
                         *(fold.class_sizes or ("", "")),
-                        " ".join(map(str, fold.permitted_k or ())),
+                        " ".join(map(str, fold.admissible_k or ())),
                         fold.r if fold.r is not None else "",
                         " ".join(fold.tuplam_names or ()),
                         fold.undefined or "",
@@ -365,7 +378,7 @@ def _stored_sensitivity(stored: dict[str, Any]) -> tuple[SwitchVariant, ...] | N
             SwitchVariant(
                 **{
                     **variant,
-                    "centres": CentreMode(variant["centres"]),
+                    "class_means": ClassMeans(variant["class_means"]),
                     "crit": tuple(variant["crit"]),
                 }
             )
@@ -379,7 +392,7 @@ def _differences(stored: dict[str, Any], result: ExperimentResult) -> list[str]:
     """How the repeated run differs from the stored results (empty if it reproduces them)."""
     repeated = results_dict(result)
     differences = []
-    for key in ("permitted_k", "r", "tuplam", "p"):
+    for key in ("admissible_k", "r", "tuplam", "p"):
         before, now = stored.get("model", {}).get(key), repeated["model"][key]
         if before is not None and before != now:
             differences.append(f"model.{key}: stored {before}, repeated {now}")

@@ -2,7 +2,8 @@
 
 The expected values are the workbook's cached cell values; the map is the one ``csr validate``
 uses (:func:`~context_synthetic_recognition.services.validation.workbook_checks`). The inputs —
-the data, the HAG parameters with both switches and the new object — are read from the workbook.
+the data, the agglomerative algorithm parameters with both switches and the new object — are read
+from the workbook.
 """
 
 import warnings
@@ -21,6 +22,7 @@ from context_synthetic_recognition.services.validation import (
     validate_workbook,
     workbook_checks,
 )
+from context_synthetic_recognition.services.validation import sheets as workbook_sheets
 
 from ..conftest import WORKBOOK
 
@@ -56,7 +58,7 @@ def test_every_computed_sheet_is_covered() -> None:
     sheets = {check.sheet for check in CHECKS}
     assert sheets == {
         "Parameters",
-        "Template Deviations",
+        workbook_sheets.SWITCHES,
         "Normalized Dataset",
         "Zhuravlev Distances",
         "Sorted Neighbors (ρ)",
@@ -67,10 +69,10 @@ def test_every_computed_sheet_is_covered() -> None:
         "Membership & Stability",
         "Informativeness ω",
         "Ψ(r) Contribution & Weight",
-        "Greedy upon Weight (1-Latent)",
-        "Greedy upon Weight (2-Latent)",
-        "Greedy upon Weight (3-Latent)",
-        "Greedy upon Weight (4-Latent)",
+        workbook_sheets.agglomerative_step(1),
+        workbook_sheets.agglomerative_step(2),
+        workbook_sheets.agglomerative_step(3),
+        workbook_sheets.agglomerative_step(4),
         "Dataset for Meta-algorithm",
         "Brace for Meta-algorithm",
         "Meta-algorithm",
@@ -88,9 +90,10 @@ def test_every_computed_sheet_is_covered() -> None:
 
 
 def test_the_workbook_inputs(subject: ExperimentSubject) -> None:
-    # the Parameters sheet holds the template setting; the new object is S₁ left out of its context
-    settings = subject.hag.settings
-    assert (settings.centres.value, settings.step4_passes) == ("running", 2)
+    # the Parameters sheet holds the workbook's setting (running means, two passes); the new
+    # object is S₁ left out of its context
+    settings = subject.agglomerative.settings
+    assert (settings.class_means.value, settings.majorizing_passes) == ("running", 2)
     assert subject.new_object.exclude == 0
     assert subject.new_object.values.tolist()[:3] == [70.0, 1.0, 4.0]
 
@@ -99,12 +102,18 @@ def test_the_validation_report() -> None:
     report = validate_workbook(WORKBOOK)
     assert report.passed
     assert report.kind == "experiment"
-    assert report.cells == 11631
+    assert report.cells == 11622
     assert len(report.results) == len(CHECKS)
     # the Leave-One-Out sheet holds the engine's scores rounded to 10 decimals
     loo = [r for r in report.results if r.sheet == "Leave-One-Out"]
     assert max(r.max_difference for r in loo) < 1e-10
     assert max(r.max_difference for r in report.results if r.sheet != "Leave-One-Out") < 1e-13
-    assert list(report.sheets())[:3] == ["Parameters", "Template Deviations", "Normalized Dataset"]
-    assert report.notes[0].startswith("HAG settings of the workbook (Parameters sheet): α = 0.3")
+    assert list(report.sheets())[:3] == [
+        "Parameters",
+        workbook_sheets.SWITCHES,
+        "Normalized Dataset",
+    ]
+    assert report.notes[0].startswith(
+        "agglomerative algorithm settings of the workbook (Parameters sheet): α = 0.3"
+    )
     assert any("ADR-002" in note for note in report.notes)

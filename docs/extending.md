@@ -6,14 +6,14 @@ a function with the signature of its kind; it may declare a parameter type, whic
 
 | Kind | Registry | Signature | Default |
 |---|---|---|---|
-| normalizer | `core.normalizers.NORMALIZERS` | `(X, quantitative, params) → Scaling` | `minmax` |
-| metric | `core.metrics.METRICS` | `(A, B, quantitative, decimals, params) → distances`, with optional [traits](#metric-traits) | `zhuravlyov` |
-| k strategy | `core.k_strategies.K_STRATEGIES` | `(class_sizes, params) → PermittedK` | `formula` |
-| encoder | `core.encoders.ENCODERS` | `(chi1, k, params) → values in {1, 2}` | `formula-5` |
-| weights | `core.contributions.WEIGHTS` | `(WeightInputs, params) → float` | `omega` |
-| majorizer | `core.majorizers.MAJORIZERS` | `(x, params) → ϕ(x)` element-wise | `sigmoid` |
-| decision rule | `core.meta.DECISION_RULES` | `(b1, b2, class_sizes, params) → 1, 2 or 0` | `article-step-4` |
-| protocol | `evaluation.protocols.PROTOCOLS` | `(class_index, seed, params) → [Split]` | `resubstitution`, `leave-one-out` |
+| normalizer | `core.local_context.normalizers.NORMALIZERS` | `(X, quantitative, params) → Scaling` | `minmax` |
+| metric | `core.local_context.metrics.METRICS` | `(A, B, quantitative, decimals, params) → distances`, with optional [traits](#metric-traits) | `zhuravlyov` |
+| k strategy | `core.local_context.admissible_k.K_STRATEGIES` | `(class_sizes, params) → AdmissibleK` | `min-class` |
+| encoder | `core.synthetic_features.encoders.ENCODERS` | `(chi1, k, params) → values in {1, 2}` | `formula-5` |
+| informativeness | `core.synthetic_features.contributions.INFORMATIVENESS` | `(InformativenessInputs, params) → float` | `formula-4` |
+| majorizing function | `core.additional_features.majorizing_functions.MAJORIZING_FUNCTIONS` | `(x, params) → φ(x)` element-wise | `sigmoid` |
+| decision rule | `core.meta_algorithm.algorithm.DECISION_RULES` | `(b1, b2, class_sizes, params) → 1, 2 or 0` | `step-4` |
+| protocol | `evaluation.protocols.PROTOCOLS` | `(class_index, seed, params) → [Split]`; marked with `uses_dataset`: `(dataset, config, params) → [Split]` | `resubstitution`, `leave-one-out` |
 | baseline | `evaluation.baselines.BASELINES` | `(BaselineInput, params) → [BaselineOutput]` | `knn-vote` |
 | dataset format | `data.loaders.LOADERS` | `(path, LoadOptions) → Dataset` | detected |
 | export format | `export.run.EXPORTERS` | `(ExportContext) → [Path]` | `all` ([Exporting](exporting.md)) |
@@ -32,17 +32,23 @@ Normalizers: `minmax` (default), `z-score` (parameter `ddof`), `robust`, `max-ab
 `decimal-scaling`, `rank`, `unit-length`, `none`. Their definitions are in the
 [algorithm reference](algorithm-reference.md#normalizers-and-metrics) (ADR-051, ADR-052).
 
+The local contexts have one normalizer; an operator can override it with its own (ADR-066). R-IPS
+has its own metric, normalizer and features in the section `rips`:
+
 ```yaml
-preprocessing:
+local_context:
   normalizer: z-score
-context:
   operators:
     - {label: ρ, features: all}                                  # the Zhuravlyov metric
     - {label: H, metric: heom, features: all}
-    - {label: E, metric: euclidean, features: quantitative}
+    - {label: E, metric: euclidean, features: quantitative, normalizer: none}
     - label: ρ_w
       metric: {name: weighted-zhuravlyov, params: {nominal_weight: 0.5}}
       features: [x₁, x₂, x₃]
+rips:
+  metric: chebyshev
+  normalizer: none
+  features: quantitative
 ```
 
 A metric defined on quantitative features must be given `features: quantitative` (or a list of
@@ -56,7 +62,11 @@ import numpy as np
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from context_synthetic_recognition.core.metrics import METRICS, round_distances, traits
+from context_synthetic_recognition.core.local_context.metrics import (
+    METRICS,
+    round_distances,
+    traits,
+)
 from context_synthetic_recognition.core.registry import PARAMS_CONFIG
 
 
@@ -77,7 +87,7 @@ def lorentzian(A, B, quantitative, decimals, params):
 It can then be used as an operator:
 
 ```yaml
-context:
+local_context:
   operators:
     - label: L
       metric: {name: lorentzian, params: {scale: 0.5}}
@@ -131,15 +141,20 @@ def standardized_manhattan(A, B, quantitative, decimals, params):
   never reads a class label: its fit step is not given any (ADR-050, ADR-051).
 - **Normalizers** estimate their constants on the training objects only, never change nominal
   codes and map a quantitative feature without spread to 0 (ADR-052).
-- **k strategies** return odd k only; the pipeline also checks k ≤ m − 1.
+- **k strategies** take the class sizes of the training sample and return odd k only; the
+  pipeline also checks k ≤ m − 1.
 - **Encoders** use only χ₁, the classes of the neighbours — never the class of the object itself,
   which a new object does not have (Theorem, ADR-009, ADR-021).
-- **Majorizers** should map ℝ onto (0, 1) and increase, like the built-in ones, so that every step
-  α·ϕ(−b) stays in (0, α) (ADR-026).
+- **Informativeness** functions weigh a synthetic feature from its ω, stability and boundary; the
+  weight enters the contributions (6) and Step 2 of the agglomerative algorithm.
+- **Majorizing functions** should map ℝ onto (0, 1) and increase, like the built-in ones, so that
+  every step α·φ(−b) stays in (0, α) (ADR-026).
 - **Decision rules** receive the final sizes |B1(a_p)|, |B2(a_p)| and the class sizes and return
   1 (K1), 2 (K2) or 0 (refusal) for every object (ADR-027).
 - **Protocols** return the folds; the runner re-fits the whole pipeline on every training part
-  and never shows it the held-out objects' classes (ADR-032).
+  and never shows it the held-out objects' classes (ADR-032). A protocol that needs the features —
+  R-IPS does — is marked with `uses_dataset` and receives the dataset and the configuration; a
+  fold may carry its own configuration, as nested cross-validation does (ADR-069).
 - **Baselines** get the fold's training part only and return decisions 1, 2, 0 with a score that
   is larger for K1.
 - Everything is deterministic; the configuration hash covers the plug-in names and parameters.

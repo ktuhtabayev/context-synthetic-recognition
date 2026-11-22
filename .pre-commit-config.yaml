@@ -1,5 +1,5 @@
-# Protected source material and the author's datasets are never touched by hooks (CLAUDE.md)
-exclude: ^(resources|docs/handoff|datasets|tests/data)/
+# The author's datasets, the test workbooks and the experiment's results are never touched by hooks
+exclude: ^(datasets|tests/data|experiments)/
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

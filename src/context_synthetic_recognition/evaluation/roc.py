@@ -21,7 +21,7 @@ import numpy as np
 import numpy.typing as npt
 
 from context_synthetic_recognition.core.arrays import FloatArray, freeze_fields
-from context_synthetic_recognition.core.meta import K1_DECISION
+from context_synthetic_recognition.core.meta_algorithm.algorithm import K1_DECISION
 
 DEFAULT_DECIMALS = 10
 

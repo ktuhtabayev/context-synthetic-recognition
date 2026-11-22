@@ -33,7 +33,11 @@ from PySide6.QtWidgets import (
 
 from context_synthetic_recognition import __version__
 from context_synthetic_recognition.config import ExperimentConfig, load_config, save_config
-from context_synthetic_recognition.config.presets import active_deviations, matching_preset
+from context_synthetic_recognition.config.presets import (
+    PresetName,
+    active_deviations,
+    matching_preset,
+)
 from context_synthetic_recognition.data import load_from_config
 from context_synthetic_recognition.errors import CSRError
 from context_synthetic_recognition.gui.i18n import LANGUAGES, SYSTEM, mark, tr
@@ -243,12 +247,13 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self.undo_action)
         edit_menu.addAction(self.redo_action)
         edit_menu.addSeparator()
-        self._action(
-            edit_menu, tr("Template preset"), lambda: self.configure_page.apply_preset("template")
-        )
-        self._action(
-            edit_menu, tr("Article preset"), lambda: self.configure_page.apply_preset("article")
-        )
+        self.preset_menu = edit_menu.addMenu(tr("Apply a preset"))
+        for chosen in PresetName:  # the presets keep their names, as in the configuration files
+            self._action(
+                self.preset_menu,
+                chosen.value,
+                partial(self.configure_page.apply_preset, chosen.value),
+            )
 
         run_menu = bar.addMenu(tr("&Run"))
         self.run_action = self._action(run_menu, tr("Run the experiment"), self.run, "F5")
@@ -359,7 +364,9 @@ class MainWindow(QMainWindow):
         )
         active = active_deviations(state.config)
         self.deviation_button.setVisible(bool(active))
-        self.deviation_button.setText(tr("⚠ {n} template calculation(s)").format(n=len(active)))
+        self.deviation_button.setText(
+            tr("⚠ deviates from the article: {n} setting(s)").format(n=len(active))
+        )
         self.deviation_button.setToolTip(
             "\n".join(f"{d.adr}: {d.statement}" for d in active)
             + "\n"
@@ -368,7 +375,7 @@ class MainWindow(QMainWindow):
         if state.view is None:
             self.result_label.setText("")
         else:
-            text = tr("TUPLAM = {tuplam}").format(tuplam=state.view.hag.label)
+            text = tr("TUPLAM = {tuplam}").format(tuplam=state.view.agglomerative.label)
             if state.stale:
                 text += "  ·  " + tr("⚠ computed with another configuration")
             self.result_label.setText(text)
@@ -585,12 +592,11 @@ class MainWindow(QMainWindow):
         """What the application is."""
         return tr(
             "Context-synthetic recognition {version}\n\n"
-            "The context-synthetic model of recognition algorithms (CS-model): local "
-            "k-nearest-neighbour contexts → synthetic features Ψ(r) → hierarchical agglomerative "
-            "grouping → meta-algorithm.\n\n"
-            "⚠ Two template calculations differ from the article (running class centres in θ/γ; "
-            "the STEP 4 majorizer applied twice). Both are switches on the Configure page; the "
-            "default reproduces the template workbooks."
+            "The context-synthetic model of recognition algorithms (CS-model): R-IPS → local "
+            "k-nearest-neighbour contexts → synthetic features Ψ(r) → additional features "
+            "(hierarchical agglomerative algorithm) → meta-algorithm.\n\n"
+            "The default preset follows the article. Settings that deviate from it are switches "
+            "on the Configure page, marked “⚠ deviates from the article”."
         ).format(version=__version__)
 
     def show_shortcuts(self) -> None:

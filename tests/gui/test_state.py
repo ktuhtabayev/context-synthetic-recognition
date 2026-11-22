@@ -7,7 +7,7 @@ from PySide6.QtCore import QByteArray, QCoreApplication
 from PySide6.QtGui import QPalette
 from pytestqt.qtbot import QtBot
 
-from context_synthetic_recognition.config import DatasetConfig, ExperimentConfig, HAGConfig, preset
+from context_synthetic_recognition.config import DatasetConfig, ExperimentConfig
 from context_synthetic_recognition.data import Dataset
 from context_synthetic_recognition.export import RunView
 from context_synthetic_recognition.gui import GUI_EXTRA_HINT
@@ -30,6 +30,8 @@ from context_synthetic_recognition.gui.theme import (
     qt_palette,
     stylesheet,
 )
+
+from ..conftest import article_switches, excel_experiment, workbook_additional, workbook_config
 
 pytestmark = pytest.mark.gui
 
@@ -171,26 +173,27 @@ def test_the_dataset_and_its_section(
 
 def test_configuration_changes_can_be_undone(qtbot: QtBot) -> None:
     state = AppState()
-    template = state.config
-    article = preset("article")
+    default = state.config
+    assert default == ExperimentConfig()  # the default preset: the article's method
+    excel = excel_experiment()
     with qtbot.waitSignal(state.configChanged):
-        state.set_config(article, "Preset: article")
-    assert state.config.hag == article.hag
-    assert state.undo_stack.undoText() == "Preset: article"
+        state.set_config(excel, "Preset: excel-experiment")
+    assert state.config.additional_features == excel.additional_features
+    assert state.undo_stack.undoText() == "Preset: excel-experiment"
     with qtbot.assertNotEmitted(state.configChanged):
         state.set_config(state.config)  # nothing changed: nothing to undo
     assert state.undo_stack.count() == 1
     state.set_config(state.config.model_copy(update={"seed": 7}))
     state.undo_stack.undo()
     assert state.config.seed == 42
-    assert state.config.hag == article.hag
+    assert state.config.additional_features == excel.additional_features
     state.undo_stack.undo()
-    assert state.config == template
+    assert state.config == default
     state.undo_stack.redo()
-    assert state.config.hag == article.hag
+    assert state.config.additional_features == excel.additional_features
     with qtbot.waitSignal(state.configChanged):
-        state.reset_config(ExperimentConfig(hag=HAGConfig(kappa=3)))
-    assert state.config.hag.kappa == 3
+        state.reset_config(workbook_config(additional_features=workbook_additional(kappa=3)))
+    assert state.config.additional_features.kappa == 3
     assert not state.undo_stack.canUndo()  # a file was opened: the history starts again
 
 
@@ -203,7 +206,7 @@ def test_undo_never_changes_the_dataset_section(qtbot: QtBot, experiment: Datase
     assert state.config.seed == 42
     assert state.config.dataset == section
     # an edited configuration that carries another dataset section does not replace it either
-    state.set_config(preset("article").model_copy(update={"dataset": DatasetConfig(path="x.csv")}))
+    state.set_config(article_switches().model_copy(update={"dataset": DatasetConfig(path="x.csv")}))
     assert state.config.dataset == section
 
 

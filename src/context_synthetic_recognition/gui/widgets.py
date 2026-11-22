@@ -82,7 +82,7 @@ def card() -> tuple[QFrame, QVBoxLayout]:
 
 
 class WarningBox(QFrame):
-    """A ⚠ box: what the user must not miss (the template deviations, problems of the data)."""
+    """A ⚠ box: what the user must not miss (deviations from the article, problems of the data)."""
 
     def __init__(self, text: str = "", parent: QWidget | None = None) -> None:
         """Create the box; it hides itself while it has no text."""

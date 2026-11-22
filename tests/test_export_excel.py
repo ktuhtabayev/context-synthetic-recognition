@@ -1,7 +1,5 @@
 """The Excel mirror: the writer, the palette, the layout on every shape and the size limits."""
 
-import json
-import warnings
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -11,7 +9,6 @@ import openpyxl
 import pytest
 from openpyxl.workbook import Workbook
 
-from context_synthetic_recognition.config.models import CentreMode
 from context_synthetic_recognition.export import RunView
 from context_synthetic_recognition.export.excel import ExcelOptions, build_workbook, write_workbook
 from context_synthetic_recognition.export.excel.common import (
@@ -22,11 +19,6 @@ from context_synthetic_recognition.export.excel.common import (
     plan_sheets,
 )
 from context_synthetic_recognition.export.excel.styles import STYLES, TAB_COLORS, StyleBook
-from context_synthetic_recognition.export.excel.template_data import (
-    template_hag,
-    template_input,
-    template_variants,
-)
 from context_synthetic_recognition.export.excel.writer import (
     LayoutError,
     SheetWriter,
@@ -35,15 +27,13 @@ from context_synthetic_recognition.export.excel.writer import (
     reference,
     sheet_name,
 )
-from context_synthetic_recognition.services.validation.templates import read_hag_template
 
-from .conftest import HAG_TEMPLATE
 from .shapes import SHAPES, shape
 
 EXPERIMENT_SHEETS = [
     "Overview",
     "Parameters",
-    "Template Deviations",
+    "Switches",
     "Dataset",
     "Quantitative",
     "Nominal",
@@ -56,13 +46,13 @@ EXPERIMENT_SHEETS = [
     "Ψ(r) Binary Features",
     "Membership & Stability",
     "Informativeness ω",
-    "Ψ(r) Contribution & Weight",
-    "Greedy upon Weight (1-Latent)",
-    "Greedy upon Weight (2-Latent)",
-    "Greedy upon Weight (3-Latent)",
-    "Greedy upon Weight (4-Latent)",
-    "Dataset for Meta-algorithm",
-    "Brace for Meta-algorithm",
+    "Ψ(r) Contributions",
+    "Additional Feature 1",
+    "Additional Feature 2",
+    "Additional Feature 3",
+    "Additional Feature 4",
+    "Meta-description",
+    "New Object",
     "Meta-algorithm",
     "Meta-algorithm (All Objects)",
     "Margin Analysis",
@@ -71,11 +61,11 @@ EXPERIMENT_SHEETS = [
     "Precision, Recall, F1 Score",
     "ROC Curve & AUC",
     "Leave-One-Out",
-    "Sensitivity (Switches)",
+    "Switch Sensitivity",
     "Model Properties",
     "Validation",
 ]
-"""The sheets of the Excel experiment, in its order (the metric's name spelled Zhuravlyov)."""
+"""The sheets of the mirror, in the Excel experiment's order (some named in the article's terms)."""
 
 SMALL_BUDGET = ExcelOptions(check_overlaps=True, max_sheet_cells=4000, max_matrix_cells=8000)
 
@@ -117,7 +107,12 @@ def test_references_and_sheet_names() -> None:
 def writer(check_overlaps: bool = False) -> SheetWriter:
     workbook = Workbook()
     return SheetWriter(
-        workbook, StyleBook(workbook), "Test", "hag", freeze="B4", check_overlaps=check_overlaps
+        workbook,
+        StyleBook(workbook),
+        "Test",
+        "additional_features",
+        freeze="B4",
+        check_overlaps=check_overlaps,
     )
 
 
@@ -125,7 +120,7 @@ def test_the_sheet_set_up() -> None:
     sheet = writer()
     ws = sheet.ws
     assert sheet.title == "Test"
-    assert ws.sheet_properties.tabColor.rgb == "FF" + TAB_COLORS["hag"]
+    assert ws.sheet_properties.tabColor.rgb == "FF" + TAB_COLORS["additional_features"]
     assert ws.freeze_panes == "B4"
     assert ws.sheet_view.showGridLines is False
     assert ws.page_setup.orientation == "landscape"
@@ -286,7 +281,7 @@ def test_the_mirror_holds_values_not_formulas(mirror: Any) -> None:
     for ws in workbook.worksheets:
         for row in ws.iter_rows():
             for cell in row:
-                # the HAG sheets mark equal class centres with the text "=": not a formula
+                # the agglomerative sheets mark equal class means with the text "=": not a formula
                 assert cell.data_type != "f", f"{ws.title}!{cell.coordinate}"
 
 
@@ -300,7 +295,7 @@ def test_the_overview_links_to_every_sheet(mirror: Any) -> None:
     assert set(targets) == {f"'{name}'!A1" for name in EXPERIMENT_SHEETS[1:]}
 
 
-def test_the_template_deviations_are_highlighted(mirror: Any) -> None:
+def test_the_deviations_from_the_article_are_highlighted(mirror: Any) -> None:
     workbook, _ = mirror
     parameters = [
         str(cell.value)
@@ -308,17 +303,25 @@ def test_the_template_deviations_are_highlighted(mirror: Any) -> None:
         for cell in row
         if cell.value is not None
     ]
-    assert "⚠1 Class centres in θ and γ" in parameters
-    assert "⚠2 Majorizer passes in STEP 4" in parameters
+    assert "⚠1 Class means in θ and γ" in parameters
+    assert "⚠2 Majorizing function passes in Step 4" in parameters
     assert str(workbook["Validation"]["A3"].value).startswith(
-        "⚠ Template calculations that differ from the article"
+        "⚠ Settings of the agglomerative algorithm that deviate from the article"
     )
-    deviations = workbook["Template Deviations"]
-    assert str(deviations["A1"].value).startswith("Template Deviations — where the template HAG")
-    text = [str(c.value) for row in deviations.iter_rows() for c in row if c.value is not None]
-    assert "{x₃, x₆, x₁₃, x₄, x₉}" in text  # the template data under the template calculation
-    assert "{x₃, x₁, x₅, x₉, x₆}" in text  # … and under the article's
-    assert "< 1e-9  (identical)" in text
+    switches = workbook["Switches"]
+    assert str(switches["A1"].value).startswith(
+        "Switches — the settings that deviate from the article"
+    )
+    text = [str(c.value) for row in switches.iter_rows() for c in row if c.value is not None]
+    assert any(line.startswith("Iteration 1 on this run's data") for line in text)
+    assert any(line.startswith("d₁ on this run's data") for line in text)
+    # the effect table keeps the workbook's rows 53–56
+    assert [switches.cell(53 + i, 1).value for i in range(4)] == [
+        "running means, 2 passes",
+        "running means, 1 pass",
+        "final means, 2 passes",
+        "article",
+    ]
 
 
 def test_the_mirror_spells_zhuravlyov(mirror: Any) -> None:
@@ -349,7 +352,7 @@ def expected_sheets(view: RunView) -> list[str]:
     trace = view.trace
     quantitative = bool(trace.scaling.quantitative.any())
     nominal = bool((~trace.scaling.quantitative).any())
-    sheets = ["Overview", "Parameters", "Template Deviations", "Dataset"]
+    sheets = ["Overview", "Parameters", "Switches", "Dataset"]
     sheets += ["Quantitative"] * quantitative + ["Nominal"] * nominal
     sheets += ["Normalized Dataset", "Zhuravlyov Distances"]
     sheets += [f"Sorted Neighbors ({operator.label})" for operator in trace.operators]
@@ -358,12 +361,12 @@ def expected_sheets(view: RunView) -> list[str]:
         "Ψ(r) Binary Features",
         "Membership & Stability",
         "Informativeness ω",
-        "Ψ(r) Contribution & Weight",
+        "Ψ(r) Contributions",
     ]
-    sheets += [f"Greedy upon Weight ({j}-Latent)" for j in range(1, greedy_sheets(view) + 1)]
+    sheets += [f"Additional Feature {j}" for j in range(1, greedy_sheets(view) + 1)]
     sheets += [
-        "Dataset for Meta-algorithm",
-        "Brace for Meta-algorithm",
+        "Meta-description",
+        "New Object",
         "Meta-algorithm",
         "Meta-algorithm (All Objects)",
         "Margin Analysis",
@@ -379,7 +382,7 @@ def expected_sheets(view: RunView) -> list[str]:
         "hold-out": "Hold-Out",
     }
     sheets += [titles[p.protocol] for p in view.cross_validations]
-    sheets += ["Sensitivity (Switches)"] * (view.sensitivity is not None)
+    sheets += ["Switch Sensitivity"] * (view.sensitivity is not None)
     return [*sheets, "Model Properties", "Validation"]
 
 
@@ -403,7 +406,7 @@ def test_the_number_of_sheets_follows_the_run() -> None:
     assert numeric.slots == 3
     assert greedy_sheets(numeric) == 2  # ϰ = 3
     assert greedy_sheets(nominal) == 0  # r = 1: nothing to group
-    assert nominal.hag.p == 0
+    assert nominal.agglomerative.p == 0
     assert greedy_sheets(tiny) == 1
     plan = plan_sheets(numeric)
     assert plan.quantitative
@@ -422,7 +425,7 @@ def test_the_distance_sheet_is_named_after_the_metric() -> None:
                 scaling=SimpleNamespace(quantitative=np.array([True, False])),
             ),
             slots=2,
-            hag=SimpleNamespace(iterations=[None]),
+            agglomerative=SimpleNamespace(iterations=[None]),
             cross_validations=[SimpleNamespace(protocol=protocol)],
             sensitivity=None,
         )
@@ -438,8 +441,8 @@ def test_the_size_limits_leave_out_and_say_so() -> None:
     omitted = "\n".join(book.omitted)
     assert "the 3 matrices of 270 × 270 distances are not written" in omitted
     assert "Sorted Neighbors (ρ_J): the 270 × 270 rank matrix is not written" in omitted
-    assert "ranks 1 … 22 (the largest permitted k and one beyond) for 22 of 270 objects" in omitted
-    assert "only the block of the chosen feature q is written (30 candidates)" in omitted
+    assert "ranks 1 … 120 (the largest admissible k and one beyond) for 4 of 270 objects" in omitted
+    assert "only the block of the chosen feature q is written (177 candidates)" in omitted
     assert "B1/B2 flags per step are written for 1 of 270 objects" in omitted
     assert "Task 2 (bit representations) is not written" in omitted
     _, literal = build_workbook(shape("literal"), SMALL_BUDGET)
@@ -465,53 +468,3 @@ def test_other_shapes_are_written_and_read_back(name: str, tmp_path: Path) -> No
     values = [c.value for row in dataset.iter_rows() for c in row if c.value is not None]
     assert view.trace.classes[0] in values  # text labels are written as they are
     loaded.close()
-
-
-# ---------------------------------------------------------------- the template data
-
-
-def test_the_template_data_is_the_template_workbook() -> None:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        book = openpyxl.load_workbook(HAG_TEMPLATE, data_only=True)
-    contributions, weights, class_index, labels = read_hag_template(book)
-    sheet = book["Dataset for Meta-algorithm"]
-    latent = [[sheet.cell(r, c).value for c in range(10, 14)] for r in range(3, 13)]
-    book.close()
-    data = template_input()
-    assert np.array_equal(data.contributions, contributions)
-    assert np.array_equal(data.weights, weights)
-    assert np.array_equal(data.class_index, class_index)
-    assert data.labels == tuple(labels)
-    assert np.array_equal(data.latent, np.array(latent))
-
-
-def test_the_template_resource_is_small_json() -> None:
-    from importlib.resources import files
-
-    resource = files("context_synthetic_recognition.export.excel") / "hag_template.json"
-    data = json.loads(resource.read_text(encoding="utf-8"))
-    assert set(data) == {"source", "contributions", "weights", "classes", "latent"}
-    assert (len(data["contributions"]), len(data["contributions"][0])) == (10, 13)
-
-
-def test_the_switch_settings_on_the_template_data() -> None:
-    variants = template_variants()
-    assert [(v.centres, v.step4_passes, v.label) for v in variants] == [
-        (CentreMode.RUNNING, 2, "template cells"),
-        (CentreMode.RUNNING, 1, "running centres, 1 pass"),
-        (CentreMode.FINAL, 2, "final centres, 2 passes"),
-        (CentreMode.FINAL, 1, "article"),
-    ]
-    assert [v.selected for v in variants] == [
-        "{x₃, x₆, x₁₃, x₄, x₉}",
-        "{x₃, x₆, x₁₃, x₅, x₁₂}",
-        "{x₃, x₁, x₅, x₉}",
-        "{x₃, x₁, x₅, x₉, x₆}",
-    ]
-    # the template setting reproduces the template's latent features; the others do not
-    assert variants[0].difference < 1e-12
-    assert variants[0].difference_text == "< 1e-9  (identical)"
-    assert [v.difference_text for v in variants[1:]] == ["1.2e+00", "1.2e+00", "1.7e+00"]
-    assert template_hag().p == 4
-    assert template_hag(CentreMode.FINAL, 2).p == 3

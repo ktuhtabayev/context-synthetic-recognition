@@ -9,13 +9,14 @@ from openpyxl.workbook import Workbook
 from context_synthetic_recognition.export.excel.styles import StyleBook
 from context_synthetic_recognition.export.excel.writer import SheetWriter, sheet_name
 from context_synthetic_recognition.export.view import RunView
+from context_synthetic_recognition.services.validation import sheets
 
 ZHURAVLYOV = "zhuravlyov"
 """Registry name of the default metric."""
 
 OVERVIEW = "Overview"
 PARAMETERS = "Parameters"
-DEVIATIONS = "Template Deviations"
+DEVIATIONS = sheets.mirror_name(sheets.SWITCHES)
 DATASET = "Dataset"
 QUANTITATIVE = "Quantitative"
 NOMINAL = "Nominal"
@@ -28,9 +29,9 @@ MU = "Synthetic Features (k-NN)"
 PSI = "Ψ(r) Binary Features"
 MEMBERSHIP = "Membership & Stability"
 OMEGA = "Informativeness ω"
-CONTRIBUTION = "Ψ(r) Contribution & Weight"
-META_DATASET = "Dataset for Meta-algorithm"
-BRACE = "Brace for Meta-algorithm"
+CONTRIBUTION = sheets.mirror_name(sheets.CONTRIBUTIONS)
+META_DATASET = sheets.mirror_name(sheets.META_DESCRIPTION)
+BRACE = sheets.mirror_name(sheets.NEW_OBJECT)
 META = "Meta-algorithm"
 ALL_OBJECTS = "Meta-algorithm (All Objects)"
 MARGINS = "Margin Analysis"
@@ -38,7 +39,7 @@ ACCURACY = "Accuracy"
 CONFUSION = "Confusion Matrix"
 PRF1 = "Precision, Recall, F1 Score"
 ROC = "ROC Curve & AUC"
-SENSITIVITY = "Sensitivity (Switches)"
+SENSITIVITY = sheets.mirror_name(sheets.SENSITIVITY)
 PROPERTIES = "Model Properties"
 VALIDATION = "Validation"
 
@@ -47,6 +48,8 @@ PROTOCOL_SHEETS = {
     "stratified-k-fold": "Stratified K-Fold",
     "repeated-k-fold": "Repeated K-Fold",
     "hold-out": "Hold-Out",
+    "rips": "R-IPS Split",
+    "nested-cross-validation": "Nested Cross-Validation",
 }
 """Sheet of every hold-out protocol's folds."""
 
@@ -56,9 +59,11 @@ class ExcelOptions:
     """How much detail the mirror writes on large data."""
 
     max_sheet_cells: int = 150_000
-    """Budget of the repeated per-object blocks of one sheet (neighbour blocks, HAG candidate
-    blocks, the B1/B2 blocks of every training object). When a sheet's blocks would exceed it,
-    only as many blocks as fit are written and the sheet says so."""
+    """Budget of the repeated per-object blocks of one sheet.
+
+    Neighbour blocks, candidate blocks of the agglomerative algorithm, the B1/B2 blocks of every
+    training object. When a sheet's blocks would exceed it, only as many blocks as fit are written
+    and the sheet says so."""
     max_matrix_cells: int = 250_000
     """Largest object × object table (distances, ranks) written in full — about 500 objects;
     beyond it the sheet holds a note pointing to the CSV export."""
@@ -75,7 +80,7 @@ class SheetPlan:
     neighbours: tuple[str, ...]
     """One *Sorted Neighbors* sheet per base operator."""
     greedy: tuple[str, ...]
-    """One *Greedy upon Weight* sheet per HAG iteration laid out."""
+    """One *Additional Feature* sheet per iteration of the agglomerative algorithm laid out."""
     protocols: dict[str, str]
     """Hold-out protocol → the sheet with its folds."""
     quantitative: bool
@@ -84,11 +89,11 @@ class SheetPlan:
 
 
 def greedy_sheets(view: RunView) -> int:
-    """HAG iterations the mirror lays out: every possible one up to min(ϰ, r) − 1.
+    """Iterations of the agglomerative algorithm the mirror lays out: up to min(ϰ, r) − 1.
 
     An iteration the grouping did not reach is shown as "not executed", as in the workbook.
     """
-    return max(view.slots - 1, len(view.hag.iterations))
+    return max(view.slots - 1, len(view.agglomerative.iterations))
 
 
 def plan_sheets(view: RunView) -> SheetPlan:
@@ -100,7 +105,7 @@ def plan_sheets(view: RunView) -> SheetPlan:
         name = sheet_name(f"Sorted Neighbors ({operator.label})", taken)
         taken.append(name)
         neighbours.append(name)
-    greedy = tuple(f"Greedy upon Weight ({j}-Latent)" for j in range(1, greedy_sheets(view) + 1))
+    greedy = tuple(sheets.mirror_step(j) for j in range(1, greedy_sheets(view) + 1))
     protocols = {
         p.protocol: PROTOCOL_SHEETS.get(p.protocol, sheet_name(p.protocol.title()))
         for p in view.cross_validations

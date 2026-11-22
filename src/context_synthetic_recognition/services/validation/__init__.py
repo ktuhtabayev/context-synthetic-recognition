@@ -3,8 +3,11 @@
 Three layouts are recognised from their sheet names (:class:`WorkbookKind`):
 
 - the **experiment** workbook (Steps 1–12, :mod:`.experiment`);
-- the **HAG template** (``RegularizedStackingEnsembleWithHAG […]``, :mod:`.templates`);
-- the **meta-algorithm template** (``Meta-algorithm […]``, :mod:`.templates`).
+- the **additional-features check workbook** — the agglomerative algorithm on its own data
+  (:mod:`.check_workbooks`);
+- the **meta-algorithm check workbook** (:mod:`.check_workbooks`).
+
+The workbooks' sheet names are quoted in :mod:`.sheets` only.
 
 A declarative map pairs sheet ranges with values computed by the package; numbers must agree to
 a tolerance (1e-9 by default), text exactly. ``csr validate`` and the golden tests use the same
@@ -20,6 +23,13 @@ from pathlib import Path
 from typing import Any
 
 from context_synthetic_recognition.config.models import ExperimentConfig
+from context_synthetic_recognition.services.validation import sheets
+from context_synthetic_recognition.services.validation.check_workbooks import (
+    additional_features_workbook_checks,
+    meta_algorithm_workbook_checks,
+    validate_additional_features_workbook,
+    validate_meta_algorithm_workbook,
+)
 from context_synthetic_recognition.services.validation.checks import (
     DEFAULT_TOLERANCE,
     Check,
@@ -34,12 +44,6 @@ from context_synthetic_recognition.services.validation.experiment import (
     workbook_checks,
 )
 from context_synthetic_recognition.services.validation.subject import ExperimentSubject
-from context_synthetic_recognition.services.validation.templates import (
-    hag_template_checks,
-    meta_template_checks,
-    validate_hag_template,
-    validate_meta_template,
-)
 
 __all__ = [
     "DEFAULT_TOLERANCE",
@@ -49,9 +53,9 @@ __all__ = [
     "ValidationError",
     "ValidationReport",
     "WorkbookKind",
+    "additional_features_workbook_checks",
     "experiment_subject",
-    "hag_template_checks",
-    "meta_template_checks",
+    "meta_algorithm_workbook_checks",
     "run_check",
     "validate_workbook",
     "workbook_checks",
@@ -64,10 +68,10 @@ class WorkbookKind(StrEnum):
 
     EXPERIMENT = "experiment"
     """The full CS-model experiment (Steps 1–12)."""
-    HAG_TEMPLATE = "hag-template"
-    """The HAG template of the author's earlier project."""
-    META_TEMPLATE = "meta-template"
-    """The meta-algorithm template of the author's earlier project."""
+    ADDITIONAL_FEATURES = "additional-features"
+    """The additional-features check workbook (the agglomerative algorithm on its own data)."""
+    META_ALGORITHM = "meta-algorithm"
+    """The meta-algorithm check workbook."""
 
 
 def workbook_kind(sheet_names: list[str]) -> WorkbookKind:
@@ -79,20 +83,20 @@ def workbook_kind(sheet_names: list[str]) -> WorkbookKind:
     names = set(sheet_names)
     if "Parameters" in names and "Dataset" in names:
         return WorkbookKind.EXPERIMENT
-    if {"Dataset (Contribution & Weight)", "Greedy upon Weight (1-Latent)"} <= names:
-        return WorkbookKind.HAG_TEMPLATE
-    if {"Brace for Meta-algorithm", "Meta-algorithm"} <= names:
-        return WorkbookKind.META_TEMPLATE
+    if {sheets.CONTRIBUTION_INPUT, sheets.agglomerative_step(1)} <= names:
+        return WorkbookKind.ADDITIONAL_FEATURES
+    if {sheets.NEW_OBJECT, sheets.META_ALGORITHM} <= names:
+        return WorkbookKind.META_ALGORITHM
     raise ValidationError(
-        "not a known workbook: expected the CS-model experiment or one of the HAG and "
-        "meta-algorithm templates"
+        "not a known workbook: expected the CS-model experiment or one of the check workbooks "
+        "(additional features, meta-algorithm)"
     )
 
 
 _VALIDATORS = {
     WorkbookKind.EXPERIMENT: validate_experiment,
-    WorkbookKind.HAG_TEMPLATE: validate_hag_template,
-    WorkbookKind.META_TEMPLATE: validate_meta_template,
+    WorkbookKind.ADDITIONAL_FEATURES: validate_additional_features_workbook,
+    WorkbookKind.META_ALGORITHM: validate_meta_algorithm_workbook,
 }
 
 
@@ -108,9 +112,9 @@ def validate_workbook(
     (as last calculated by Excel or LibreOffice).
 
     Args:
-        path: The experiment workbook or a template workbook.
-        config: Configuration; the template preset by default (for the experiment together with
-            the HAG parameters of its *Parameters* sheet).
+        path: The experiment workbook or a check workbook.
+        config: Configuration; ``None``: the workbook's own settings (the ``excel-experiment``
+            preset, for the experiment with the parameters of its *Parameters* sheet).
         tolerance: Largest accepted absolute difference of numbers.
 
     Raises:

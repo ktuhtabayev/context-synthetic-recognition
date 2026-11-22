@@ -12,7 +12,11 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 
-from context_synthetic_recognition.core.meta import K1_DECISION, K2_DECISION, REFUSAL
+from context_synthetic_recognition.core.meta_algorithm.algorithm import (
+    K1_DECISION,
+    K2_DECISION,
+    REFUSAL,
+)
 from context_synthetic_recognition.data.schema import Label
 from context_synthetic_recognition.export.view import LEAVE_ONE_OUT, RunView
 from context_synthetic_recognition.notation import DASH, synthetic_name
@@ -109,11 +113,11 @@ def _ok(condition: bool, good: str, bad: str) -> str:
 def determinacy_rows(view: RunView) -> list[tuple[str, str | int, str]]:
     """Definition 1 / Property 1: (check, result, status) — rows 5–9 of *Model Properties*."""
     d = view.result.properties.determinacy
-    declared = view.trace.permitted_k.k_max
+    declared = view.trace.admissible_k.k_max
     k_max = declared if declared is not None else d.k_max
     return [
         (
-            "Enough neighbours for every permitted k  (m − 1 ≥ k_max)",
+            "Enough neighbours for every admissible k  (m − 1 ≥ k_max)",
             f"{d.neighbours} ≥ {k_max}",
             _ok(d.neighbours >= k_max, "✓ defined", "✗ too few objects"),
         ),

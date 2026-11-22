@@ -46,7 +46,7 @@ class FeatureType(StrEnum):
 
     @classmethod
     def from_flag(cls, flag: int) -> FeatureType:
-        """Type for a workbook/template flag (1 → I, 0 → J)."""
+        """Type for a type flag of a workbook or a data file (1 → I, 0 → J)."""
         if flag == 1:
             return cls.QUANTITATIVE
         if flag == 0:

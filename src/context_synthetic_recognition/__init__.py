@@ -6,9 +6,9 @@ Implements the pipeline of the article "Контекстно-синтетиче�
     (S, E) → Ψ_ρ,k(S, E) → D(S, E) → Y(S, E) → R(Y(S, E))
 
 Local k-nearest-neighbour contexts of the base operators (metric × feature subset) become
-synthetic features Ψ(r), the hierarchical agglomerative grouping (HAG) turns them into
-additional (latent) features D, and the meta-algorithm R classifies in the space Y. A new object
-is represented and classified without its class (Theorem of the article).
+synthetic features Ψ(r), the hierarchical agglomerative grouping (agglomerative algorithm) turns
+them into additional (latent) features D, and the meta-algorithm R classifies in the space Y. A new
+object is represented and classified without its class (Theorem of the article).
 
 Layers: :mod:`.core` (pure numerical core), :mod:`.config`, :mod:`.data`, :mod:`.services` (runs,
 validation, summaries, runs side by side), :mod:`.evaluation`, :mod:`.export`, :mod:`.cli` and

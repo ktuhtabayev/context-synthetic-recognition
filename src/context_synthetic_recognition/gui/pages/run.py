@@ -103,7 +103,10 @@ class RunPage(Page):
         self.sensitivity.addItem(tr("always"), "yes")
         self.sensitivity.addItem(tr("never"), "no")
         self.sensitivity.setToolTip(
-            tr("Evaluate all four settings of the two ⚠ switches (a leave-one-out for each)")
+            tr(
+                "Evaluate the four combinations of the class means and the passes of the "
+                "majorizing function (a leave-one-out for each)"
+            )
         )
         form.addRow(self.save)
         form.addRow(tr("Runs folder"), folder_row)
@@ -200,11 +203,11 @@ class RunPage(Page):
             protocols = ", ".join(spec.name for spec in config.evaluation.protocols) or "—"
             active = active_deviations(config)
             switches = (
-                tr("⚠ template calculation for {fields}").format(
+                tr("⚠ deviates from the article: {fields}").format(
                     fields=", ".join(d.field for d in active)
                 )
                 if active
-                else tr("article calculation for both switches")
+                else tr("follows the article")
             )
             self.plan.setText(
                 tr("{name} · m = {m}, n = {n} · protocols: {protocols} · {switches}").format(
@@ -340,7 +343,9 @@ class RunPage(Page):
         view = outcome.view
         self._ok = True
         self.stage.setText(
-            tr("Finished: TUPLAM = {tuplam}, p = {p}.").format(tuplam=view.hag.label, p=view.hag.p)
+            tr("Finished: TUPLAM = {tuplam}, p = {p}.").format(
+                tuplam=view.agglomerative.label, p=view.agglomerative.p
+            )
         )
         self.console.appendPlainText(tr("— finished —"))
 

@@ -1,0 +1,93 @@
+# context-synthetic-recognition experiment configuration
+# preset: alpha-0.1
+
+schema_version: 2
+name: cs-model-alpha-0.1
+description: ''
+dataset:
+  path: null
+  format: auto
+  sheet: null
+  class_column: null
+  id_column: null
+  feature_types: null
+  missing_values: error
+rips:
+  metric:
+    name: zhuravlyov
+    params: {}
+  normalizer:
+    name: minmax
+    params: {}
+  features: all
+  training: remaining
+  keep_blocked_cover: false
+  test_sample: []
+  distance_decimals: 10
+local_context:
+  normalizer:
+    name: minmax
+    params: {}
+  operators:
+  - label: ρ
+    metric:
+      name: zhuravlyov
+      params: {}
+    features: all
+    normalizer: null
+  - label: ρ_I
+    metric:
+      name: zhuravlyov
+      params: {}
+    features: quantitative
+    normalizer: null
+  - label: ρ_J
+    metric:
+      name: zhuravlyov
+      params: {}
+    features: nominal
+    normalizer: null
+  distance_decimals: 10
+  tie_break: smaller-index
+  skip_empty_operators: true
+admissible_k:
+  name: min-class
+  params: {}
+synthetic_features:
+  encoder:
+    name: formula-5
+    params: {}
+  informativeness:
+    name: formula-4
+    params: {}
+  skip_constant: false
+  original_features: []
+  zero_value: false
+additional_features:
+  alpha: 0.1
+  delta: 0.1
+  kappa: 5
+  cr1: 10.0
+  majorizing_function:
+    name: sigmoid
+    params: {}
+  class_means: final
+  majorizing_passes: 1
+meta_algorithm:
+  decision_rule:
+    name: step-4
+    params: {}
+evaluation:
+  protocols:
+  - name: resubstitution
+    params: {}
+  - name: leave-one-out
+    params: {}
+  baselines:
+  - name: knn-vote
+    params: {}
+  positive_class: 1
+  score_decimals: 10
+seed: 42
+output:
+  runs_dir: runs

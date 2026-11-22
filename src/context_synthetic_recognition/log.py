@@ -2,9 +2,9 @@
 
 Records carry key–value context through ``extra``::
 
-    logger.info("permitted k computed", extra={"k": [3, 5], "k_max": 5})
+    logger.info("admissible k computed", extra={"k": [3, 5], "k_max": 5})
 
-The console shows ``12:00:01 INFO    context_synthetic_recognition.core: permitted k computed
+The console shows ``12:00:01 INFO    context_synthetic_recognition.core: admissible k computed
 k=[3, 5] k_max=5``; a run folder receives the same records as JSON lines.
 """
 

@@ -4,9 +4,10 @@ The GUI tables, the exporters and the golden tests read the same trace, so the w
 software and the article's tables cannot drift apart. Indices are 0-based; the display names
 (S₁, x₁, a₁) come from :mod:`context_synthetic_recognition.notation`.
 
-This module covers Steps 1–8 (up to Ψ(r), formulas (1)–(6)). The HAG's trace (``HAGResult``,
-``HAGIteration``, ``CandidateScan``) is in :mod:`.hag`, the meta-algorithm's (``MetaResult``,
-``MetaSteps``) in :mod:`.meta`; :mod:`.model` puts them together.
+This module covers Steps 1–8 (up to Ψ(r), formulas (1)–(6)). The trace of the agglomerative
+algorithm (``AgglomerativeResult``, ``AgglomerativeIteration``, ``CandidateScan``) is in
+:mod:`.additional_features.agglomerative`, the meta-algorithm's (``MetaResult``, ``MetaSteps``) in
+:mod:`.meta_algorithm.algorithm`; :mod:`.model` puts them together.
 """
 
 from __future__ import annotations
@@ -16,20 +17,23 @@ from dataclasses import dataclass
 import numpy as np
 
 from context_synthetic_recognition.core.arrays import BoolArray, FloatArray, IntArray, freeze_fields
-from context_synthetic_recognition.core.k_strategies import PermittedK
-from context_synthetic_recognition.core.membership import Boundary, MembershipTable
-from context_synthetic_recognition.core.neighbours import (
+from context_synthetic_recognition.core.local_context.admissible_k import AdmissibleK
+from context_synthetic_recognition.core.local_context.neighbours import (
     cumulative_count,
     neighbour_classes,
     rank_matrix,
 )
-from context_synthetic_recognition.core.normalizers import Scaling
-from context_synthetic_recognition.core.operators import SkippedOperator
+from context_synthetic_recognition.core.local_context.normalizers import Scaling
+from context_synthetic_recognition.core.local_context.operators import SkippedOperator
+from context_synthetic_recognition.core.synthetic_features.membership import (
+    Boundary,
+    MembershipTable,
+)
 from context_synthetic_recognition.notation import synthetic_name
 
 
 @dataclass(frozen=True, eq=False)
-class OperatorContext:
+class LocalContext:
     """Steps 2–3 for one base operator: distances and neighbour order of the training sample."""
 
     label: str
@@ -42,6 +46,8 @@ class OperatorContext:
     """(m × m) distances, rounded (sheet *Zhuravlev Distances*)."""
     order: IntArray
     """(m × (m − 1)) neighbours of every object by (distance, index), self excluded."""
+    normalizer: str = "minmax"
+    """Registry name of the normalization the operator's distances use."""
 
     def __post_init__(self) -> None:
         """Freeze the arrays."""
@@ -72,7 +78,11 @@ class OperatorContext:
 
 @dataclass(frozen=True, eq=False)
 class SyntheticFeature:
-    """Steps 4–8 for one synthetic feature aᵤ = (operator, k)."""
+    """Steps 4–8 for one synthetic feature aᵤ = (operator, k).
+
+    Or for an original nominal feature combined with the synthetic ones (``original ≥ 0``,
+    ADR-065: its codes are the gradations).
+    """
 
     index: int
     """0-based u; the feature is aᵤ₊₁."""
@@ -100,14 +110,21 @@ class SyntheticFeature:
     """(m,) whether S lies on its class's side of G_k."""
     omega: float
     """Informativeness ω by formula (4)."""
-    weight: float
-    """Weight used by formula (6) and the HAG (= ω by default)."""
+    informativeness: float
+    """Weight used by formula (6) and the hierarchical agglomerative algorithm (= ω by default)."""
     alpha: IntArray
     """(2 × 2) α counts: ``alpha[j − 1, c]`` = objects of class c with aᵤ = j."""
     eta: FloatArray
     """(2,) contributions η(1), η(2) by formula (6)."""
     contributions: FloatArray
     """(m,) contribution value ηᵤ(a_tu) of every object."""
+    zeros: int = 0
+    """Training objects whose class is indistinguishable at their gradation μ (f_k(μ) = 0.5):
+    the value 0 of the article's experiments (ADR-064)."""
+    gradations: tuple[int, ...] = (1, 2)
+    """The values j of formula (6): {1, 2}, or the codes of an original feature."""
+    original: int = -1
+    """0-based index of the original nominal feature; −1 for a synthetic feature."""
 
     def __post_init__(self) -> None:
         """Freeze the arrays."""
@@ -119,6 +136,28 @@ class SyntheticFeature:
         return synthetic_name(self.index)
 
     @property
+    def is_original(self) -> bool:
+        """Whether this is an original nominal feature combined with the synthetic ones."""
+        return self.original >= 0
+
+    @property
+    def label(self) -> str:
+        """``ρ_J·5`` for a synthetic feature, the feature name (``x₃``) for an original one."""
+        return self.operator_label if self.is_original else f"{self.operator_label}·{self.k}"
+
+    def eta_at(self, value: int) -> float:
+        """η(j) for the value ``value``; NaN if the feature has no such value."""
+        if value not in self.gradations:
+            return float("nan")
+        return float(self.eta[self.gradations.index(value)])
+
+    def alpha_at(self, value: int, class_: int) -> int:
+        """α of the value ``value`` in class ``class_`` (0 = K1, 1 = K2); 0 if absent."""
+        if value not in self.gradations:
+            return 0
+        return int(self.alpha[self.gradations.index(value), class_])
+
+    @property
     def chi2(self) -> IntArray:
         """χ₂ = k − χ₁."""
         return self.k - self.chi1
@@ -126,25 +165,51 @@ class SyntheticFeature:
 
 @dataclass(frozen=True)
 class SkippedFeature:
-    """A synthetic feature left out because it is constant on the training sample (ADR-030)."""
+    """A synthetic feature left out of Ψ(r) on the training sample."""
 
     operator_label: str
     k: int
     value: int
-    """The one value every training object has."""
+    """The value of the first training object (the one value of a constant feature)."""
     omega: float
     """Its informativeness ω — often 1 at large k, although it carries no information."""
+    reason: str = "constant"
+    """``constant`` (``skip_constant``, ADR-030) or ``zero`` — a training object takes the value 0
+    (f_k(μ) = 0.5) and ``zero_value`` is on (ADR-064)."""
+    zeros: int = 0
+    """Training objects whose class is indistinguishable at their gradation (f_k(μ) = 0.5)."""
 
 
 @dataclass(frozen=True, eq=False)
-class BitMaskRepresentation:
+class ClassSequenceMasks:
+    """Task 2 for one operator: the class-sequence bit masks of section 1.2, one per k ≤ 62."""
+
+    operator: int
+    """Index of the base operator."""
+    operator_label: str
+    ks: tuple[int, ...]
+    """The admissible k for which masks are formed."""
+    masks: IntArray
+    """(m × len(ks)) mask of every object for every k (bit j = 1: the j-th neighbour is in K1)."""
+    tables: tuple[MembershipTable, ...]
+    """Formula (1) over the masks of every k."""
+    stabilities: FloatArray
+    """(len(ks),) g by formula (2), β = 2ᵏ − 1."""
+
+    def __post_init__(self) -> None:
+        """Freeze the arrays."""
+        freeze_fields(self)
+
+
+@dataclass(frozen=True, eq=False)
+class MajorityChains:
     """Task 2 for one operator: bits by the majority rule and their membership and stability."""
 
     operator: int
     """Index of the base operator."""
     operator_label: str
     ks: tuple[int, ...]
-    """The permitted k, first = most significant bit."""
+    """The admissible k, first = most significant bit."""
     bits: BoolArray
     """(m × len(ks)) bit i = [μ(kᵢ) > kᵢ/2]."""
     masks: IntArray
@@ -160,8 +225,8 @@ class BitMaskRepresentation:
 
 
 @dataclass(frozen=True, eq=False)
-class ContextTrace:
-    """Steps 1–8 on a training sample: from the data to Ψ(r) with contributions and weights."""
+class PsiTrace:
+    """Steps 1–8 on a training sample: from the data to Ψ(r), contributions, informativeness."""
 
     object_ids: tuple[str, ...]
     feature_names: tuple[str, ...]
@@ -172,21 +237,23 @@ class ContextTrace:
     class_sizes: tuple[int, int]
     """|K1|, |K2|."""
     scaling: Scaling
-    """Step 1: the fitted scale unification."""
+    """Step 1: the fitted normalization."""
     normalized: FloatArray
     """(m × n) unified training values (sheet *Normalized Dataset*)."""
-    operators: tuple[OperatorContext, ...]
+    operators: tuple[LocalContext, ...]
     """Steps 2–3 per base operator."""
     skipped_operators: tuple[SkippedOperator, ...]
     """Operators left out (empty feature subset, ADR-007)."""
-    permitted_k: PermittedK
+    admissible_k: AdmissibleK
     """The k of this fit."""
     features: tuple[SyntheticFeature, ...]
     """Ψ(r): operators in configuration order, k increasing within an operator."""
-    bit_masks: tuple[BitMaskRepresentation, ...]
-    """Task 2 per operator; empty when there are more than 62 permitted k."""
+    majority_chains: tuple[MajorityChains, ...]
+    """Task 2 per operator; empty when there are more than 62 admissible k."""
     skipped_features: tuple[SkippedFeature, ...] = ()
     """Constant synthetic features left out (``synthetic.skip_constant``, ADR-030)."""
+    class_sequences: tuple[ClassSequenceMasks, ...] = ()
+    """Task 2: the class-sequence bit masks of every operator (section 1.2)."""
 
     def __post_init__(self) -> None:
         """Freeze the arrays."""
@@ -209,13 +276,13 @@ class ContextTrace:
 
     @property
     def contributions(self) -> FloatArray:
-        """(m × r) Ψ(r) as contribution values ηᵤ(a_tu) — the HAG input."""
+        """(m × r) Ψ(r) as contribution values ηᵤ(a_tu) — the agglomerative algorithm input."""
         return np.column_stack([f.contributions for f in self.features])
 
     @property
-    def weights(self) -> FloatArray:
-        """(r,) weight of every synthetic feature (ω by default)."""
-        return np.array([f.weight for f in self.features])
+    def informativeness(self) -> FloatArray:
+        """(r,) the informativeness of every synthetic feature (ω by formula (4) by default)."""
+        return np.array([f.informativeness for f in self.features])
 
     @property
     def omegas(self) -> FloatArray:
@@ -223,16 +290,17 @@ class ContextTrace:
         return np.array([f.omega for f in self.features])
 
     @property
-    def meta_object(self) -> FloatArray:
-        """(r,) the meta-object: stability g of every synthetic feature."""
+    def metaobject(self) -> FloatArray:
+        """(r,) the metaobject: stability g of every synthetic feature."""
         return np.array([f.stability for f in self.features])
 
 
 @dataclass(frozen=True, eq=False)
-class ObjectContext:
+class PsiRepresentation:
     """Objects described relative to the fixed training sample E, without their class (Theorem).
 
-    Built by :meth:`~context_synthetic_recognition.core.context.ContextModel.represent`.
+    Built by
+    :meth:`~context_synthetic_recognition.core.synthetic_features.psi.PsiOperator.represent`.
     """
 
     normalized: FloatArray

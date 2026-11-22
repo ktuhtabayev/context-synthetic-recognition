@@ -1,54 +1,50 @@
 # Context-synthetic recognition
 
-Python implementation of the **context-synthetic model of recognition algorithms (CS-model)** —
-library, `csr` command line and desktop GUI — built on the author's complete Excel experiment
-on Heart-Disease (10, 13, 2), which serves as the executable specification.
+Python implementation of the **context-synthetic model of recognition algorithms (CS-model)** of
+the author's article (in preparation) — a library, the `csr` command line and a desktop GUI. The
+article is the specification: the defaults follow it. The author's Excel experiment on
+Heart-Disease (10, 13, 2) remains an acceptance test, reproduced cell for cell with its own
+settings.
 
 > **Windows app, no Python needed:** download `csr-gui-<version>-windows.zip` from the
 > [latest release](https://github.com/ktuhtabayev/context-synthetic-recognition/releases/latest),
 > unpack it and start `csr-gui.exe`.
 
 ```text
-(S, E) → Ψ_ρ,k(S, E) → D(S, E) → Y(S, E) → R(Y(S, E))
+E₀ —R-IPS→ E, T      (S, E) → Ψ_ρ,k(S, E) → D(S, E) → Y(S, E) → R(Y(S, E))
 ```
 
-Base operators (the Zhuravlyov metric on all, quantitative and nominal features) turn each object's
-k-nearest-neighbour context into class-free synthetic features Ψ(r) (formula (5)); membership,
-stability, informativeness and contributions (formulas (1)–(6)) weight them; the hierarchical
-agglomerative grouping (HAG) builds latent features; the meta-algorithm classifies — a new object
-without its class (Theorem of the article).
+## The method
 
-> [!WARNING]
-> **Two template calculations differ from the article.**
-> - θ and γ are measured from running partial class means instead of the final class means M₁ and M₂.
-> - In STEP 4 the majorizer is applied twice instead of once.
->
-> Both are configuration switches (`hag.centres`, `hag.step4_passes`). The default reproduces the
-> template workbooks exactly; the `article` preset follows the article. See
-> [docs/DECISIONS.md](docs/DECISIONS.md) (ADR-002 – ADR-004).
-
-## Status
-
-| Milestone | Content | State |
+| Stage | What it does | Package |
 |---|---|---|
-| M0 | Analysis and plan | ✓ |
-| M1 | Skeleton: packaging, tooling, CI, configuration, logging, docs | ✓ |
-| M2 | Data layer; core pipeline up to Ψ(r) and formulas (1)–(6); golden tests Steps 1–8 | ✓ |
-| M3 | HAG, meta-algorithm, new-object path, template replication | ✓ |
-| M4 | Evaluation (LOO re-fit, baselines, metrics, margins, properties), `csr validate` | ✓ |
-| M5 | Exporters: Excel mirror, CSV/JSON, Markdown/LaTeX tables, figures, HTML/PDF report | ✓ |
-| M6 | Desktop GUI (PySide6): dataset, configure, run, results explorer, new object, compare, export | ✓ |
-| M7 | More metrics (HEOM, Gower, Euclidean, Mahalanobis, …) and normalizers (z-score, robust, rank, …) | ✓ |
-| M8 | Reproduction guide, Russian and Uzbek interface, Windows executable, documentation site | ✓ |
+| R-IPS | forms the precedent base: hyperspheres around the objects split E₀ into a training sample E and a test sample | `core/rips` |
+| Local contexts Ψ_ρ,k | normalization fitted on E; base operators (the Zhuravlyov metric on all, quantitative and nominal features); nested neighbourhoods; admissible values of k | `core/local_context` |
+| Synthetic features Ψ(r) | formula (5) from the classes of the k nearest neighbours; membership (1), stability (2) and the metaobject, boundary (3), informativeness ω (4), contributions η (6) | `core/synthetic_features` |
+| Additional (latent) features d₁ … d_p | the hierarchical agglomerative algorithm, Steps 1–5, with the majorizing function φ and the margin regularization parameter α | `core/additional_features` |
+| Meta-algorithm R | Steps 1–5 on the meta-description Y: class K1, K2 or refusal | `core/meta_algorithm` |
 
-Documentation: <https://ktuhtabayev.github.io/context-synthetic-recognition/>
+A new object is represented and classified without its class (Theorem of the article): the
+classification methods have no label argument. Terms and symbols are listed in the
+[glossary](docs/glossary.md).
 
-## The desktop application without Python
+## Presets and switches
 
-Download `csr-gui-<version>-windows.zip` from the
-[latest release](https://github.com/ktuhtabayev/context-synthetic-recognition/releases/latest),
-unpack it anywhere and start `csr-gui.exe`. Nothing is installed; the Heart-Disease datasets are
-built in. The interface is available in English, Russian and Uzbek (**View → Language**).
+| Preset | Settings |
+|---|---|
+| `default` | the article: odd k = 3 … min(\|K1\|, \|K2\|), final class means, one majorizing pass in Step 4; where the article gives no value, α = 0.3, δ = 0.1, ϰ = 5, cr1₀ = 10 and φ = logistic sigmoid (ADR-068) |
+| `alpha-0.1`, `alpha-0.2` | the default with α = 0.1 or 0.2, the values of the article's experiments |
+| `excel-experiment` | the Excel experiment: odd k = 3 … 2·min\|Kᵢ\| − 3, ⚠ running class means, ⚠ two majorizing passes; reproduces the workbook |
+
+Four switches deviate from the article when they are on. They are off by default and marked ⚠
+in the command line, the GUI and every export:
+
+| Switch | The article (default) | ⚠ Deviating value | Decision |
+|---|---|---|---|
+| `rips.keep_blocked_cover` | `false` | `true` — a blocked object keeps covering other objects with \|r(S)\| | ADR-061 |
+| `rips.training` | `remaining` — the objects left in E₁ | `moved` — the objects R-IPS moves to D | ADR-061 |
+| `additional_features.class_means` | `final` — M₁, M₂ | `running` — θ and γ from running partial class means | ADR-002 |
+| `additional_features.majorizing_passes` | `1` | `2` — φ applied twice in Step 4 | ADR-003 |
 
 ## Quick start (Windows PowerShell)
 
@@ -62,78 +58,67 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 ```
 
-Commands:
-
 ```powershell
-.\.venv\Scripts\csr.exe config show                      # the template preset (default)
-.\.venv\Scripts\csr.exe config show --preset article     # final centres, one STEP 4 pass
-.\.venv\Scripts\csr.exe config init my-experiment.yaml   # start a configuration file
-.\.venv\Scripts\csr.exe config check my-experiment.yaml  # validate; hash, preset, deviations, plug-ins
-.\.venv\Scripts\csr.exe data list                        # built-in datasets and file formats
-.\.venv\Scripts\csr.exe data info heart-disease-270      # sizes, types I/J, |Kᵢ|, permitted k, r
-.\.venv\Scripts\csr.exe fit heart-disease-10               # Ψ(r), the HAG step by step, TUPLAM
-.\.venv\Scripts\csr.exe classify heart-disease-10 --object 1                         # S₁ left out of its context
-.\.venv\Scripts\csr.exe classify heart-disease-10 --values "58 1 3 125 250 0 2 150 0 1 2 1 7"  # a new object
-.\.venv\Scripts\csr.exe validate --against "resources\Experiments\Context-Synthetic Recognition Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
-.\.venv\Scripts\csr.exe validate --against "tests\data\templates\RegularizedStackingEnsembleWithHAG [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx"
-.\.venv\Scripts\csr.exe run heart-disease-10 --sensitivity  # resubstitution, LOO, k-NN baselines, margins, switches
-.\.venv\Scripts\csr.exe run -c configs\heart-disease-270-large-data.yaml   # the large-data setting (ADR-030)
-.\.venv\Scripts\csr.exe run heart-disease-10 --export all  # … and export: workbook, tables, figures, report
-.\.venv\Scripts\csr.exe export -f excel,html               # export the latest run again (repeated from its folder)
-.\.venv\Scripts\csr.exe gui                                # the desktop application
+.\.venv\Scripts\csr.exe fit heart-disease-10            # admissible k, Ψ(r), the agglomerative algorithm step by step, TUPLAM
+.\.venv\Scripts\csr.exe run heart-disease-10            # resubstitution, leave-one-out, k-NN baselines, margins, properties
+.\.venv\Scripts\csr.exe gui                             # the desktop application
 ```
 
-`csr validate` compares the package with a workbook's cached cell values, reading the inputs (data,
-HAG parameters and both switches, the new object) from the workbook itself: every computed sheet
-of the experiment (11,631 cells in 29 sheets, Steps 1–12 and the evaluation), the HAG template
-(SET {x₃, x₆, x₁₃, x₄, x₉}, 6,131 cells) and the meta-algorithm template (Class 2, B1(a₄) = ∅,
-B2(a₄) = {S₉, S₁₀}). `csr run` evaluates the model and writes a run folder
-([Evaluation](docs/evaluation.md)).
+More commands:
 
-`csr export` writes a run as `workbook.xlsx` — a mirror of the Excel experiment with the same
-sheets, layout and style, generated for any data; for Heart-Disease (10, 13, 2) it passes
-`csr validate` cell for cell — as CSV/JSON, as Markdown and LaTeX tables, as PNG/SVG figures and
-as an HTML/PDF report ([Exporting](docs/exporting.md)).
+```powershell
+.\.venv\Scripts\csr.exe config show --preset excel-experiment   # a preset as YAML
+.\.venv\Scripts\csr.exe config init my-experiment.yaml          # start a configuration file
+.\.venv\Scripts\csr.exe config check my-experiment.yaml         # hash, preset, deviations, plug-ins
+.\.venv\Scripts\csr.exe data list                               # datasets, built-ins, file formats
+.\.venv\Scripts\csr.exe data info heart-disease-270             # sizes, types I/J, |Kᵢ|, admissible k, r
+.\.venv\Scripts\csr.exe classify heart-disease-10 --object 1    # S₁ left out of its own context
+.\.venv\Scripts\csr.exe classify heart-disease-10 --values "58 1 3 125 250 0 2 150 0 1 2 1 7"  # a new object
+.\.venv\Scripts\csr.exe run heart-disease-10 -c configs\excel-experiment.yaml --sensitivity     # the workbook's settings and the four switch settings
+.\.venv\Scripts\csr.exe run heart-disease-10 --export all       # … and export: workbook, tables, figures, report
+.\.venv\Scripts\csr.exe export -f excel,html                    # export the latest run again
+.\.venv\Scripts\csr.exe validate --against "tests\data\workbooks\Excel experiment [Heart-Disease (10, 13, 2)].xlsx"
+```
 
-`csr gui` starts the desktop application: load a dataset, configure the method (the two ⚠
-switches are always in sight), run in the background, explore every table and figure of the
-workbook with cross-highlighting, classify a new object with a step-by-step explanation,
-compare runs and export — in English, Russian or Uzbek ([Desktop application](docs/gui.md)).
+`csr validate` reads the data, the parameters and the switch settings from the workbook, runs the
+pipeline with the `excel-experiment` preset and compares every computed sheet: 11,622 cells in
+579 checks. The two check workbooks — additional features and meta-algorithm — are compared the
+same way ([Reproducing the Excel experiment](docs/reproduction.md)).
 
-To repeat the Excel experiment yourself — the workbook checked cell for cell, every result step
-by step, any saved run again — follow [Reproducing the experiment](docs/reproduction.md).
+`csr run` evaluates the model and writes a run folder: resubstitution (Definition 2) and
+leave-one-out with the whole pipeline re-fitted per fold by default; the protocols `rips`
+(the R-IPS split, Definition 3) and `nested-cross-validation` are chosen in the configuration
+([Evaluation](docs/evaluation.md)). `csr export` writes a run as an Excel workbook in the layout
+of the Excel experiment, as CSV/JSON, Markdown and LaTeX tables, figures and an HTML/PDF report
+([Exporting](docs/exporting.md)). `csr gui` does all of this in a desktop application, in English,
+Russian or Uzbek ([Desktop application](docs/gui.md)).
+
+The article's computational experiment — R-IPS samples, Tables 1–6 and the k-NN comparison on
+Heart (270, 13, 2) and German (1000, 20, 2) — is rebuilt by `scripts\run_experiments.py`; the
+results do not reach the article's printed accuracies
+([Computational experiment](docs/experiments.md)).
 
 ![The results explorer](docs/images/gui/results-table.png)
-
-The Zhuravlyov metric with the fractional-linear (min–max) transform is the default and
-reproduces the workbook. Other metrics — weighted Zhuravlyov, HEOM, Gower, Manhattan, Euclidean,
-Chebyshev, Minkowski, Canberra, cosine, Mahalanobis, Hamming — and other normalizers — z-score,
-robust, max-abs, decimal scaling, rank, unit length — are chosen in the configuration or on the
-Configure page ([Algorithm reference](docs/algorithm-reference.md#normalizers-and-metrics),
-[Extending](docs/extending.md)). No metric reads a class label.
-
-> [!NOTE]
-> On large datasets the literal k range (k_max = 2·min|Kᵢ| − 3) reaches near-global
-> neighbourhoods where ω is inflated; use `configs/heart-disease-270-large-data.yaml`
-> (constant synthetic features skipped, k ≤ 21) as the starting point — see ADR-030.
 
 From Python:
 
 ```python
+from context_synthetic_recognition.config import preset
 from context_synthetic_recognition.core.model import fit_model
 from context_synthetic_recognition.data import load_builtin
-
-model = fit_model(load_builtin("heart-disease-10"))  # Steps 1–11, template preset
-model.trace.permitted_k.ks  # (3, 5)
-model.hag.label  # TUPLAM = {a₆, a₃, a₁, a₂, a₄}
-model.meta_dataset.Y  # Y = (y₀ … y₄, r₁ … r₄)
-result = model.classify(new_objects)  # no label argument (Theorem)
-result.decisions  # 1 = K1, 2 = K2, 0 = refusal
-result.meta.steps(0).b1(4)  # B1(a₄) of the first object
-
 from context_synthetic_recognition.services.runner import run_experiment
 
-evaluation = run_experiment(load_builtin("heart-disease-10"))  # resubstitution + leave-one-out
+data = load_builtin("heart-disease-10")
+model = fit_model(data)  # the article's settings
+model.trace.admissible_k.ks  # (3,)
+model.agglomerative.label  # '{a₁, a₃, a₂}'
+model.meta_table.columns  # ('y₀ (a₁)', 'y₁ (a₃)', 'y₂ (a₂)', 'd₁', 'd₂')
+result = model.classify(new_objects)  # no label argument (Theorem)
+result.decisions  # 1 = K1, 2 = K2, 0 = refusal
+
+workbook = fit_model(data, preset("excel-experiment"))
+workbook.agglomerative.label  # '{a₆, a₃, a₁, a₂, a₄}'
+evaluation = run_experiment(data, preset("excel-experiment"))  # resubstitution + leave-one-out
 evaluation.metrics(evaluation.protocol("leave-one-out").predictions).accuracy  # 0.2
 ```
 
@@ -148,33 +133,45 @@ Tests and checks:
 ## Layout
 
 ```text
-configs/            preset configurations (template.yaml, article.yaml)
-docs/               documentation (mkdocs), DECISIONS.md; handoff/ = design material (read-only)
-resources/          the Excel experiments (specification, read-only)
+configs/            configuration files: default, alpha-0.1, alpha-0.2, excel-experiment,
+                    heart-disease-270-large-data
+datasets/           the author's datasets: default (10, 13, 2), raw/Heart-Disease, raw/German
+docs/               documentation (mkdocs): glossary, algorithm reference, DECISIONS.md, …
+experiments/        the article's computational experiment: results/*.csv, summary.json, checksums
+scripts/            run_experiments.py, build_exe.py, gui_screenshots.py, update_translations.py
 src/context_synthetic_recognition/
-  core/             pure numerical core: Steps 1–12 (context, HAG, meta-algorithm, model),
-                    model properties, trace objects, plug-in registries
-  evaluation/       protocols (LOO re-fit, k-fold, hold-out), baselines, metrics, ROC, margins
-  config/           typed configuration, presets, the two switches
+  core/             pure numerical core (no I/O), one package per stage of the method:
+    rips/                 R-IPS: hyperspheres, algorithm, selection
+    local_context/        metrics, normalizers, operators, neighbours, admissible k
+    synthetic_features/   Ψ: psi (the fitted operator), encoders (formula (5)), membership,
+                          contributions, bit representations
+    additional_features/  the hierarchical agglomerative algorithm, majorizing functions
+    meta_algorithm/       the meta-algorithm
+    model.py, trace.py    the CS-model end to end; trace objects
+  evaluation/       protocols, baselines, metrics, ROC, margins
+  config/           typed configuration (schema 2), presets, the switches
   data/             dataset schema, loaders, built-in datasets
-  services/         experiment runner, run folders, validation against the workbooks,
-                    switch sensitivity, dataset summaries
-  export/           Excel mirror, tables (CSV, JSON, Markdown, LaTeX), figures, report
-  gui/              desktop application (PySide6): pages, shared state, worker threads
+  services/         runner, run folders, validation against the workbooks, switch sensitivity,
+                    dataset summaries — shared by the CLI and the GUI
+  export/           Excel workbook, tables (CSV, JSON, Markdown, LaTeX), figures, report
+  gui/              desktop application (PySide6); it computes nothing itself
   cli/              the csr command
-tests/              pytest suite; tests/data/templates = copies of the template workbooks
+tests/              pytest suite; tests/data/workbooks = the author's Excel workbooks,
+                    tests/golden = acceptance tests and an independent re-implementation
 ```
 
 ## Documentation
 
+<https://ktuhtabayev.github.io/context-synthetic-recognition/>
+
 - [Architecture](docs/architecture.md) · [Algorithm reference](docs/algorithm-reference.md) ·
-  [Reproducing the experiment](docs/reproduction.md) · [Datasets](docs/datasets.md) · [Evaluation](docs/evaluation.md) · [Exporting](docs/exporting.md) ·
+  [Glossary](docs/glossary.md) · [Reproducing the Excel experiment](docs/reproduction.md) ·
+  [Computational experiment](docs/experiments.md) · [Datasets](docs/datasets.md) ·
+  [Evaluation](docs/evaluation.md) · [Exporting](docs/exporting.md) ·
   [Desktop application](docs/gui.md) · [Extending](docs/extending.md) ·
   [Decisions](docs/DECISIONS.md) · [Development](docs/development.md)
-- Specification: `resources/Experiments/` and
-  `docs/handoff/CONTEXT_HANDOFF.md`
 
-The article is in preparation; its draft is not part of this repository yet.
+The article is in preparation and is not part of this repository.
 
 ## License
 

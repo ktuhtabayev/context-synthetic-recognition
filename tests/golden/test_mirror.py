@@ -2,7 +2,7 @@
 
 Two acceptance checks (ADR-037):
 
-* the exported workbook passes ``csr validate`` — every one of the 11,631 computed cells of the
+* the exported workbook passes ``csr validate`` — every one of the 11,622 computed cells of the
   validation map sits at its original address with its value (tolerance 1e-9);
 * sheet by sheet it has the structure and the style of the original: the same sheets in the same
   order, every number at the same address, the same merged ranges, frozen panes, tab colours,
@@ -21,46 +21,56 @@ from openpyxl.cell import Cell
 
 from context_synthetic_recognition.export import RunView
 from context_synthetic_recognition.export.excel import ExcelOptions, write_workbook
-from context_synthetic_recognition.services.validation import validate_workbook
+from context_synthetic_recognition.services.validation import sheets, validate_workbook
 
 from ..conftest import WORKBOOK
 
 pytestmark = pytest.mark.golden
 
-RENAMED = {"Zhuravlev Distances": "Zhuravlyov Distances"}
-"""Original sheet name → the mirror's (the transliteration of the article, ADR-039)."""
+RENAMED = sheets.MIRROR_NAMES
+"""Original sheet name → the mirror's (the article's terms, ADR-039, ADR-059)."""
+REDESIGNED = (sheets.SWITCHES, sheets.SENSITIVITY)
+"""Sheets the mirror lays out in the article's terms; only their validated cells match."""
 RUN_BLOCK = ("Parameters", range(39, 48))
 """Rows the mirror adds below the original content: "This run · what identifies it"."""
 
 TEXT_DIFFERENCES = {
     # the original shows these labels as Office-Math drawings, the mirror writes them as text
-    "Dataset": 56,
-    "Quantitative": 16,
-    "Nominal": 17,
-    # wording adapted from "live formulas / the engine" to a static export, and Zhuravlyov
-    "Overview": 34,
-    "Parameters": 3,
-    "Template Deviations": 5,
-    "Zhuravlev Distances": 4,
-    "Greedy upon Weight (1-Latent)": 1,
-    "Greedy upon Weight (2-Latent)": 1,
-    "Greedy upon Weight (3-Latent)": 1,
-    "Greedy upon Weight (4-Latent)": 1,
-    "Brace for Meta-algorithm": 2,
-    "Accuracy": 8,
-    "Confusion Matrix": 2,
-    "Precision, Recall, F1 Score": 24,
-    "ROC Curve & AUC": 2,
-    "Leave-One-Out": 3,
-    "Sensitivity (Switches)": 4,
-    "Validation": 15,
+    sheets.DATASET: 56,
+    sheets.QUANTITATIVE: 16,
+    sheets.NOMINAL: 17,
+    # wording adapted to a static export and to the article's terms (agglomerative algorithm,
+    # additional features d, majorizing function φ, Zhuravlyov, the switches)
+    sheets.OVERVIEW: 79,
+    sheets.PARAMETERS: 21,
+    sheets.NORMALIZED: 1,
+    sheets.DISTANCES: 4,
+    sheets.sorted_neighbours("ρ"): 1,
+    sheets.sorted_neighbours("ρ_I"): 1,
+    sheets.sorted_neighbours("ρ_J"): 1,
+    sheets.OWN_CLASS_COUNTS: 4,
+    sheets.BINARY_FEATURES: 1,
+    sheets.MEMBERSHIP: 4,
+    sheets.CONTRIBUTIONS: 1,
+    **{sheets.agglomerative_step(j): 12 for j in range(1, 5)},
+    sheets.META_DESCRIPTION: 15,
+    sheets.NEW_OBJECT: 12,
+    sheets.META_ALGORITHM: 4,
+    sheets.MARGINS: 17,
+    sheets.ACCURACY: 8,
+    sheets.CONFUSION: 2,
+    sheets.PRECISION: 24,
+    sheets.ROC: 2,
+    sheets.LEAVE_ONE_OUT: 5,
+    sheets.PROPERTIES: 1,
+    sheets.VALIDATION: 24,
 }
 """Sheet → the largest number of text cells that may differ from the original."""
 
 STYLE_DIFFERENCES = {
     # quirks of the original the mirror does not copy: a missing border, two stray bold cells
-    "Dataset": {"R2", "Y2", "H20"},
-    "Quantitative": {"H2", "I15"},
+    sheets.DATASET: {"R2", "Y2", "H20"},
+    sheets.QUANTITATIVE: {"H2", "I15"},
 }
 WIDTH_DIFFERENCES = {
     "Dataset": {"C"},
@@ -95,8 +105,10 @@ def mirror(mirror_path: Path) -> Iterator[Any]:
 
 
 def pairs(original: Any, mirror: Any) -> Iterator[tuple[str, Any, Any]]:
+    """The sheets laid out like the original (the redesigned ones are left out)."""
     for name in original.sheetnames:
-        yield name, original[name], mirror[RENAMED.get(name, name)]
+        if name not in REDESIGNED:
+            yield name, original[name], mirror[RENAMED.get(name, name)]
 
 
 def is_number(value: Any) -> bool:
@@ -126,7 +138,7 @@ def test_the_mirror_passes_the_validation(mirror_path: Path) -> None:
     failed = [f"{r.sheet}!{r.ref}: {r.mismatches[:2]}" for r in report.results if not r.passed]
     assert not failed
     assert report.passed
-    assert report.cells == 11631
+    assert report.cells == 11622
     assert "Zhuravlyov Distances" in report.sheets()
     assert max(r.max_difference for r in report.results) < 1e-9
 

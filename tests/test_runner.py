@@ -11,13 +11,11 @@ from typer.testing import CliRunner
 from context_synthetic_recognition.cli.app import EXIT_USAGE, app
 from context_synthetic_recognition.config import (
     DatasetConfig,
-    ExperimentConfig,
-    SyntheticConfig,
+    SyntheticFeaturesConfig,
     plugin,
-    preset,
     save_config,
 )
-from context_synthetic_recognition.core.context import fit_context
+from context_synthetic_recognition.core.synthetic_features.psi import fit_psi
 from context_synthetic_recognition.data import Dataset, FeatureType, load_from_config
 from context_synthetic_recognition.errors import ConfigError, ModelUndefinedError
 from context_synthetic_recognition.evaluation.protocols import run_protocol
@@ -30,21 +28,21 @@ from context_synthetic_recognition.services.runner import (
 )
 from context_synthetic_recognition.services.sensitivity import switch_sensitivity
 
-from .conftest import CONFIGS, GOLDEN_VALUES
+from .conftest import CONFIGS, GOLDEN_VALUES, excel_experiment, workbook_config
 
 runner = CliRunner()
 
 
 def test_run_experiment_on_the_experiment(experiment: Dataset) -> None:
     stages: list[tuple[str, int, int]] = []
-    result = run_experiment(experiment, progress=lambda *a: stages.append(a))
+    result = run_experiment(experiment, excel_experiment(), progress=lambda *a: stages.append(a))
     assert [p.protocol for p in result.protocols] == ["resubstitution", "leave-one-out"]
     assert result.positive == 1
     loo = result.protocol("leave-one-out")
     assert result.metrics(loo.predictions).accuracy == 0.2
     assert result.auc(loo.predictions) == pytest.approx(0.2708333333333333)
     assert len(loo.baselines) == 6
-    assert result.margins.with_majorizer[0].width == pytest.approx(0.148177267098285)
+    assert result.margins.with_majorizing_function[0].width == pytest.approx(0.148177267098285)
     assert result.properties.tuplam_conflicts == 10
     assert stages[-1] == ("leave-one-out", 10, 10)
     assert set(result.timings) >= {"fit", "resubstitution", "leave-one-out"}
@@ -61,7 +59,7 @@ def test_positive_class() -> None:
 
 
 def test_save_run(experiment: Dataset, tmp_path: Path) -> None:
-    result = run_experiment(experiment)
+    result = run_experiment(experiment, excel_experiment())
     folder = save_run(result, tmp_path / "runs")
     manifest = read_manifest(folder)
     assert manifest.dataset_hash == experiment.content_hash()
@@ -69,7 +67,7 @@ def test_save_run(experiment: Dataset, tmp_path: Path) -> None:
     results = json.loads((folder / "results.json").read_text(encoding="utf-8"))
     assert results["model"]["tuplam"] == ["a₆", "a₃", "a₁", "a₂", "a₄"]
     assert results["protocols"]["leave-one-out"]["methods"]["CS-model"]["accuracy"] == 0.2
-    assert results["template_deviations"] == ["ADR-002", "ADR-003"]
+    assert results["deviations"] == ["ADR-002", "ADR-003"]
     assert results == results_dict(result)
     with (folder / "predictions.csv").open(encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
@@ -85,7 +83,7 @@ def test_save_run(experiment: Dataset, tmp_path: Path) -> None:
 def test_switch_sensitivity_reproduces_the_golden_variants(experiment: Dataset) -> None:
     with GOLDEN_VALUES.open(encoding="utf-8") as handle:
         golden = json.load(handle)["variants"]
-    variants = switch_sensitivity(experiment)
+    variants = switch_sensitivity(experiment, excel_experiment())
     for variant, expected in zip(variants, golden, strict=True):
         assert variant.label == expected["label"]
         assert variant.tuplam == expected["T"]
@@ -100,9 +98,9 @@ def test_switch_sensitivity_reproduces_the_golden_variants(experiment: Dataset) 
 
 
 def test_skipping_constant_features(experiment: Dataset) -> None:
-    skip = ExperimentConfig(synthetic=SyntheticConfig(skip_constant=True))
+    skip = workbook_config(synthetic_features=SyntheticFeaturesConfig(skip_constant=True))
     fold3 = experiment.subset([i for i in range(experiment.m) if i != 2])
-    kept = fit_context(fold3, skip).trace
+    kept = fit_psi(fold3, skip).trace
     assert [(s.operator_label, s.k, s.value) for s in kept.skipped_features] == [
         ("ρ", 3, 2),
         ("ρ_J", 3, 2),
@@ -110,7 +108,7 @@ def test_skipping_constant_features(experiment: Dataset) -> None:
     ]
     assert [f.name for f in kept.features] == ["a₁", "a₂", "a₃"]  # renumbered
     assert [(f.operator_label, f.k) for f in kept.features] == [("ρ", 5), ("ρ_I", 3), ("ρ_I", 5)]
-    assert fit_context(fold3).trace.skipped_features == ()
+    assert fit_psi(fold3, excel_experiment()).trace.skipped_features == ()
     # the full fit has no constant feature; leave-one-out changes in folds 5 and 6
     loo = run_protocol(experiment, skip, "leave-one-out")
     assert loo.predictions.by_object().tolist() == [1, 0, 0, 0, 1, 1, 2, 1, 1, 1]
@@ -122,9 +120,9 @@ def test_every_feature_constant_is_undefined() -> None:
     X = np.array([[0.0], [0.1], [0.2], [-5.0], [5.0]])
     y = np.array([1, 1, 1, 2, 2])
     dataset = Dataset(X=X, y=y, feature_types=(FeatureType.QUANTITATIVE,))
-    config = ExperimentConfig(synthetic=SyntheticConfig(skip_constant=True))
-    with pytest.raises(ModelUndefinedError, match="every synthetic feature is constant"):
-        fit_context(dataset, config)
+    config = workbook_config(synthetic_features=SyntheticFeaturesConfig(skip_constant=True))
+    with pytest.raises(ModelUndefinedError, match="every synthetic feature was left out"):
+        fit_psi(dataset, config)
 
 
 # ---------------------------------------------------------------- built-in datasets in configs
@@ -140,20 +138,22 @@ def test_builtin_dataset_path() -> None:
 
 
 def test_the_large_data_example_config() -> None:
-    from context_synthetic_recognition.config import load_config
+    from context_synthetic_recognition.config import active_deviations, load_config
 
     config = load_config(CONFIGS / "heart-disease-270-large-data.yaml")
-    assert config.synthetic.skip_constant
-    assert config.k.params == {"k_max_cap": 21}
+    assert config.synthetic_features.skip_constant
+    assert config.admissible_k.name == "min-class"  # otherwise the article's settings (ADR-076)
+    assert active_deviations(config) == []
     assert config.dataset.path == "heart-disease-270"  # the datasets folder, by id
-    assert preset("template").synthetic.skip_constant is False
+    assert excel_experiment().synthetic_features.skip_constant is False
 
 
 # ---------------------------------------------------------------- csr run
 
 
 def test_csr_run(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["run", "heart-disease-10", "--runs-dir", str(tmp_path)])
+    workbook = ["-c", str(CONFIGS / "excel-experiment.yaml")]
+    result = runner.invoke(app, ["run", "heart-disease-10", *workbook, "--runs-dir", str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert "leave-one-out (10 folds):" in result.output
     assert "resubstitution (1 fold):" in result.output
@@ -166,9 +166,9 @@ def test_csr_run(tmp_path: Path) -> None:
 def test_csr_run_with_a_config_and_sensitivity(tmp_path: Path) -> None:
     path = tmp_path / "experiment.yaml"
     save_config(
-        ExperimentConfig(
+        workbook_config(
             dataset=DatasetConfig(path="builtin:heart-disease-10"),
-            evaluation=preset("template").evaluation.model_copy(
+            evaluation=excel_experiment().evaluation.model_copy(
                 update={"protocols": (plugin("leave-one-out"),), "baselines": ()}
             ),
         ),
@@ -189,9 +189,9 @@ def test_csr_run_errors() -> None:
 def test_config_problems_cover_the_evaluation_plugins() -> None:
     from context_synthetic_recognition.services.configs import config_problems
 
-    assert config_problems(ExperimentConfig()) == []
-    config = ExperimentConfig(
-        evaluation=preset("template").evaluation.model_copy(
+    assert config_problems(excel_experiment()) == []
+    config = workbook_config(
+        evaluation=excel_experiment().evaluation.model_copy(
             update={
                 "protocols": (plugin("bootstrap"), plugin("stratified-k-fold", folds=1)),
                 "baselines": (plugin("knn-vote", ks=[2]),),

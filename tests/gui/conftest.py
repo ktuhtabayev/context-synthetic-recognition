@@ -65,13 +65,19 @@ def run(qtbot: QtBot) -> Run:
 
 @pytest.fixture
 def loaded(window: MainWindow) -> MainWindow:
-    """A window with Heart-Disease (10, 13, 2) loaded."""
+    """A window with Heart-Disease (10, 13, 2) loaded and the preset "excel-experiment" applied.
+
+    The settings of the Excel experiment reproduce its values, which the tests check; the undo
+    history starts after the preset.
+    """
     assert window.dataset_page.load("heart-disease-10")
+    window.configure_page.apply_preset("excel-experiment")
+    window.state.undo_stack.clear()
     return window
 
 
 @pytest.fixture
 def evaluated(loaded: MainWindow, run: Run) -> MainWindow:
-    """A window with Heart-Disease (10, 13, 2) evaluated (template preset, not saved)."""
+    """A window with Heart-Disease (10, 13, 2) evaluated (preset "excel-experiment", not saved)."""
     run(loaded)
     return loaded

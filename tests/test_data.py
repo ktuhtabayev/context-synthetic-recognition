@@ -127,7 +127,7 @@ def test_content_hash_ignores_name_and_source_only() -> None:
     assert d.content_hash() != small(X=[[1.0, 0.0], [2.0, 1.0], [3.5, 1.0]]).content_hash()
 
 
-# ---------------------------------------------------------------- workbook and template layout
+# ---------------------------------------------------------------- workbook and extended layout
 
 
 def test_workbook_dataset_sheet(experiment: Dataset) -> None:
@@ -154,11 +154,11 @@ def test_detect_format(tmp_path: Path) -> None:
     assert detect_format(KNN_WORKBOOK) == "cs-workbook"
     extended = tmp_path / "e.csv"
     extended.write_text("2,1,2,,\n1,1\n2,2\n1,\n", encoding="utf-8")
-    assert detect_format(extended) == "template-extended"
+    assert detect_format(extended) == "extended"
     table = tmp_path / "t.csv"
     table.write_text("a,class\n1,1\n", encoding="utf-8")
     assert detect_format(table) == "csv"
-    assert detect_format(tmp_path / "x.dat") == "template-extended"
+    assert detect_format(tmp_path / "x.dat") == "extended"
     assert detect_format(tmp_path / "x.parquet") == "parquet"
     with pytest.raises(DatasetError, match=r"unknown dataset extension '\.json'"):
         detect_format(tmp_path / "x.json")
@@ -186,7 +186,7 @@ def write_extended(path: Path, text: str) -> Path:
     return path
 
 
-def test_template_csv_and_dat_agree(tmp_path: Path) -> None:
+def test_extended_csv_and_dat_agree(tmp_path: Path) -> None:
     csv_file = write_extended(tmp_path / "d.csv", "3,2,2,\n1.5,0,1\n2.5,1,2\n3,1,2\n1,0,\n")
     dat_file = write_extended(tmp_path / "d.dat", "3 2 2\n1,5\t0 1\n2,5 1 2\n3 1 2\n1 0 0\n")
     a, b = load_dataset(csv_file), load_dataset(dat_file)
@@ -209,9 +209,9 @@ def test_template_csv_and_dat_agree(tmp_path: Path) -> None:
         ("2,2,3\n1,0,1\n2,1,2\n1,0\n", "the header says c = 3 classes, the data have 2"),
     ],
 )
-def test_template_layout_errors(tmp_path: Path, text: str, message: str) -> None:
+def test_extended_layout_errors(tmp_path: Path, text: str, message: str) -> None:
     with pytest.raises(DatasetError, match=message):
-        load_dataset(write_extended(tmp_path / "bad.csv", text), "template-extended")
+        load_dataset(write_extended(tmp_path / "bad.csv", text), "extended")
 
 
 def test_feature_type_override_for_typed_formats(tmp_path: Path) -> None:

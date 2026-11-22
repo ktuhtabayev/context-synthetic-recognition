@@ -1,7 +1,7 @@
 """Dataset summaries for the CLI and the GUI, and objects typed as text.
 
 The summary is what the GUI shows live while a dataset is being set up: sizes, types, |Kᵢ|, the
-permitted k of the configured strategy, the operators and the synthetic features r they imply.
+admissible k of the configured strategy, the operators and the synthetic features r they imply.
 """
 
 from __future__ import annotations
@@ -13,8 +13,12 @@ import numpy as np
 import numpy.typing as npt
 
 from context_synthetic_recognition.config.models import ExperimentConfig
-from context_synthetic_recognition.core.k_strategies import PermittedK, permitted_k
-from context_synthetic_recognition.core.operators import SkippedOperator, resolve_operators
+from context_synthetic_recognition.core.local_context.admissible_k import AdmissibleK, admissible_k
+from context_synthetic_recognition.core.local_context.operators import (
+    SkippedOperator,
+    resolve_operators,
+)
+from context_synthetic_recognition.core.rips.selection import test_sample_indices
 from context_synthetic_recognition.data.schema import Dataset
 from context_synthetic_recognition.errors import CSRError, DatasetError
 
@@ -33,8 +37,8 @@ class DatasetSummary:
     """What the pipeline will make of a dataset under a configuration."""
 
     dataset: Dataset
-    permitted_k: PermittedK | None
-    """``None`` if no k is permitted (see :attr:`problems`)."""
+    admissible_k: AdmissibleK | None
+    """``None`` if no k is admissible (see :attr:`problems`)."""
     operators: tuple[OperatorSummary, ...]
     skipped_operators: tuple[SkippedOperator, ...]
     problems: tuple[str, ...]
@@ -42,30 +46,32 @@ class DatasetSummary:
 
     @property
     def r(self) -> int | None:
-        """Number of synthetic features |Ψ(r)| = operators × permitted k."""
-        if self.permitted_k is None:
+        """Number of synthetic features |Ψ(r)| = operators × admissible k."""
+        if self.admissible_k is None:
             return None
-        return len(self.operators) * self.permitted_k.count
+        return len(self.operators) * self.admissible_k.count
 
 
 def summarize(dataset: Dataset, config: ExperimentConfig | None = None) -> DatasetSummary:
-    """Summarize ``dataset`` under ``config`` (the template preset by default)."""
+    """Summarize ``dataset`` under ``config`` (the default configuration if ``None``)."""
     cfg = config or ExperimentConfig()
     problems: list[str] = []
     if len(dataset.classes) != 2:
         problems.append(
             f"{len(dataset.classes)} classes — the CS-model is binary (two classes, ADR-010)"
         )
-    ks: PermittedK | None = None
+    ks: AdmissibleK | None = None
     try:
-        ks = permitted_k(cfg.k.name, cfg.k.params, dataset.class_sizes, dataset.m - 1)
+        ks = admissible_k(
+            cfg.admissible_k.name, cfg.admissible_k.params, dataset.class_sizes, dataset.m - 1
+        )
     except CSRError as error:
         problems.append(str(error))
     operators: tuple[OperatorSummary, ...] = ()
     skipped: tuple[SkippedOperator, ...] = ()
     try:
         resolved, skipped = resolve_operators(
-            cfg.context, dataset.feature_names, dataset.quantitative
+            cfg.local_context, dataset.feature_names, dataset.quantitative
         )
         operators = tuple(
             OperatorSummary(
@@ -73,6 +79,10 @@ def summarize(dataset: Dataset, config: ExperimentConfig | None = None) -> Datas
             )
             for op in resolved
         )
+    except CSRError as error:
+        problems.append(str(error))
+    try:
+        test_sample_indices(dataset, cfg.rips)
     except CSRError as error:
         problems.append(str(error))
     return DatasetSummary(dataset, ks, operators, skipped, tuple(problems))

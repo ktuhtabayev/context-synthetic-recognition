@@ -35,11 +35,11 @@ def test_console_line_carries_the_context_fields() -> None:
     stream = io.StringIO()
     configure_logging("INFO", stream=stream)
     logging.getLogger(f"{PACKAGE_LOGGER}.core").info(
-        "permitted k computed", extra={"k": [3, 5], "k_max": 5, "operator": "ρ_J"}
+        "admissible k computed", extra={"k": [3, 5], "k_max": 5, "operator": "ρ_J"}
     )
     line = stream.getvalue().strip()
     assert line.endswith(
-        "context_synthetic_recognition.core: permitted k computed k=[3, 5] k_max=5 operator='ρ_J'"
+        "context_synthetic_recognition.core: admissible k computed k=[3, 5] k_max=5 operator='ρ_J'"
     )
     assert " INFO " in line
 
@@ -54,7 +54,7 @@ def test_level_filters_records() -> None:
 def test_json_lines_file(tmp_path: Path) -> None:
     path = tmp_path / "run" / "log.jsonl"
     configure_logging("DEBUG", stream=io.StringIO(), json_path=path)
-    logger = logging.getLogger(f"{PACKAGE_LOGGER}.hag")
+    logger = logging.getLogger(f"{PACKAGE_LOGGER}.core")
     logger.debug("iteration done", extra={"q": "a₃", "crit": 0.4281557866657403})
     try:
         raise ValueError("boom")

@@ -63,8 +63,6 @@ jobs:
           cache: pip
       - run: python -m pip install -e ".[docs]"
       - run: mkdocs build --strict
-      - name: The handoff material is not part of the site
-        run: if (Test-Path site/handoff) { throw "docs/handoff was built into the site" }
       # the site is published from main only (job "pages")
       - uses: actions/configure-pages@v6
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

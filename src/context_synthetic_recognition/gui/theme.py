@@ -1,9 +1,9 @@
 """The design system: one set of tokens per theme for the style sheet, the tables and the figures.
 
 A :class:`Palette` holds the colours of the application chrome and of the table cells; the cell
-colours carry the workbook's meaning (:class:`CellRole`) — quantitative and nominal features,
-synthetic and latent features, the features of TUPLAM, correct and wrong decisions, warnings.
-The classes K1 and K2 have the two colours they have in every figure
+colours carry what a cell means (:class:`CellRole`), as in the Excel export — quantitative and
+nominal features, synthetic and additional features, the features of TUPLAM, correct and wrong
+decisions, warnings. The classes K1 and K2 have the two colours they have in every figure
 (:mod:`context_synthetic_recognition.export.theme`), in a tint that keeps the text readable.
 """
 
@@ -28,20 +28,20 @@ FONT_SCALES = (0.85, 1.0, 1.15, 1.3, 1.5, 1.75)
 
 
 class CellRole(StrEnum):
-    """What a table cell means; decides its colours (the workbook's colour semantics)."""
+    """What a table cell means; decides its colours (those of the Excel export)."""
 
     QUANTITATIVE = "quantitative"
-    """A quantitative feature (set I) — the workbook's blue."""
+    """A quantitative feature (set I) — the Excel export's blue."""
     NOMINAL = "nominal"
-    """A nominal feature (set J) — the workbook's yellow."""
+    """A nominal feature (set J) — the Excel export's yellow."""
     K1 = "k1"
     K2 = "k2"
     REFUSAL = "refusal"
     """The decision 0."""
     SYNTHETIC = "synthetic"
-    """A synthetic feature aᵤ — the workbook's light green."""
-    LATENT = "latent"
-    """A latent feature r_j — the workbook's stronger green."""
+    """A synthetic feature aᵤ — the Excel export's light green."""
+    ADDITIONAL = "additional"
+    """An additional feature dⱼ — the Excel export's stronger green."""
     SELECTED = "selected"
     """A feature of TUPLAM, or the chosen candidate q."""
     GOOD = "good"
@@ -117,7 +117,7 @@ LIGHT = Palette(
         CellRole.K2: ("#fbe0d3", "#8a3410"),
         CellRole.REFUSAL: ("#ececec", "#5b6472"),
         CellRole.SYNTHETIC: ("#e2efda", "#1f2430"),
-        CellRole.LATENT: ("#b7dea8", "#1f2430"),
+        CellRole.ADDITIONAL: ("#b7dea8", "#1f2430"),
         CellRole.SELECTED: ("#ffe699", "#1f2430"),
         CellRole.GOOD: ("#c6efce", "#006100"),
         CellRole.BAD: ("#ffc7ce", "#9c0006"),
@@ -157,7 +157,7 @@ DARK = Palette(
         CellRole.K2: ("#55291a", "#f7b99d"),
         CellRole.REFUSAL: ("#3a3a37", "#b0aea6"),
         CellRole.SYNTHETIC: ("#26402a", "#f1f0ec"),
-        CellRole.LATENT: ("#2f5c33", "#f1f0ec"),
+        CellRole.ADDITIONAL: ("#2f5c33", "#f1f0ec"),
         CellRole.SELECTED: ("#6b5300", "#fff3c4"),
         CellRole.GOOD: ("#1e4d2b", "#a8e6b4"),
         CellRole.BAD: ("#5c1f24", "#ffb3ba"),

@@ -100,32 +100,92 @@
         <translation>all (I ∪ J), quantitative (I), nominal (J) yoki vergul bilan ajratilgan alomat nomlari</translation>
     </message>
     <message>
+        <source>The operator's own normalization; by default that of the local contexts</source>
+        <translation>Operatorning oʻz normallashi; odatiy holatda — lokal kontekstlarning normallashi</translation>
+    </message>
+    <message>
         <source>Remove this operator</source>
         <translation>Bu operatorni oʻchirish</translation>
+    </message>
+    <message>
+        <source>Normalizer</source>
+        <translation>Normallash</translation>
     </message>
     <message>
         <source>Add operator</source>
         <translation>Operator qoʻshish</translation>
     </message>
     <message>
-        <source>Every setting of the method. The defaults are the template preset, which reproduces the Excel experiment; Edit → Undo takes back any change.</source>
-        <translation>Usulning barcha sozlamalari. Odatiy holatda Excel tajribasini aynan takrorlaydigan «Shablon» tayyor sozlamasi amal qiladi; Tahrirlash → Ortga qaytarish istalgan oʻzgarishni bekor qiladi.</translation>
+        <source>Every setting of the method, in the order of its stages. The default preset follows the article; Edit → Undo takes back any change.</source>
+        <translation>Usulning barcha sozlamalari, bosqichlari tartibida. «default» tayyor sozlamasi maqolaga amal qiladi; Tahrirlash → Ortga qaytarish istalgan oʻzgarishni bekor qiladi.</translation>
     </message>
     <message>
-        <source>Template preset</source>
-        <translation>«Shablon» tayyor sozlamasi</translation>
+        <source>A named set of settings of the method</source>
+        <translation>Usul sozlamalarining nomlangan toʻplami</translation>
     </message>
     <message>
-        <source>Running class centres, two majorizer passes (default)</source>
-        <translation>Joriy sinf markazlari, majorantaning ikki oʻtishi (odatiy)</translation>
+        <source>The article's method (the default)</source>
+        <translation>Maqoladagi usul (odatiy)</translation>
     </message>
     <message>
-        <source>Article preset</source>
-        <translation>«Maqola» tayyor sozlamasi</translation>
+        <source>The default with α = 0.1, as in the article's experiments</source>
+        <translation>α = 0.1 boʻlgan odatiy sozlamalar, maqoladagi tajribalardagidek</translation>
     </message>
     <message>
-        <source>Final class centres, one majorizer pass</source>
-        <translation>Yakuniy sinf markazlari, majorantaning bir oʻtishi</translation>
+        <source>The default with α = 0.2, as in the article's experiments</source>
+        <translation>α = 0.2 boʻlgan odatiy sozlamalar, maqoladagi tajribalardagidek</translation>
+    </message>
+    <message>
+        <source>The settings of the Excel experiment: odd k = 3 … 2·min|Kᵢ| − 3, running class means, two passes of the majorizing function (⚠ deviates from the article)</source>
+        <translation>Excel tajribasining sozlamalari: toq k = 3 … 2·min|Kᵢ| − 3, joriy sinf oʻrtachalari, majoranta funksiyaning ikki marta qoʻllanishi (⚠ maqoladan chetga chiqadi)</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Qoʻllash</translation>
+    </message>
+    <message>
+        <source>Set the method settings of the chosen preset; Edit → Undo takes them back</source>
+        <translation>Tanlangan tayyor sozlamaning usul sozlamalarini oʻrnatish; Tahrirlash → Ortga qaytarish ularni bekor qiladi</translation>
+    </message>
+    <message>
+        <source>the objects that remain in E₁ (the article)</source>
+        <translation>E₁ da qolgan obyektlar (maqola)</translation>
+    </message>
+    <message>
+        <source>the objects moved to D</source>
+        <translation>D ga koʻchirilgan obyektlar</translation>
+    </message>
+    <message>
+        <source>keep covering other objects with |r(S)|</source>
+        <translation>boshqa obyektlarni |r(S)| bilan qoplashda davom etadi</translation>
+    </message>
+    <message>
+        <source>final class means M₁, M₂ (the article)</source>
+        <translation>yakuniy sinf oʻrtachalari M₁, M₂ (maqola)</translation>
+    </message>
+    <message>
+        <source>running partial class means</source>
+        <translation>joriy qisman sinf oʻrtachalari</translation>
+    </message>
+    <message>
+        <source>1 pass (the article)</source>
+        <translation>1 marta (maqola)</translation>
+    </message>
+    <message>
+        <source>2 passes</source>
+        <translation>2 marta</translation>
+    </message>
+    <message>
+        <source>The features ρ is applied to: all (I ∪ J), quantitative (I), nominal (J), or feature names separated by commas</source>
+        <translation>ρ qoʻllanadigan alomatlar: all (I ∪ J), quantitative (I), nominal (J) yoki vergul bilan ajratilgan alomat nomlari</translation>
+    </message>
+    <message>
+        <source>none</source>
+        <translation>yoʻq</translation>
+    </message>
+    <message>
+        <source>T: the ids of the objects held out before R-IPS, separated by commas (E₁ = E₀ ∖ T)</source>
+        <translation>T: R-IPS dan oldin ajratib qoʻyilgan obyektlarning identifikatorlari, vergul bilan ajratilgan (E₁ = E₀ ∖ T)</translation>
     </message>
     <message>
         <source>Distances are rounded to this many decimals so that equal distances tie exactly</source>
@@ -140,12 +200,24 @@
         <translation>Oʻzgarmas sintetik alomatlarni oʻtkazib yuborish</translation>
     </message>
     <message>
-        <source>Drop features that take one value on every training object (off: as the workbook)</source>
-        <translation>Barcha oʻrgatuvchi obyektlarda bitta qiymat qabul qiladigan alomatlarni chiqarib tashlash (oʻchirilgan: Excel kitobidagidek)</translation>
+        <source>Drop features that take one value on every training object (off by default)</source>
+        <translation>Barcha oʻrgatuvchi obyektlarda bitta qiymat qabul qiladigan alomatlarni chiqarib tashlash (odatiy holatda oʻchirilgan)</translation>
     </message>
     <message>
-        <source>α — regularisation, 0 &lt; α &lt; 1</source>
-        <translation>α — regulyarizatsiya, 0 &lt; α &lt; 1</translation>
+        <source>Zero value: a = 0 where the classes are indistinguishable (f_k(μ) = 0.5)</source>
+        <translation>Nol qiymat: sinflar farqlanmaydigan joyda a = 0 (f_k(μ) = 0.5)</translation>
+    </message>
+    <message>
+        <source>The values 0, 1, 2 of the article's experiments: every feature that takes 0 on a training object is left out. Off: formula (5) alone.</source>
+        <translation>Maqoladagi tajribalarning 0, 1, 2 qiymatlari: oʻrgatuvchi obyektda 0 qiymat qabul qiladigan har bir alomat chiqarib tashlanadi. Oʻchirilgan: faqat (5) formula.</translation>
+    </message>
+    <message>
+        <source>Original nominal features combined with the synthetic ones: nominal (all of J) or feature names separated by commas; empty: none</source>
+        <translation>Sintetik alomatlar bilan birlashtiriladigan dastlabki nominal alomatlar: nominal (J ning barcha alomatlari) yoki vergul bilan ajratilgan alomat nomlari; boʻsh — yoʻq</translation>
+    </message>
+    <message>
+        <source>α — margin regularization parameter, 0 &lt; α &lt; 1</source>
+        <translation>α — chegaradan chekinishni regulyarizatsiyalash parametri, 0 &lt; α &lt; 1</translation>
     </message>
     <message>
         <source>δ — the grouping stops when θ/γ ≤ δ</source>
@@ -160,26 +232,6 @@
         <translation>cr1 — nomzod faqat θ/γ &lt; cr1 boʻlganda tanlanadi</translation>
     </message>
     <message>
-        <source>running partial means (template)</source>
-        <translation>joriy oʻrtachalar (shablon)</translation>
-    </message>
-    <message>
-        <source>final class means (article)</source>
-        <translation>yakuniy oʻrtachalar (maqola)</translation>
-    </message>
-    <message>
-        <source>2 passes (template)</source>
-        <translation>2 oʻtish (shablon)</translation>
-    </message>
-    <message>
-        <source>1 pass (article)</source>
-        <translation>1 oʻtish (maqola)</translation>
-    </message>
-    <message>
-        <source>⚠ differs from the article</source>
-        <translation>⚠ maqoladan farqli</translation>
-    </message>
-    <message>
         <source>The positive class of precision, recall and ROC</source>
         <translation>Aniqlik (precision), toʻliqlik (recall) va ROC uchun musbat sinf</translation>
     </message>
@@ -188,20 +240,24 @@
         <translation>Tasodifiy protokollardagi boʻlinishlar uchun generatorning boshlangʻich qiymati</translation>
     </message>
     <message>
-        <source>Steps 2–3 · Base operators (metric × feature subset)</source>
-        <translation>2–3-qadamlar · Bazaviy operatorlar (metrika × alomatlar)</translation>
+        <source>R-IPS · Precedent base for training and testing</source>
+        <translation>R-IPS · Oʻrgatish va tekshirish uchun pretsedentlar bazasi</translation>
     </message>
     <message>
-        <source>Step 9 · Hierarchical agglomerative grouping</source>
-        <translation>9-qadam · Ierarxik aglomerativ guruhlash</translation>
+        <source>Step 9 · Additional features: hierarchical agglomerative algorithm</source>
+        <translation>9-qadam · Qoʻshimcha alomatlar: ierarxik aglomerativ algoritm</translation>
     </message>
     <message>
-        <source>Load a dataset to see the permitted k.</source>
+        <source>Load a dataset to see the admissible k.</source>
         <translation>Ruxsat etilgan k larni koʻrish uchun maʼlumotlar toʻplamini yuklang.</translation>
     </message>
     <message>
         <source>Edit the configuration</source>
         <translation>Konfiguratsiyani oʻzgartirish</translation>
+    </message>
+    <message>
+        <source>as the local contexts</source>
+        <translation>lokal kontekstlardagidek</translation>
     </message>
     <message>
         <source>Label</source>
@@ -220,15 +276,35 @@
         <translation>Mos keladigan tayyor sozlama:</translation>
     </message>
     <message>
-        <source>Step 1 · Scale unification</source>
-        <translation>1-qadam · Shkalalarni unifikatsiyalash</translation>
+        <source>⚠ deviates from the article</source>
+        <translation>⚠ maqoladan chetga chiqadi</translation>
     </message>
     <message>
-        <source>Distance decimals</source>
-        <translation>Masofalardagi xonalar soni</translation>
+        <source>Metric ρ</source>
+        <translation>Metrika ρ</translation>
     </message>
     <message>
-        <source>Permitted k</source>
+        <source>Test sample T</source>
+        <translation>Test tanlanmasi T</translation>
+    </message>
+    <message>
+        <source>Training sample</source>
+        <translation>Oʻrgatuvchi tanlanma</translation>
+    </message>
+    <message>
+        <source>Blocked objects</source>
+        <translation>Bloklangan obyektlar</translation>
+    </message>
+    <message>
+        <source>Step 1 · Normalization</source>
+        <translation>1-qadam · Normallash</translation>
+    </message>
+    <message>
+        <source>Steps 2–3 · Base operators (metric × feature subset)</source>
+        <translation>2–3-qadamlar · Bazaviy operatorlar (metrika × alomatlar)</translation>
+    </message>
+    <message>
+        <source>Admissible k</source>
         <translation>Ruxsat etilgan k</translation>
     </message>
     <message>
@@ -236,20 +312,16 @@
         <translation>4–8-qadamlar · Sintetik alomatlar Ψ(r)</translation>
     </message>
     <message>
-        <source>Majorizer ϕ</source>
-        <translation>Majoranta ϕ</translation>
+        <source>Majorizing function φ</source>
+        <translation>Majoranta funksiya φ</translation>
     </message>
     <message>
-        <source>⚠ The two calculations that differ from the article:</source>
-        <translation>⚠ Maqoladan farq qiluvchi ikki hisoblash:</translation>
+        <source>Class means in θ, γ</source>
+        <translation>θ, γ dagi sinf oʻrtachalari</translation>
     </message>
     <message>
-        <source>Class centres in θ, γ</source>
-        <translation>θ, γ sinf markazlari</translation>
-    </message>
-    <message>
-        <source>STEP 4 passes</source>
-        <translation>4-QADAM oʻtishlari</translation>
+        <source>Passes of the majorizing function</source>
+        <translation>Majoranta funksiyaning qoʻllanishlari</translation>
     </message>
     <message>
         <source>Steps 10–12 · Meta-algorithm</source>
@@ -264,20 +336,20 @@
         <translation>Tajriba</translation>
     </message>
     <message>
+        <source>⚠ Switches: one value follows the article, the other deviates from it.</source>
+        <translation>⚠ Kalitlar: bir qiymat maqolaga amal qiladi, boshqasi undan chetga chiqadi.</translation>
+    </message>
+    <message>
         <source>custom</source>
         <translation>maxsus</translation>
     </message>
     <message>
-        <source>⚠ Template calculations that differ from the article are active:</source>
-        <translation>⚠ Shablonning maqoladan farq qiluvchi hisoblashlari yoqilgan:</translation>
+        <source>⚠ Settings that deviate from the article are active:</source>
+        <translation>⚠ Maqoladan chetga chiquvchi sozlamalar yoqilgan:</translation>
     </message>
     <message>
-        <source>They reproduce the template workbooks exactly; the Article preset follows the article.</source>
-        <translation>Ular shablon kitoblarini aynan takrorlaydi; «Maqola» tayyor sozlamasi maqolaga amal qiladi.</translation>
-    </message>
-    <message>
-        <source>⚠ This configuration follows the article for both switches (final class centres, one majorizer pass); it does not reproduce the template workbooks.</source>
-        <translation>⚠ Bu konfiguratsiya ikkala kalit boʻyicha maqolaga amal qiladi (yakuniy sinf markazlari, majorantaning bir oʻtishi); u shablon kitoblarini takrorlamaydi.</translation>
+        <source>The default preset follows the article.</source>
+        <translation>«default» tayyor sozlamasi maqolaga amal qiladi.</translation>
     </message>
     <message>
         <source>{name}: k = {ks}  →  r = {r} synthetic features ({operators} operator(s) × {count} k)</source>
@@ -288,8 +360,12 @@
         <translation>baholash: kamida bitta protokol tanlang</translation>
     </message>
     <message>
-        <source>Normalizer</source>
-        <translation>Normallash</translation>
+        <source>The training and the test sample of the protocols rips and nested-cross-validation (Definition 3).</source>
+        <translation>rips va nested-cross-validation protokollarining oʻrgatuvchi va test tanlanmalari (3-taʼrif).</translation>
+    </message>
+    <message>
+        <source>Distance decimals</source>
+        <translation>Masofalardagi xonalar soni</translation>
     </message>
     <message>
         <source>Rule</source>
@@ -300,8 +376,12 @@
         <translation>Kodlovchi</translation>
     </message>
     <message>
-        <source>Weights</source>
-        <translation>Vaznlar</translation>
+        <source>Informativeness ω</source>
+        <translation>Informativlik ω</translation>
+    </message>
+    <message>
+        <source>Original features</source>
+        <translation>Dastlabki alomatlar</translation>
     </message>
     <message>
         <source>Decision rule</source>
@@ -332,7 +412,7 @@
         <translation>Boshlangʻich qiymat (seed)</translation>
     </message>
     <message>
-        <source>No permitted k for {name}.</source>
+        <source>No admissible k for {name}.</source>
         <translation>{name} uchun ruxsat etilgan k yoʻq.</translation>
     </message>
     <message>
@@ -362,10 +442,6 @@
     <message>
         <source>last column</source>
         <translation>oxirgi ustun</translation>
-    </message>
-    <message>
-        <source>none</source>
-        <translation>yoʻq</translation>
     </message>
     <message>
         <source>Read again</source>
@@ -412,8 +488,8 @@
         <translation>Turli qiymatlar soni</translation>
     </message>
     <message>
-        <source>The type decides how a feature enters the distance: |x′ − y′| on the unified scale for I, equal / not equal for J. Changing a type re-reads the dataset and drops the current result.</source>
-        <translation>Tur alomatning masofaga qanday kirishini belgilaydi: I uchun unifikatsiyalangan shkalada |x′ − y′|, J uchun teng / teng emas. Tur oʻzgartirilsa, maʼlumotlar toʻplami qayta oʻqiladi va joriy natija bekor qilinadi.</translation>
+        <source>The type decides how a feature enters the distance: |x′ − y′| of the normalized values for I, equal / not equal for J. Changing a type re-reads the dataset and drops the current result.</source>
+        <translation>Tur alomatning masofaga qanday kirishini belgilaydi: I uchun normallangan qiymatlarning |x′ − y′| ayirmasi, J uchun teng / teng emas. Tur oʻzgartirilsa, maʼlumotlar toʻplami qayta oʻqiladi va joriy natija bekor qilinadi.</translation>
     </message>
     <message>
         <source>Objects m</source>
@@ -492,8 +568,8 @@
         <translation>Eksport</translation>
     </message>
     <message>
-        <source>Write the run on screen: the Excel mirror of the experiment workbook, every table, the figures and the run report.</source>
-        <translation>Ekrandagi hisoblashni saqlash: tajriba kitobining Excel nusxasi, barcha jadvallar, rasmlar va hisobot.</translation>
+        <source>Write the run on screen: an Excel workbook of every step, every table, the figures and the run report.</source>
+        <translation>Ekrandagi hisoblashni saqlash: barcha qadamlarning Excel kitobi, barcha jadvallar, rasmlar va hisobot.</translation>
     </message>
     <message>
         <source>All</source>
@@ -620,8 +696,8 @@
         <translation>Uni oʻz kontekstidan chiqarish</translation>
     </message>
     <message>
-        <source>The object is not its own neighbour: the Theorem check of the workbook</source>
-        <translation>Obyekt oʻziga qoʻshni emas: Excel kitobidagi Teorema tekshiruvi</translation>
+        <source>The object is not its own neighbour: the check of the Theorem</source>
+        <translation>Obyekt oʻziga qoʻshni emas: Teorema tekshiruvi</translation>
     </message>
     <message>
         <source>Paste a row: n values separated by commas, semicolons, spaces or tabs</source>
@@ -640,8 +716,8 @@
         <translation>Qoʻshnilar</translation>
     </message>
     <message>
-        <source>Unified values</source>
-        <translation>Unifikatsiyalangan qiymatlar</translation>
+        <source>Normalized values</source>
+        <translation>Normallangan qiymatlar</translation>
     </message>
     <message>
         <source>— a new object —</source>
@@ -708,8 +784,8 @@
         <translation>Obyektni tanlang — jadvalda yoki yuqoridagi roʻyxatda.</translation>
     </message>
     <message>
-        <source>Every step of the pipeline, as in the workbook. Click a column to sort; click a row to follow its object through every table.</source>
-        <translation>Hisoblash zanjirining barcha qadamlari, Excel kitobidagidek. Saralash uchun ustunni bosing; obyektni barcha jadvallarda kuzatish uchun uning satrini bosing.</translation>
+        <source>Every step of the method, in its order. Click a column to sort; click a row to follow its object through every table.</source>
+        <translation>Usulning barcha qadamlari, tartibi bilan. Saralash uchun ustunni bosing; obyektni barcha jadvallarda kuzatish uchun uning satrini bosing.</translation>
     </message>
     <message>
         <source>The object marked in every table (cross-highlighting)</source>
@@ -772,8 +848,8 @@
         <translation>hech qachon</translation>
     </message>
     <message>
-        <source>Evaluate all four settings of the two ⚠ switches (a leave-one-out for each)</source>
-        <translation>Ikkita ⚠ kalitning barcha toʻrt holatini baholash (har biri uchun leave-one-out)</translation>
+        <source>Evaluate the four combinations of the class means and the passes of the majorizing function (a leave-one-out for each)</source>
+        <translation>Sinf oʻrtachalari va majoranta funksiya qoʻllanishlari sonining toʻrt birikmasini baholash (har biri uchun leave-one-out)</translation>
     </message>
     <message>
         <source>⚠ Switch sensitivity</source>
@@ -836,8 +912,8 @@
         <translation>Hozircha ishga tushiradigan narsa yoʻq.</translation>
     </message>
     <message>
-        <source>article calculation for both switches</source>
-        <translation>ikkala kalit uchun maqola boʻyicha hisoblash</translation>
+        <source>follows the article</source>
+        <translation>maqolaga amal qiladi</translation>
     </message>
     <message>
         <source>⚠ The results on screen were computed with another configuration. Run again to update them.</source>
@@ -876,8 +952,8 @@
         <translation>✗ {message}</translation>
     </message>
     <message>
-        <source>⚠ template calculation for {fields}</source>
-        <translation>⚠ shablon boʻyicha hisoblash: {fields}</translation>
+        <source>⚠ deviates from the article: {fields}</source>
+        <translation>⚠ maqoladan chetga chiqadi: {fields}</translation>
     </message>
     <message>
         <source>{name} · m = {m}, n = {n} · protocols: {protocols} · {switches}</source>
@@ -1024,6 +1100,10 @@
         <translation>Qayta bajarish</translation>
     </message>
     <message>
+        <source>Apply a preset</source>
+        <translation>Tayyor sozlamani qoʻllash</translation>
+    </message>
+    <message>
         <source>&amp;Run</source>
         <translation>&amp;Hisoblash</translation>
     </message>
@@ -1122,22 +1202,22 @@
     <message>
         <source>Context-synthetic recognition {version}
 
-The context-synthetic model of recognition algorithms (CS-model): local k-nearest-neighbour contexts → synthetic features Ψ(r) → hierarchical agglomerative grouping → meta-algorithm.
+The context-synthetic model of recognition algorithms (CS-model): R-IPS → local k-nearest-neighbour contexts → synthetic features Ψ(r) → additional features (hierarchical agglomerative algorithm) → meta-algorithm.
 
-⚠ Two template calculations differ from the article (running class centres in θ/γ; the STEP 4 majorizer applied twice). Both are switches on the Configure page; the default reproduces the template workbooks.</source>
+The default preset follows the article. Settings that deviate from it are switches on the Configure page, marked “⚠ deviates from the article”.</source>
         <translation>Context-synthetic recognition {version}
 
-Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): k ta eng yaqin qoʻshnining lokal kontekstlari → sintetik alomatlar Ψ(r) → ierarxik aglomerativ guruhlash → meta-algoritm.
+Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k ta eng yaqin qoʻshnining lokal kontekstlari → sintetik alomatlar Ψ(r) → qoʻshimcha alomatlar (ierarxik aglomerativ algoritm) → meta-algoritm.
 
-⚠ Shablonning ikki hisoblashi maqoladan farq qiladi (θ/γ dagi joriy sinf markazlari; 4-QADAMda majoranta ikki marta qoʻllanadi). Ikkalasi ham «Sozlash» sahifasidagi kalitlar; odatiy holatda shablon kitoblari takrorlanadi.</translation>
+«default» tayyor sozlamasi maqolaga amal qiladi. Undan chetga chiquvchi sozlamalar «Sozlash» sahifasidagi kalitlardir va «⚠ maqoladan chetga chiqadi» deb belgilangan.</translation>
     </message>
     <message>
         <source>preset: {name}</source>
         <translation>tayyor sozlama: {name}</translation>
     </message>
     <message>
-        <source>⚠ {n} template calculation(s)</source>
-        <translation>⚠ shablon hisoblashlari: {n}</translation>
+        <source>⚠ deviates from the article: {n} setting(s)</source>
+        <translation>⚠ maqoladan chetga chiqishlar: {n}</translation>
     </message>
     <message>
         <source>TUPLAM = {tuplam}</source>

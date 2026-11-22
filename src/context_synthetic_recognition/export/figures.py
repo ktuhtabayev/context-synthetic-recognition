@@ -28,12 +28,12 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle, Patch
 
-from context_synthetic_recognition.core.meta import REFUSAL
+from context_synthetic_recognition.core.meta_algorithm.algorithm import REFUSAL
 from context_synthetic_recognition.evaluation.protocols import ProtocolResult
 from context_synthetic_recognition.export.theme import LIGHT, Theme
 from context_synthetic_recognition.export.view import RunView
 from context_synthetic_recognition.export.wording import protocol_title
-from context_synthetic_recognition.notation import latent_name
+from context_synthetic_recognition.notation import additional_name
 
 WIDTH = 7.2
 """Figure width in inches (a two-column page)."""
@@ -196,10 +196,10 @@ def draw_distances(ax: Axes, view: RunView, operator: int, theme: Theme = LIGHT)
 
 
 def draw_neighbourhoods(ax: Axes, view: RunView, operator: int, theme: Theme = LIGHT) -> None:
-    """The class of every object's neighbours by rank, with the permitted k marked (Step 3)."""
+    """The class of every object's neighbours by rank, with the admissible k marked (Step 3)."""
     trace = view.trace
     found = trace.operators[operator]
-    m, ks = trace.m, trace.permitted_k.ks
+    m, ks = trace.m, trace.admissible_k.ks
     depth = int(min(m - 1, max(ks) + 2))
     classes = trace.class_index[found.order[:, :depth]].astype(float)
     own = trace.class_index.astype(float)[:, None]
@@ -215,7 +215,7 @@ def draw_neighbourhoods(ax: Axes, view: RunView, operator: int, theme: Theme = L
         aspect="auto",
     )
     _cell_gaps(ax, theme, m, depth + 2)
-    # every permitted k while they are few, otherwise the smallest and the largest
+    # every admissible k while they are few, otherwise the smallest and the largest
     shown = ks if len(ks) <= 6 else (ks[0], ks[-1])
     for k in shown:
         if k > depth:
@@ -258,11 +258,11 @@ def draw_object_context(
 
     The object is at the centre; every neighbour sits at its distance from it (the angle only
     spreads the points), coloured by its class; a circle marks the k-th neighbour of every
-    permitted k, so the neighbourhoods are nested as in the article.
+    admissible k, so the neighbourhoods are nested as in the article.
 
     Args:
         ax: The axes to draw on.
-        view: The run (operators, classes, permitted k, object names).
+        view: The run (operators, classes, admissible k, object names).
         operator: Index of the base operator.
         name: Name of the object at the centre (a training object or ``S``).
         distances: (m,) its distances to the training objects under the operator.
@@ -272,7 +272,7 @@ def draw_object_context(
     """
     trace = view.trace
     found = trace.operators[operator]
-    ks = trace.permitted_k.ks
+    ks = trace.admissible_k.ks
     ranked = np.asarray(order, dtype=np.int64)
     radii = np.asarray(distances, dtype=np.float64)[ranked]
     depth = int(min(ranked.size, max(ks) + 3, MAX_TICK_LABELS))
@@ -411,7 +411,7 @@ def draw_feature_quality(
     title = (
         "informativeness ω — formula (4)" if quantity == "omega" else "stability g — formula (2)"
     )
-    selected = set(view.hag.tuplam)
+    selected = set(view.agglomerative.tuplam)
     style_axes(ax, theme)
     ax.set_title(title)
     per_operator = max(
@@ -427,7 +427,7 @@ def draw_feature_quality(
                 x += 0.6
                 previous = f.operator
             positions.append(x)
-            labels.append(f"{f.name}\n{f.operator_label}·{f.k}")
+            labels.append(f"{f.name}\n{f.label}")
             x += 1.0
         _lollipops(ax, theme, positions, values, [f.index in selected for f in features], baseline)
         ax.set_xticks(positions, labels)
@@ -467,7 +467,7 @@ def draw_feature_quality(
                 markeredgewidth=RING,
                 zorder=3,
             )
-        ks = trace.permitted_k.ks
+        ks = trace.admissible_k.ks
         ax.set_xticks(ks[:: max(1, -(-len(ks) // 12))])
         ax.set_xlabel("k (dots: the features in TUPLAM)")
         _legend(
@@ -486,8 +486,8 @@ def draw_feature_quality(
 
 
 def draw_candidates(ax: Axes, view: RunView, iteration: int, theme: Theme = LIGHT) -> None:
-    """θ/γ of every candidate of one HAG iteration; the chosen q is emphasised (STEP 3)."""
-    it = view.hag.iterations[iteration]
+    """θ/γ of every candidate of one iteration (Step 3); the chosen q is emphasised."""
+    it = view.agglomerative.iterations[iteration]
     features = view.trace.features
     style_axes(ax, theme)
     finite = np.isfinite(it.ratio)
@@ -541,12 +541,12 @@ def draw_candidates(ax: Axes, view: RunView, iteration: int, theme: Theme = LIGH
 
 
 def draw_criterion(ax: Axes, view: RunView, theme: Theme = LIGHT) -> None:
-    """Crit = min θ/γ after every HAG iteration against the threshold δ (STEP 5)."""
-    hag = view.hag
+    """Crit = min θ/γ after every iteration against the threshold δ (Step 5)."""
+    agglomerative = view.agglomerative
     style_axes(ax, theme)
-    added = [it for it in hag.iterations if it.q is not None]
+    added = [it for it in agglomerative.iterations if it.q is not None]
     if not added:
-        _message(ax, theme, "The HAG added no feature (p = 0).")
+        _message(ax, theme, "The hierarchical agglomerative algorithm added no feature (p = 0).")
         return
     steps = [it.number for it in added]
     crit = [it.crit for it in added]
@@ -562,7 +562,7 @@ def draw_criterion(ax: Axes, view: RunView, theme: Theme = LIGHT) -> None:
         markeredgecolor=theme.surface,
         markeredgewidth=RING,
     )
-    delta = hag.settings.delta
+    delta = agglomerative.settings.delta
     ax.axhline(delta, color=theme.ink_muted, linewidth=1.0)
     ax.text(
         steps[-1],
@@ -591,7 +591,9 @@ def draw_criterion(ax: Axes, view: RunView, theme: Theme = LIGHT) -> None:
     ax.set_ylim(low - pad, high + pad)
     ax.set_xlabel("iteration · feature q added")
     ax.set_ylabel("crit = min θ/γ")
-    ax.set_title(f"HAG criterion (stops: {hag.stop.text})")
+    ax.set_title(
+        f"hierarchical agglomerative algorithm criterion (stops: {agglomerative.stop.text})"
+    )
 
 
 # ---------------------------------------------------------------- margins
@@ -603,13 +605,21 @@ def _jitter(count: int) -> Any:
 
 
 def draw_margin(
-    ax: Axes, view: RunView, latent: int, with_majorizer: bool = True, theme: Theme = LIGHT
+    ax: Axes,
+    view: RunView,
+    additional: int,
+    with_majorizing_function: bool = True,
+    theme: Theme = LIGHT,
 ) -> None:
-    """One latent feature on a line: both classes, the boundary b and the margin between them."""
+    """One additional feature on a line: both classes, the boundary b and the margin."""
     analysis = view.result.margins
-    margins = analysis.with_majorizer if with_majorizer else analysis.without_majorizer
+    margins = (
+        analysis.with_majorizing_function
+        if with_majorizing_function
+        else analysis.without_majorizing_function
+    )
     style_axes(ax, theme, grid="x")
-    margin = margins[latent]
+    margin = margins[additional]
     d, y = margin.values, margin.class_index
     left, right = margin.left, margin.right
     overlap = margin.width < 0
@@ -643,20 +653,20 @@ def draw_margin(
     ax.set_xlim(float(d.min()) - 0.06 * span, float(d.max()) + 0.06 * span)
     ax.set_ylim(-0.7, 1.7)
     ax.set_yticks([0.0, 1.0], ["K2", "K1"])
-    name = latent_name(latent) + ("" if with_majorizer else ", no ϕ")
+    name = additional_name(additional) + ("" if with_majorizing_function else ", no φ")
     ax.set_title(f"{name}\nwidth {margin.width:+.4f}", fontsize=8.5)
 
 
 def draw_margin_widths(ax: Axes, view: RunView, theme: Theme = LIGHT) -> None:
-    """Margin width of every latent feature, with the majorizer and without it."""
+    """Margin width of every additional feature, with the majorizing function and without it."""
     analysis = view.result.margins
     style_axes(ax, theme)
-    with_, without = analysis.with_majorizer, analysis.without_majorizer
+    with_, without = analysis.with_majorizing_function, analysis.without_majorizing_function
     steps = list(range(1, len(with_) + 1))
     ax.axhline(0.0, color=theme.axis, linewidth=1.0)
     series = (
-        ("without majorizer", [m.width for m in without], theme.context),
-        ("with majorizer ϕ", [m.width for m in with_], theme.accent),
+        ("without majorizing function", [m.width for m in without], theme.context),
+        ("with majorizing function φ", [m.width for m in with_], theme.accent),
     )
     for label, widths, colour in series:
         ax.plot(
@@ -680,11 +690,11 @@ def draw_margin_widths(ax: Axes, view: RunView, theme: Theme = LIGHT) -> None:
             fontsize=7.5,
             color=theme.ink,
         )
-    ax.set_xticks(steps, [latent_name(j) for j in range(len(steps))])
+    ax.set_xticks(steps, [additional_name(j) for j in range(len(steps))])
     ax.set_xlim(0.6, len(steps) + 0.75)
     ax.margins(y=0.2)
     ax.set_ylabel("min K1 − max K2  (> 0: separated)")
-    ax.set_title("margin width of the latent features")
+    ax.set_title("margin width of the additional features")
     _legend(ax, theme, ax.get_legend_handles_labels()[0], loc="best")
 
 
@@ -817,7 +827,7 @@ def draw_outcomes(ax: Axes, view: RunView, protocol: ProtocolResult, theme: Them
 
 
 def draw_sensitivity(ax: Axes, view: RunView, theme: Theme = LIGHT) -> None:
-    """Accuracy under the four settings of the two template/article switches."""
+    """Accuracy under the four settings of the agglomerative algorithm's two switches."""
     variants = view.sensitivity or ()
     style_axes(ax, theme, grid="x")
     if not variants:
@@ -881,7 +891,7 @@ def draw_sensitivity(ax: Axes, view: RunView, theme: Theme = LIGHT) -> None:
         bbox_to_anchor=(0.5, 1.02),
         ncols=2,
     )
-    ax.set_title("the two switches: class centres × STEP 4 passes", pad=26)
+    ax.set_title("the two switches: class means × majorizing passes", pad=26)
 
 
 def draw_prediction_map(
@@ -943,7 +953,7 @@ def _panels(figure: Figure, rows: int, columns: int, **kwargs: Any) -> list[Axes
 
 def figure_specs(view: RunView) -> list[FigureSpec]:
     """The figures of a run, in pipeline order."""
-    trace, hag, result = view.trace, view.hag, view.result
+    trace, agglomerative, result = view.trace, view.agglomerative, view.result
     operators = len(trace.operators)
     specs: list[FigureSpec] = []
     columns = min(operators, 3)
@@ -955,7 +965,9 @@ def figure_specs(view: RunView) -> list[FigureSpec]:
             draw_distances(axes[o], view, o, theme)
         for ax in axes[operators:]:
             ax.set_visible(False)
-        figure.suptitle("Step 2 · distances of the base operators", color=theme.ink, fontsize=10.5)
+        figure.suptitle(
+            "Local contexts · distances of the base operators", color=theme.ink, fontsize=10.5
+        )
 
     def neighbourhoods(figure: Figure, theme: Theme) -> None:
         axes = _panels(figure, rows, columns)
@@ -968,7 +980,7 @@ def figure_specs(view: RunView) -> list[FigureSpec]:
         for text in legend.get_texts():
             text.set_color(theme.ink_secondary)
         figure.suptitle(
-            "Step 3 · nested neighbourhoods: the class of the neighbour at every rank",
+            "Local contexts · nested neighbourhoods: the class of the neighbour at every rank",
             color=theme.ink,
             fontsize=10.5,
         )
@@ -985,7 +997,7 @@ def figure_specs(view: RunView) -> list[FigureSpec]:
     specs.append(
         FigureSpec(
             "neighbourhoods",
-            "Class of the neighbours by rank under every operator; the lines mark the permitted "
+            "Class of the neighbours by rank under every operator; the lines mark the admissible "
             "k (Step 3).",
             (WIDTH, 0.9 + height * rows),
             neighbourhoods,
@@ -1008,7 +1020,7 @@ def figure_specs(view: RunView) -> list[FigureSpec]:
         )
     )
 
-    executed = [index for index, it in enumerate(hag.iterations) if it.candidates.size]
+    executed = [index for index, it in enumerate(agglomerative.iterations) if it.candidates.size]
     if executed:
         shown = executed[:MAX_PANELS]
         per_row = min(len(shown), 4)
@@ -1023,38 +1035,39 @@ def figure_specs(view: RunView) -> list[FigureSpec]:
             for line in range(lines):
                 axes[line * per_row].set_ylabel("θ/γ")
             figure.suptitle(
-                "Step 9 · HAG STEP 3: θ/γ of the candidates, q = argmin",
+                "Additional features · Step 3: θ/γ of the candidates, q = argmin",
                 color=theme.ink,
                 fontsize=10.5,
             )
 
         specs.append(
             FigureSpec(
-                "hag-candidates",
-                "θ/γ of every candidate in every HAG iteration; the chosen feature q is "
-                "emphasised.",
+                "agglomerative-candidates",
+                "θ/γ of every candidate in every agglomerative algorithm iteration; the chosen "
+                "feature q is emphasised.",
                 (WIDTH, 0.5 + 2.5 * lines),
                 candidates,
             )
         )
         specs.append(
             FigureSpec(
-                "hag-criterion",
-                "The criterion crit = min θ/γ after every HAG iteration, against δ.",
+                "agglomerative-criterion",
+                "The criterion crit = min θ/γ after every agglomerative algorithm iteration, "
+                "against δ.",
                 (WIDTH * 0.72, 3.0),
                 lambda figure, theme: draw_criterion(figure.subplots(), view, theme),
             )
         )
 
-    p = hag.p
+    p = agglomerative.p
     if p:
-        shown_latent = min(p, MAX_PANELS)
+        shown_additional = min(p, MAX_PANELS)
 
         def margins(figure: Figure, theme: Theme) -> None:
-            axes = _panels(figure, 2, shown_latent)
-            for j in range(shown_latent):
+            axes = _panels(figure, 2, shown_additional)
+            for j in range(shown_additional):
                 draw_margin(axes[j], view, j, True, theme)
-                draw_margin(axes[shown_latent + j], view, j, False, theme)
+                draw_margin(axes[shown_additional + j], view, j, False, theme)
             handles = [
                 _marker(theme.k1, theme, f"K1 (class {trace.classes[0]})"),
                 _marker(theme.k2, theme, f"K2 (class {trace.classes[1]})"),
@@ -1067,7 +1080,8 @@ def figure_specs(view: RunView) -> list[FigureSpec]:
             for text in legend.get_texts():
                 text.set_color(theme.ink_secondary)
             figure.suptitle(
-                "Margins of the latent features: with the majorizer (top) and without (bottom)",
+                "Margins of the additional features: with the majorizing function (top) and "
+                "without (bottom)",
                 color=theme.ink,
                 fontsize=10.5,
             )
@@ -1075,8 +1089,9 @@ def figure_specs(view: RunView) -> list[FigureSpec]:
         specs.append(
             FigureSpec(
                 "margins",
-                "The latent features r₁ … r_p on a line, with the majorizer and without: both "
-                "classes, the boundary b and the margin (red band: the classes overlap).",
+                "The additional features d₁ … d_p on a line, with the majorizing function and "
+                "without: both classes, the boundary b and the margin (red band: the classes "
+                "overlap).",
                 (WIDTH, 4.3),
                 margins,
             )
@@ -1084,8 +1099,8 @@ def figure_specs(view: RunView) -> list[FigureSpec]:
         specs.append(
             FigureSpec(
                 "margin-widths",
-                "Margin width min K1 − max K2 of the latent features with and without the "
-                "majorizer.",
+                "Margin width min K1 − max K2 of the additional features with and without the "
+                "majorizing function.",
                 (WIDTH * 0.72, 3.0),
                 lambda figure, theme: draw_margin_widths(figure.subplots(), view, theme),
             )
@@ -1153,7 +1168,7 @@ def figure_specs(view: RunView) -> list[FigureSpec]:
         specs.append(
             FigureSpec(
                 "sensitivity",
-                "⚠ Accuracy under the four settings of the two template/article switches.",
+                "⚠ Accuracy under the four settings of the agglomerative algorithm's two switches.",
                 (WIDTH, 3.1),
                 lambda figure, theme: draw_sensitivity(figure.subplots(), view, theme),
             )

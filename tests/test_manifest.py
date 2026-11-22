@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from context_synthetic_recognition import __version__
-from context_synthetic_recognition.config import config_hash, preset
+from context_synthetic_recognition.config import config_hash
 from context_synthetic_recognition.errors import ConfigError
 from context_synthetic_recognition.services.manifest import (
     MANIFEST_NAME,
@@ -18,6 +18,8 @@ from context_synthetic_recognition.services.manifest import (
     read_manifest,
     write_manifest,
 )
+
+from .conftest import article_switches, excel_experiment
 
 NOON = datetime(2026, 9, 30, 12, 0, 1)
 
@@ -42,7 +44,7 @@ def test_run_dirs_in_the_same_second_get_a_suffix(tmp_path: Path) -> None:
 
 
 def test_manifest_round_trip(tmp_path: Path) -> None:
-    config = preset("article")
+    config = article_switches()
     run_dir = create_run_dir(tmp_path, config_hash(config), NOON)
     manifest = build_manifest(
         config, run_id=run_dir.name, dataset_hash="0" * 64, timings={"fit": 0.25}
@@ -58,7 +60,7 @@ def test_manifest_round_trip(tmp_path: Path) -> None:
 
 
 def test_manifest_records_the_environment() -> None:
-    manifest = build_manifest(preset("template"), run_id="x")
+    manifest = build_manifest(excel_experiment(), run_id="x")
     assert manifest.packages["context-synthetic-recognition"] == __version__
     assert "pydantic" in manifest.packages
     assert manifest.python.count(".") == 2

@@ -141,7 +141,10 @@ def _self_test(app: QApplication, lines: list[str]) -> bool:
             app.processEvents()
             time.sleep(0.01)
         view = window.state.view
-        check(f"experiment: TUPLAM = {view.hag.label if view else 'no result'}", view is not None)
+        check(
+            f"experiment: TUPLAM = {view.agglomerative.label if view else 'no result'}",
+            view is not None,
+        )
         if view is not None:
             results = window.results_page
             window.go_to(results)

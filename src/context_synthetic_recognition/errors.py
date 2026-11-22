@@ -24,5 +24,5 @@ class RegistryError(CSRError, LookupError):
 class ModelUndefinedError(CSRError, RuntimeError):
     """A stage of the pipeline is undefined for the given data (Definition 1 / Property 1).
 
-    Example: no k is permitted because the smallest class has fewer than two objects.
+    Example: no k is admissible because the smallest class has fewer than two objects.
     """

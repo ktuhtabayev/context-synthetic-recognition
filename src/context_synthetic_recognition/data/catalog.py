@@ -1,6 +1,6 @@
 """The project's dataset folder: discovery, identity checks and name resolution.
 
-Layout (the author's, as in the template project; ADR-035)::
+Layout (the author's; ADR-035)::
 
     datasets/
       default.dat, default.csv         the default dataset (Heart-Disease (10, 13, 2))
@@ -10,7 +10,7 @@ Layout (the author's, as in the template project; ADR-035)::
       synthetic/                       reserved for pre-existing synthetic datasets — not read
 
 Every file is in the extended layout (:func:`~context_synthetic_recognition.data.loaders.
-load_template_extended`): a first row ``m n c``; m rows of n feature values and the class label; a
+load_extended_layout`): a first row ``m n c``; m rows of n feature values and the class label; a
 last row of n type flags, 1 = quantitative (set I), 0 = nominal (set J). ``.dat`` is whitespace-
 separated, ``.csv`` comma-separated; the files are kept byte for byte.
 
@@ -33,7 +33,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from context_synthetic_recognition.data.loaders import LoadOptions, load_template_extended
+from context_synthetic_recognition.data.loaders import LoadOptions, load_extended_layout
 from context_synthetic_recognition.data.schema import Dataset
 from context_synthetic_recognition.errors import DatasetError
 
@@ -132,7 +132,7 @@ def load_extended(path: Path, name: str | None = None) -> Dataset:
     """Read a file of the extended layout (``.dat`` or ``.csv``)."""
     if not path.is_file():
         raise DatasetError(f"dataset file not found: {path}")
-    return load_template_extended(path, LoadOptions(name=name or path.stem))
+    return load_extended_layout(path, LoadOptions(name=name or path.stem))
 
 
 @dataclass(frozen=True)

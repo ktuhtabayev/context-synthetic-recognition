@@ -1,28 +1,30 @@
-"""Steps 4–8: μ, χ₁, formula (5), formulas (1)–(4), bit masks, formula (6)."""
+"""Steps 4–8: μ, χ₁, formula (5), formulas (1)–(4), majority chains, formula (6)."""
 
 import numpy as np
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from context_synthetic_recognition.core.contributions import (
-    WEIGHTS,
-    WeightInputs,
+from context_synthetic_recognition.core.synthetic_features.bit_representations import (
+    MAX_CHAIN_BITS,
+    majority_chains,
+)
+from context_synthetic_recognition.core.synthetic_features.contributions import (
+    INFORMATIVENESS,
+    InformativenessInputs,
     contribution_values,
     contributions,
+    formula_4,
     gradation_counts,
-    omega,
-    weight_ranks,
+    informativeness_ranks,
 )
-from context_synthetic_recognition.core.encoders import (
+from context_synthetic_recognition.core.synthetic_features.encoders import (
     ENCODERS,
     formula_5,
     k1_counts,
-    same_class_counts,
+    own_class_counts,
 )
-from context_synthetic_recognition.core.membership import (
-    MAX_MASK_BITS,
-    bit_masks,
+from context_synthetic_recognition.core.synthetic_features.membership import (
     boundary,
     correct_side,
     informativeness,
@@ -43,7 +45,7 @@ def test_counts_over_nested_neighbourhoods() -> None:
     order = np.array([[1, 2, 3], [0, 2, 3], [3, 1, 0], [2, 1, 0]])
     classes = np.array([0, 1, 1, 0])
     assert k1_counts(order, classes, (1, 3)).tolist() == [[0, 1], [1, 2], [1, 2], [0, 1]]
-    assert same_class_counts(order, classes, classes, (1, 3)).tolist() == [
+    assert own_class_counts(order, classes, classes, (1, 3)).tolist() == [
         [0, 1],
         [0, 1],
         [0, 1],
@@ -138,16 +140,16 @@ def test_formula_properties(sample: tuple[np.ndarray, np.ndarray, int]) -> None:
     assert abs(eta[0]) <= w + 1e-12
 
 
-# ---------------------------------------------------------------- bit masks (Task 2)
+# ---------------------------------------------------------------- majority chains (Task 2)
 
 
 def test_bit_masks_first_k_is_the_most_significant_bit() -> None:
     mu = np.array([[2, 3], [1, 3], [0, 1], [2, 2]])
-    bits, masks = bit_masks(mu, (3, 5))
+    bits, masks = majority_chains(mu, (3, 5))
     assert bits.tolist() == [[True, True], [False, True], [False, False], [True, False]]
     assert masks.tolist() == [3, 1, 0, 2]
-    with pytest.raises(ValueError, match=f"at most {MAX_MASK_BITS}"):
-        bit_masks(np.zeros((1, 63), dtype=np.int64), tuple(range(1, 127, 2)))
+    with pytest.raises(ValueError, match=f"at most {MAX_CHAIN_BITS}"):
+        majority_chains(np.zeros((1, 63), dtype=np.int64), tuple(range(1, 127, 2)))
 
 
 # ---------------------------------------------------------------- formula (6) and the weights
@@ -163,9 +165,16 @@ def test_contributions_of_a6_as_in_the_workbook() -> None:
 
 
 def test_weight_ranks_prefer_the_earlier_feature_on_ties() -> None:
-    assert weight_ranks(np.array([0.9, 0.9, 0.6, 0.9, 0.9, 1.0])).tolist() == [2, 3, 6, 4, 5, 1]
+    assert informativeness_ranks(np.array([0.9, 0.9, 0.6, 0.9, 0.9, 1.0])).tolist() == [
+        2,
+        3,
+        6,
+        4,
+        5,
+        1,
+    ]
 
 
 def test_omega_weight_plugin() -> None:
-    assert omega(WeightInputs(omega=0.7, stability=0.9, boundary=0.4)) == 0.7
-    assert WEIGHTS.get("informativeness") is omega
+    assert formula_4(InformativenessInputs(omega=0.7, stability=0.9, boundary=0.4)) == 0.7
+    assert INFORMATIVENESS.get("omega") is formula_4

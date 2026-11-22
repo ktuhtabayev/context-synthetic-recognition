@@ -5,7 +5,7 @@ repo_url: https://github.com/ktuhtabayev/context-synthetic-recognition
 repo_name: ktuhtabayev/context-synthetic-recognition
 docs_dir: docs
 
-# The handoff material is source material, not documentation pages
+# The author's local source material is not part of the site
 exclude_docs: |
   handoff/
 
@@ -34,7 +34,9 @@ nav:
   - Home: index.md
   - Architecture: architecture.md
   - Algorithm reference: algorithm-reference.md
-  - Reproducing the experiment: reproduction.md
+  - Glossary: glossary.md
+  - Reproducing the Excel experiment: reproduction.md
+  - Computational experiment: experiments.md
   - Datasets: datasets.md
   - Evaluation: evaluation.md
   - Exporting: exporting.md

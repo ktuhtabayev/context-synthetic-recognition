@@ -3,9 +3,9 @@
 :func:`fit_model` fits, on a training sample E,
 
 - Steps 1–8: local contexts and the synthetic features Ψ(r) with ω and η (:func:`fit_context`);
-- Step 9: the hierarchical agglomerative grouping — TUPLAM and the latent features r₁ … r_p
-  (:func:`~context_synthetic_recognition.core.hag.hag`);
-- Step 10: the meta-dataset Y = (y₀, …, y_p, r₁, …, r_p);
+- Step 9: the hierarchical agglomerative grouping — TUPLAM and the additional features d₁ … d_p
+  (:func:`~context_synthetic_recognition.core.additional_features.agglomerative.agglomerative`);
+- Step 10: the meta-dataset Y = (y₀, …, y_p, d₁, …, d_p);
 - Step 11: the training description (aᵢ, dᵢ) of the meta-algorithm;
 
 and :class:`CSModel` classifies objects with the meta-algorithm (Step 12). A new object is
@@ -24,33 +24,37 @@ import numpy as np
 import numpy.typing as npt
 
 from context_synthetic_recognition.config.models import ExperimentConfig
+from context_synthetic_recognition.core.additional_features.agglomerative import (
+    AgglomerativeResult,
+    AgglomerativeSettings,
+    agglomerative,
+)
 from context_synthetic_recognition.core.arrays import FloatArray, IntArray, freeze_fields
-from context_synthetic_recognition.core.context import ContextModel, fit_context
-from context_synthetic_recognition.core.hag import HAGResult, HAGSettings, hag
-from context_synthetic_recognition.core.meta import (
+from context_synthetic_recognition.core.meta_algorithm.algorithm import (
     DECISION_RULES,
     REFUSAL,
     MetaDescription,
     MetaResult,
     meta_classify,
 )
-from context_synthetic_recognition.core.trace import ContextTrace, ObjectContext
+from context_synthetic_recognition.core.synthetic_features.psi import PsiOperator, fit_psi
+from context_synthetic_recognition.core.trace import PsiRepresentation, PsiTrace
 from context_synthetic_recognition.data.schema import Dataset, Label
-from context_synthetic_recognition.notation import latent_name, subscript, synthetic_name
+from context_synthetic_recognition.notation import additional_name, subscript, synthetic_name
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, eq=False)
-class MetaDataset:
-    """Y = (y₀, …, y_p, r₁, …, r_p) — Step 10 (sheet *Dataset for Meta-algorithm*)."""
+class MetaTable:
+    """Y = (y₀, …, y_p, d₁, …, d_p) — Step 10 (sheet *Dataset for Meta-algorithm*)."""
 
     tuplam: tuple[int, ...]
     """The TUPLAM features (0-based), in selection order."""
     initial: FloatArray
     """(m × (p + 1)) yⱼ: the contribution values ηᵤ(a_tu) of the TUPLAM features."""
-    latent: FloatArray
-    """(m × p) rⱼ: the latent (additional) features of the HAG."""
+    additional: FloatArray
+    """(m × p) dⱼ: the additional (latent) features of the hierarchical agglomerative algorithm."""
     class_index: IntArray
     """(m,) 0 = K1, 1 = K2."""
 
@@ -60,26 +64,26 @@ class MetaDataset:
 
     @property
     def p(self) -> int:
-        """Number of latent features."""
+        """Number of additional features."""
         return len(self.tuplam) - 1
 
     @property
     def Y(self) -> FloatArray:  # noqa: N802 - the article's symbol
-        """(m × (2p + 1)) the meta-dataset (y₀ … y_p, r₁ … r_p)."""
-        return np.hstack([self.initial, self.latent])
+        """(m × (2p + 1)) the meta-dataset (y₀ … y_p, d₁ … d_p)."""
+        return np.hstack([self.initial, self.additional])
 
     @property
     def columns(self) -> tuple[str, ...]:
-        """Column names ``y₀ (a₆)``, …, ``r₁``, … of :attr:`Y`."""
+        """Column names ``y₀ (a₆)``, …, ``d₁``, … of :attr:`Y`."""
         initial = tuple(f"y{subscript(j)} ({synthetic_name(u)})" for j, u in enumerate(self.tuplam))
-        return initial + tuple(latent_name(j) for j in range(self.p))
+        return initial + tuple(additional_name(j) for j in range(self.p))
 
 
 @dataclass(frozen=True, eq=False)
 class Representation:
     """Objects described relative to the training sample E, without their class (Theorem)."""
 
-    context: ObjectContext
+    context: PsiRepresentation
     """Their local contexts and synthetic features Ψ(r) (formula (5))."""
     description: IntArray
     """(q × (p + 1)) a₀ … a_p: the gradations of the TUPLAM features — the meta-algorithm input."""
@@ -129,31 +133,31 @@ class CSModel:
 
     config: ExperimentConfig
     """The configuration it was fitted with."""
-    context: ContextModel
-    """Steps 1–8: scaling, operators, permitted k, Ψ(r) with ω and η."""
-    hag: HAGResult
-    """Step 9: TUPLAM and the latent features."""
-    meta_dataset: MetaDataset
-    """Step 10: Y = (y, r)."""
+    psi: PsiOperator
+    """Steps 1–8: scaling, operators, admissible k, Ψ(r) with ω and η."""
+    agglomerative: AgglomerativeResult
+    """Step 9: TUPLAM and the additional features."""
+    meta_table: MetaTable
+    """Step 10: Y = (y, d)."""
     description: MetaDescription
     """Step 11: the training description (aᵢ, dᵢ) of the meta-algorithm."""
     classes: tuple[Label, ...]
     """The class labels of K1 and K2."""
 
     @property
-    def trace(self) -> ContextTrace:
+    def trace(self) -> PsiTrace:
         """The Step 1–8 trace (distances, neighbours, Ψ(r), formulas (1)–(6))."""
-        return self.context.trace
+        return self.psi.trace
 
     @property
     def tuplam(self) -> tuple[int, ...]:
         """TUPLAM (0-based synthetic features) in selection order."""
-        return self.hag.tuplam
+        return self.agglomerative.tuplam
 
     @property
     def p(self) -> int:
-        """Number of latent features."""
-        return self.hag.p
+        """Number of additional features."""
+        return self.agglomerative.p
 
     def represent(
         self, X: npt.ArrayLike, *, exclude: npt.ArrayLike | None = None
@@ -166,7 +170,7 @@ class CSModel:
                 object passed through this path then gets exactly its training row); ``None``
                 for new objects.
         """
-        context = self.context.represent(X, exclude=exclude)
+        context = self.psi.represent(X, exclude=exclude)
         return Representation(context, context.values[:, list(self.tuplam)])
 
     def classify(self, X: npt.ArrayLike, *, exclude: npt.ArrayLike | None = None) -> Classification:
@@ -193,7 +197,7 @@ class CSModel:
         return Classification(self._meta(self.description.gradations), self.classes)
 
     def _meta(self, queries: npt.ArrayLike) -> MetaResult:
-        rule = self.config.meta.decision_rule
+        rule = self.config.meta_algorithm.decision_rule
         return meta_classify(self.description, queries, rule.name, rule.params)
 
 
@@ -202,7 +206,7 @@ def fit_model(dataset: Dataset, config: ExperimentConfig | None = None) -> CSMod
 
     Args:
         dataset: The training sample E (two classes).
-        config: Experiment configuration; the template preset by default.
+        config: Experiment configuration; the default configuration if ``None``.
 
     Raises:
         ModelUndefinedError: A stage is undefined for the data (Definition 1).
@@ -213,20 +217,24 @@ def fit_model(dataset: Dataset, config: ExperimentConfig | None = None) -> CSMod
     cfg = config or ExperimentConfig()
     started = time.perf_counter()
     # resolve the Step 9 and Step 12 plug-ins first: a bad name fails before the costly Steps 1–8
-    HAGSettings.from_config(cfg.hag)
-    DECISION_RULES.make_params(cfg.meta.decision_rule.name, cfg.meta.decision_rule.params)
+    AgglomerativeSettings.from_config(cfg.additional_features)
+    DECISION_RULES.make_params(
+        cfg.meta_algorithm.decision_rule.name, cfg.meta_algorithm.decision_rule.params
+    )
 
-    context = fit_context(dataset, cfg)
-    trace = context.trace
-    grouping = hag(trace.contributions, trace.weights, trace.class_index, cfg.hag)
+    psi = fit_psi(dataset, cfg)
+    trace = psi.trace
+    grouping = agglomerative(
+        trace.contributions, trace.informativeness, trace.class_index, cfg.additional_features
+    )
     columns = list(grouping.tuplam)
-    meta_dataset = MetaDataset(
+    meta_table = MetaTable(
         tuplam=grouping.tuplam,
         initial=trace.contributions[:, columns],
-        latent=grouping.latent,
+        additional=grouping.additional,
         class_index=trace.class_index,
     )
-    description = MetaDescription(trace.values[:, columns], grouping.latent, trace.class_index)
+    description = MetaDescription(trace.values[:, columns], grouping.additional, trace.class_index)
     logger.info(
         "model fitted (Steps 1–11)",
         extra={
@@ -239,9 +247,9 @@ def fit_model(dataset: Dataset, config: ExperimentConfig | None = None) -> CSMod
     )
     return CSModel(
         config=cfg,
-        context=context,
-        hag=grouping,
-        meta_dataset=meta_dataset,
+        psi=psi,
+        agglomerative=grouping,
+        meta_table=meta_table,
         description=description,
         classes=trace.classes,
     )

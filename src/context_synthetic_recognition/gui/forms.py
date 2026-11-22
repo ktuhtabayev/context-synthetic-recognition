@@ -243,15 +243,26 @@ class ParamForm(QWidget):
 
 
 class PluginEditor(QWidget):
-    """Choose a plug-in of a registry and set its parameters."""
+    """Choose a plug-in of a registry and set its parameters.
+
+    An editor made with ``unset`` lists first an entry that chooses no plug-in (for an optional
+    setting such as an operator's own normalization); read and show it with
+    :meth:`optional_spec` and :meth:`set_optional_spec`.
+    """
 
     changed = Signal()
 
-    def __init__(self, registry: Registry[Any], parent: QWidget | None = None) -> None:
-        """List the plug-ins of ``registry``."""
+    def __init__(
+        self, registry: Registry[Any], parent: QWidget | None = None, *, unset: str | None = None
+    ) -> None:
+        """List the plug-ins of ``registry`` (after the entry ``unset``, if it is given)."""
         super().__init__(parent)
         self.registry = registry
         self.combo = QComboBox()
+        self.has_unset = unset is not None
+        """Whether the first entry chooses no plug-in."""
+        if unset is not None:
+            self.combo.addItem(unset, None)
         for info in registry:
             self.combo.addItem(info.name, info.name)
             self.combo.setItemData(
@@ -290,26 +301,35 @@ class PluginEditor(QWidget):
         self.validate()
         self.changed.emit()
 
+    def is_unset(self) -> bool:
+        """Whether the entry that chooses no plug-in is selected."""
+        return self.has_unset and self.combo.currentIndex() == 0
+
     def validate(self) -> str:
         """Check the parameters; returns the problem (empty if there is none) and shows it."""
-        spec = self.spec()
-        message = self.form.error
-        if not message:
-            try:
-                self.registry.make_params(spec.name, spec.params)
-            except CSRError as error:
-                message = str(error)
+        message = ""
+        if not self.is_unset():
+            spec = self.spec()
+            message = self.form.error
+            if not message:
+                try:
+                    self.registry.make_params(spec.name, spec.params)
+                except CSRError as error:
+                    message = str(error)
         self.problem.setText(message)
         self.problem.setVisible(bool(message))
         return message
 
     def spec(self) -> PluginSpec:
-        """The plug-in chosen with its parameters."""
+        """The plug-in chosen with its parameters (see :meth:`optional_spec` for ``unset``)."""
         return PluginSpec(name=str(self.combo.currentData()), params=self.form.values())
+
+    def optional_spec(self) -> PluginSpec | None:
+        """The plug-in chosen with its parameters; ``None`` if the ``unset`` entry is chosen."""
+        return None if self.is_unset() else self.spec()
 
     def set_spec(self, spec: PluginSpec) -> None:
         """Show a plug-in and its parameters without reporting a change."""
-        self.blockSignals(True)
         name = spec.name
         if name in self.registry:
             name = self.registry.info(name).name
@@ -317,13 +337,30 @@ class PluginEditor(QWidget):
         if index < 0:  # a plug-in this installation does not have: keep it visible
             self.combo.addItem(tr("{name} (unknown)").format(name=name), normalize_name(name))
             index = self.combo.count() - 1
+        self._show(index, dict(spec.params))
+
+    def set_optional_spec(self, spec: PluginSpec | None) -> None:
+        """Show a plug-in, or the ``unset`` entry for ``None``, without reporting a change.
+
+        Raises:
+            ValueError: ``None`` for an editor without the ``unset`` entry.
+        """
+        if spec is not None:
+            self.set_spec(spec)
+        elif self.has_unset:
+            self._show(0, {})
+        else:
+            raise ValueError("this editor has no entry for choosing no plug-in")
+
+    def _show(self, index: int, params: dict[str, JsonValue]) -> None:
+        self.blockSignals(True)
         self.combo.blockSignals(True)
         self.combo.setCurrentIndex(index)
         self.combo.blockSignals(False)
         info = self._info()
         self.form.set_type(None if info is None else info.params_type)
         self.summary.setText("" if info is None else info.summary)
-        self.form.set_values(dict(spec.params))
+        self.form.set_values(params)
         self.validate()
         self.blockSignals(False)
 

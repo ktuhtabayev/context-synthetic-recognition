@@ -142,14 +142,14 @@ def run_facts(record: RunRecord) -> list[tuple[str, Cell]]:
         ("Features n", data.get("n")),
         ("Dataset SHA-256", (manifest.dataset_hash or "")[:12] or None),
         ("Preset", preset.value if preset else "custom"),
-        ("⚠ Class centres in θ, γ", config.hag.centres.value),
-        ("⚠ STEP 4 passes", config.hag.step4_passes),
-        ("k rule", config.k.name),
-        ("Permitted k", ", ".join(str(k) for k in model.get("permitted_k", ())) or None),
+        ("⚠ Class means in θ, γ", config.additional_features.class_means.value),
+        ("⚠ majorizing passes", config.additional_features.majorizing_passes),
+        ("k rule", config.admissible_k.name),
+        ("Admissible k", ", ".join(str(k) for k in model.get("admissible_k", ())) or None),
         ("Synthetic features r", model.get("r")),
         ("TUPLAM", "{" + ", ".join(model["tuplam"]) + "}" if model.get("tuplam") else None),
-        ("Latent features p", model.get("p")),
-        ("HAG stopped because", model.get("stop")),
+        ("Additional features p", model.get("p")),
+        ("hierarchical agglomerative algorithm stopped because", model.get("stop")),
     ]
     for protocol, entry in results.get("protocols", {}).items():
         own = entry.get("methods", {}).get(CS_MODEL, {})

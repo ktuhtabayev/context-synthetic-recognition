@@ -1,14 +1,20 @@
 """Evaluation protocols — training correctness (Definition 2) and generalization (Definition 3).
 
-Registry :data:`PROTOCOLS` of splitters:
+Registry :data:`PROTOCOLS`:
 
 ``resubstitution``
     The model fitted on every object classifies each training object with its own training row
     (its context excludes itself; sheet *Meta-algorithm (All Objects)*, Definition 2).
+``rips``
+    R-IPS splits the sample (``config.rips``); the model fitted on its training sample classifies
+    its test sample without their classes (Definition 3).
+``nested-cross-validation``
+    Stratified folds; inside each, R-IPS splits the rest into a training and a test sample that
+    choose the parameters (α = 0.1 or 0.2 by default), and the chosen model classifies the fold.
 ``leave-one-out``
-    m folds: the **whole pipeline** — scale unification, permitted k, Ψ(r), ω, η, HAG and the
-    meta-algorithm — is re-fitted on the other m − 1 objects, and the held-out object is
-    classified without its class (sheet *Leave-One-Out*, Definition 3, ADR-009).
+    m folds: the **whole pipeline** — normalization, admissible k, Ψ(r), ω, η, the hierarchical
+    agglomerative algorithm and the meta-algorithm — is re-fitted on the other m − 1 objects, and
+    the held-out object is classified without its class (sheet *Leave-One-Out*, Definition 3).
 ``stratified-k-fold``
     ``folds`` folds (10), every class dealt evenly over them after a shuffle with the seed.
 ``repeated-k-fold``
@@ -16,8 +22,8 @@ Registry :data:`PROTOCOLS` of splitters:
 ``hold-out``
     One stratified split, ``test_size`` (0.3) of every class held out.
 
-A fold whose training part leaves the model undefined (e.g. no permitted k when the smallest class
-has one object) refuses its held-out objects (decision 0, score 0) and is flagged (ADR-005). The
+A fold whose training part leaves the model undefined (e.g. no admissible k when the smallest class
+is too small) refuses its held-out objects (decision 0, score 0) and is flagged (ADR-005). The
 baselines are evaluated on the same folds.
 """
 
@@ -27,18 +33,20 @@ import logging
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from itertools import product
 from typing import Any, Protocol
 
 import numpy as np
-from pydantic import Field
+from pydantic import Field, JsonValue
 from pydantic.dataclasses import dataclass as params_dataclass
 
 from context_synthetic_recognition.config.models import ExperimentConfig, PluginSpec
 from context_synthetic_recognition.core.arrays import FloatArray, IntArray, freeze_fields
 from context_synthetic_recognition.core.model import CSModel, fit_model
 from context_synthetic_recognition.core.registry import PARAMS_CONFIG, Registry
+from context_synthetic_recognition.core.rips.selection import select_precedents
 from context_synthetic_recognition.data.schema import Dataset
-from context_synthetic_recognition.errors import CSRError, ModelUndefinedError
+from context_synthetic_recognition.errors import ConfigError, CSRError, ModelUndefinedError
 from context_synthetic_recognition.evaluation.baselines import (
     BASELINES,
     BaselineInput,
@@ -69,6 +77,10 @@ class Split:
     repeat: int = 0
     resubstitution: bool = False
     """The training objects themselves are classified with their training rows."""
+    config: ExperimentConfig | None = None
+    """The fold's own configuration (nested cross-validation); ``None``: the experiment's."""
+    note: str = ""
+    """What the protocol chose for the fold (e.g. the parameters of nested cross-validation)."""
 
     def __post_init__(self) -> None:
         """Freeze the index arrays."""
@@ -83,8 +95,33 @@ class Splitter(Protocol):
         ...
 
 
-PROTOCOLS: Registry[Splitter] = Registry("protocols")
-"""Evaluation protocols by name."""
+class DatasetSplitter(Protocol):
+    """Produces the folds from the dataset and the configuration (R-IPS needs the features)."""
+
+    def __call__(self, dataset: Dataset, config: ExperimentConfig, params: Any, /) -> list[Split]:
+        """Return the folds."""
+        ...
+
+
+PROTOCOLS: Registry[Any] = Registry("protocols")
+"""Evaluation protocols by name: :class:`Splitter` or, marked by :func:`uses_dataset`,
+:class:`DatasetSplitter`."""
+
+_USES_DATASET = "__uses_dataset__"
+
+
+def uses_dataset(splitter: DatasetSplitter) -> DatasetSplitter:
+    """Mark a protocol whose folds depend on the dataset and the configuration."""
+    setattr(splitter, _USES_DATASET, True)
+    return splitter
+
+
+def splits_of(name: str, params: Any, dataset: Dataset, config: ExperimentConfig) -> list[Split]:
+    """The folds of the protocol ``name`` for a dataset."""
+    splitter = PROTOCOLS.get(name)
+    if getattr(splitter, _USES_DATASET, False):
+        return list(splitter(dataset, config, params))
+    return list(splitter(dataset.class_index, config.seed, params))
 
 
 @PROTOCOLS.register(
@@ -212,6 +249,119 @@ def hold_out(
     return [Split(_complement(t, class_index.size), t)]
 
 
+@PROTOCOLS.register(
+    "rips",
+    aliases=("r-ips", "definition-3"),
+    summary="the R-IPS training sample trains, its test sample is classified (Definition 3)",
+)
+@uses_dataset
+def rips_split(dataset: Dataset, config: ExperimentConfig, params: Any = None, /) -> list[Split]:
+    """One fold: R-IPS on the whole sample (settings ``config.rips``) — Definition 3."""
+    del params
+    result = select_precedents(dataset, config.rips)
+    return [Split(result.training, result.test)]
+
+
+def _grid_configs(
+    config: ExperimentConfig, grid: dict[str, tuple[JsonValue, ...]]
+) -> list[tuple[str, ExperimentConfig]]:
+    """Every combination of the grid applied to ``config`` (dotted paths), in grid order."""
+    combos: list[tuple[str, ExperimentConfig]] = []
+    keys = list(grid)
+    for values in product(*(grid[key] for key in keys)):
+        data = config.model_dump(mode="json")
+        for key, value in zip(keys, values, strict=True):
+            target = data
+            *path, last = key.split(".")
+            for part in path:
+                target = target[part]
+            if last not in target:
+                raise KeyError(key)
+            target[last] = value
+        label = ", ".join(f"{key} = {value}" for key, value in zip(keys, values, strict=True))
+        combos.append((label, ExperimentConfig.model_validate(data)))
+    return combos
+
+
+def _article_alphas() -> dict[str, tuple[JsonValue, ...]]:
+    """The margin regularization parameters of the article's experiments: α = 0.1 and 0.2."""
+    return {"additional_features.alpha": (0.1, 0.2)}
+
+
+@params_dataclass(frozen=True, config=PARAMS_CONFIG)
+class NestedParams:
+    """Parameters of ``nested-cross-validation``."""
+
+    folds: int = Field(default=10, ge=2)
+    """Outer stratified folds."""
+    shuffle: bool = True
+    grid: dict[str, tuple[JsonValue, ...]] = Field(default_factory=_article_alphas)
+    """Candidate values by dotted configuration path; the article's α = 0.1 and 0.2 by default."""
+
+
+@PROTOCOLS.register(
+    "nested-cross-validation",
+    aliases=("nested-cv",),
+    summary="stratified folds; inside each, R-IPS splits the rest to choose the parameters",
+    params_type=NestedParams,
+)
+@uses_dataset
+def nested_cross_validation(
+    dataset: Dataset, config: ExperimentConfig, params: NestedParams | None = None, /
+) -> list[Split]:
+    """Nested cross-validation with R-IPS inside every fold (Definition 3).
+
+    For every outer fold, R-IPS splits the rest of the sample into a training and a test sample;
+    every candidate of the grid is fitted on that training sample and scored on that test sample
+    (accuracy, refusals as errors; the first candidate on ties). The chosen candidate, fitted on
+    the same training sample, then classifies the outer fold. A test sample T of ``rips`` is not
+    used inside the folds.
+
+    Raises:
+        ConfigError: A grid path or value the configuration does not accept.
+    """
+    chosen = params or NestedParams()
+    rng = np.random.default_rng(config.seed) if chosen.shuffle else None
+    try:
+        candidates = _grid_configs(config, chosen.grid)
+    except (KeyError, TypeError, ValueError) as error:
+        raise ConfigError(
+            f"nested-cross-validation: invalid grid {chosen.grid} ({error})"
+        ) from error
+    inner_rips = config.rips.model_copy(update={"test_sample": ()})
+    splits = []
+    for test in _stratified_folds(dataset.class_index, chosen.folds, rng):
+        if not test.size:
+            continue
+        rest = _complement(test, dataset.m)
+        part = dataset.subset(rest)
+        try:
+            inner = select_precedents(part, inner_rips)
+        except ModelUndefinedError as error:
+            splits.append(Split(rest, test, note=f"R-IPS undefined: {error}"))
+            continue
+        train, validate = inner.training, inner.test
+        best_label, best_config, best_accuracy = candidates[0][0], candidates[0][1], -1.0
+        for label, candidate in candidates:
+            try:
+                model = fit_model(part.subset(train), candidate)
+            except ModelUndefinedError:
+                continue
+            decisions = model.predict(part.X[validate])
+            accuracy = float(np.mean(decisions == part.class_index[validate] + 1))
+            if accuracy > best_accuracy:
+                best_label, best_config, best_accuracy = label, candidate, accuracy
+        splits.append(
+            Split(
+                rest[train],
+                test,
+                config=best_config,
+                note=f"{best_label} (inner accuracy {best_accuracy:.4f})",
+            )
+        )
+    return splits
+
+
 # ---------------------------------------------------------------- results
 
 
@@ -230,7 +380,7 @@ class FoldResult:
     """(q × (p + 1)) the test objects' (a₀ … a_p); ``None`` if the fold is undefined."""
     class_sizes: tuple[int, int] | None
     """|K1|, |K2| of the training part."""
-    permitted_k: tuple[int, ...] | None
+    admissible_k: tuple[int, ...] | None
     r: int | None
     tuplam: tuple[int, ...] | None
     tuplam_names: tuple[str, ...] | None
@@ -318,7 +468,7 @@ class ProtocolResult:
 
 def _feature_names(model: CSModel) -> tuple[str, ...]:
     features = model.trace.features
-    return tuple(f"{features[u].operator_label}·{features[u].k}" for u in model.tuplam)
+    return tuple(features[u].label for u in model.tuplam)
 
 
 def _fold(
@@ -360,7 +510,7 @@ def _fold(
         scores2=meta.scores2,
         descriptions=np.asarray(descriptions),
         class_sizes=model.trace.class_sizes,
-        permitted_k=model.trace.permitted_k.ks,
+        admissible_k=model.trace.admissible_k.ks,
         r=model.trace.r,
         tuplam=model.tuplam,
         tuplam_names=_feature_names(model),
@@ -398,7 +548,7 @@ def run_protocol(
     params = PROTOCOLS.make_params(spec.name, spec.params)
     resolved = [(BASELINES.get(b.name), BASELINES.make_params(b.name, b.params)) for b in baselines]
     started = time.perf_counter()
-    splits = PROTOCOLS.get(spec.name)(dataset.class_index, cfg.seed, params)
+    splits = splits_of(spec.name, params, dataset, cfg)
     truth_codes = dataset.class_index + 1
     folds: list[FoldResult] = []
     per_fold: list[dict[str, tuple[IntArray, FloatArray]]] = []
@@ -408,7 +558,7 @@ def run_protocol(
             raise EvaluationCancelledError(
                 f"{name}: cancelled after {number} of {len(splits)} folds"
             )
-        fold, train = _fold(number, split, dataset, cfg)
+        fold, train = _fold(number, split, dataset, split.config or cfg)
         folds.append(fold)
         exclude = split.test if split.resubstitution else None
         outputs: dict[str, tuple[IntArray, FloatArray]] = {}

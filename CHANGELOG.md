@@ -5,20 +5,68 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-11-22 — rebuild on the article
+
+The project is rebuilt on the author's article (ADR-058): its stages, its names and its defaults.
+
 ### Added
 
-- The author's resources: `resources/Article/` (the article draft), `resources/Interpretation/`
-  (the step-by-step guides), `resources/from Ignatev bobo/` (N. A. Ignatev's article, program and
-  datasets) and `resources/Experiments/ERDR algorithm [Heart-Disease (7, 13, 2)].xlsx`
-  (ADR-014, amended).
+- R-IPS, the first stage: the hyperspheres r(S), g(S), Steps 1–6, an optional test sample T, and
+  the configuration section `rips` (ADR-061). Two switches, flagged ⚠: `rips.keep_blocked_cover`
+  and `rips.training: moved`.
+- The protocols `rips` (Definition 3 on the R-IPS split: accuracy with refusals as errors, accuracy
+  on the answered objects, refusals, class split) and `nested-cross-validation` (R-IPS inside every
+  outer fold, α chosen on the inner test sample) (ADR-069).
+- The zero value of the article's experiments, `synthetic_features.zero_value` (ADR-064);
+  original nominal features combined with the synthetic ones,
+  `synthetic_features.original_features` (ADR-065); a normalizer per base operator,
+  `local_context.operators[].normalizer` (ADR-066).
+- Class-sequence bit masks and majority chains as training-side analysis (ADR-067); the
+  metaobject in every output (ADR-074).
+- The dataset German (1000, 20, 2), byte for byte (ADR-073).
+- The article's computational experiment rebuilt from real runs: `scripts/run_experiments.py`
+  writes `experiments/` with checksums; a test reproduces it byte for byte. The results do not
+  reach the accuracies the article prints; nothing was tuned (ADR-070).
+- `docs/glossary.md`: the article's terms, symbols, English names and code names.
+- The admissible-k strategy `min-class` (odd k = 3 … min|Kᵢ|).
+- The dataset summary reports unknown objects of the test sample T before a run.
 
 ### Changed
 
-- The experiment workbooks moved from `resources/experiments/context-synthetic-model/` to
-  `resources/Experiments/`; the full experiment is now
-  `Context-Synthetic Recognition Model – Full Experiment [Heart-Disease (10, 13, 2)] - Opus 5.5.xlsx`.
-  Every path was updated — README, CLAUDE.md, the documentation, the tests and the handoff
-  documents (ADR-001). Both workbooks are byte for byte unchanged.
+- **Defaults follow the article** — admissible k `min-class`, final class means, one majorizing
+  pass in Step 4 (ADR-062, ADR-063). This changes the results: on Heart-Disease (10, 13, 2)
+  resubstitution 70 % → 50 % and leave-one-out 20 % → 0 %; on Heart-Disease (270, 13, 2)
+  resubstitution 44.81 % → 84.44 % and leave-one-out 7.04 % → 80.74 % (`tests/test_defaults.py`).
+- Presets `default`, `alpha-0.1`, `alpha-0.2`, `excel-experiment`; configuration files of the same
+  names in `configs/` (ADR-071). `csr validate` runs the Excel experiment workbook with
+  `excel-experiment` and still agrees in every compared cell (11,622 cells, 579 checks; ADR-058).
+- Every name follows the article (ADR-059): the core is ordered by stage (`core/rips`,
+  `core/local_context`, `core/synthetic_features`, `core/additional_features`,
+  `core/meta_algorithm`); the configuration has `schema_version: 2` with the sections `rips`,
+  `local_context`, `admissible_k`, `synthetic_features`, `additional_features`,
+  `meta_algorithm`, `evaluation` — schema-1 files are not read; the Excel mirror, the tables, the
+  figures, the report, the CLI and the desktop application use the same names. The renaming
+  changed no number.
+- The Excel mirror's *Switches* sheet explains the switches on the run's own data (ADR-075).
+- The desktop application: a preset list, the R-IPS group, a normalizer per operator, the zero
+  value and original features, and a "⚠ deviates from the article" badge beside every switch that
+  is on; Russian and Uzbek translations updated.
+- `configs/heart-disease-270-large-data.yaml` follows the article's settings and keeps only the
+  constant-feature skip; on Heart-Disease (270, 13, 2) it now gives the default's results
+  (leave-one-out 81.5 % → 80.7 %, ADR-076).
+- `csr fit`, `csr classify`, `csr data info` and `csr run` read the configuration's dataset when
+  no dataset is named, and apply its feature types and reading options when one is (ADR-077).
+- The results tree, the tables and the figures are grouped by the article's stages; the Excel
+  mirror keeps the workbook's Steps 1–12 (ADR-078). The additional features are named d₁ … d_p
+  everywhere.
+- The study of the article's experiments treats the slope of Heart-Disease (x₁₁) as quantitative,
+  as the article does, through `dataset.feature_types`; the data file is unchanged (ADR-072).
+
+### Removed
+
+- The author's source material is no longer part of the repository; the workbooks used as
+  acceptance tests are copied to `tests/data/workbooks/` and the independent re-implementation
+  used as a test oracle to `tests/golden/independent/` (ADR-060).
 
 ### Fixed
 
@@ -69,11 +117,11 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   `mahalanobis` on quantitative features; `hamming` on nominal features. The Zhuravlyov
   operators ρ, ρ_I, ρ_J stay the default. HVDM is not offered: it reads the classes of the
   training objects (author).
-- Metric traits (ADR-050): `core.metrics.traits(domain=…, fit=…, check=…)`. A metric names the
-  feature types it is defined on (a mismatch is a configuration error that names the features),
-  may estimate training statistics in a fit step — ranges for HEOM and Gower, the covariance
-  for Mahalanobis — re-fitted in every fold and never given a class label, and may check its
-  parameters against an operator's features.
+- Metric traits (ADR-050): `core.local_context.metrics.traits(domain=…, fit=…, check=…)`. A
+  metric names the feature types it is defined on (a mismatch is a configuration error that names
+  the features), may estimate training statistics in a fit step — ranges for HEOM and Gower, the
+  covariance for Mahalanobis — re-fitted in every fold and never given a class label, and may
+  check its parameters against an operator's features.
 - Normalizers (ADR-052): `z-score` (parameter `ddof`), `robust` (median and interquartile range),
   `max-abs`, `decimal-scaling`, `rank` (mid-ranks, new values interpolated) and `unit-length`
   (per object). Min–max stays the default; every fitted normalizer maps a feature without
@@ -97,7 +145,7 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   script) with the workflow Dataset → Configure → Run → Results → New object → Compare → Export
   (ADR-044):
   - *Dataset*: project and built-in datasets, files, drag-and-drop; preview; feature types;
-    reading options; live |K1|, |K2|, permitted k and r.
+    reading options; live |K1|, |K2|, admissible k and r.
   - *Configure*: every setting with plug-in parameter forms generated from the parameter types;
     presets; the two ⚠ switches marked; validation; undo / redo (ADR-046).
   - *Run*: worker thread with progress, log and cancel; optional run folder; switch sensitivity.
@@ -125,27 +173,29 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 ### Added
 
 - Excel mirror (`export.excel`, `workbook.xlsx`): the sheets, layout and style of the Excel
-  experiment, generated for any data — a *Sorted Neighbors* sheet per operator, a *Greedy upon
-  Weight* sheet per HAG iteration, a fold sheet per hold-out protocol; values, no formulas. The
-  export of Heart-Disease (10, 13, 2) passes `csr validate` (11,631 cells) and matches the
-  experiment workbook in structure and style (golden tests). Size limits with notes on the
-  sheets for large data (ADR-037, ADR-038).
+  experiment, generated for any data — a *Sorted Neighbors* sheet per operator, a step sheet per
+  iteration of the agglomerative algorithm, a fold sheet per hold-out protocol; values, no
+  formulas. The export of Heart-Disease (10, 13, 2) passes `csr validate` (11,631 cells) and
+  matches the experiment workbook in structure and style (golden tests). Size limits with notes
+  on the sheets for large data (ADR-037, ADR-038).
 - Tables of a run as plain data (`export.tables`, 44 for the experiment) and their forms: CSV
   and JSON at full precision, Markdown and LaTeX (`booktabs`, the notation in math mode) for
   the article (ADR-040).
-- Figures (`export.figures`, matplotlib): distances, neighbourhoods, ω and stability, HAG
-  candidates and criterion, margins, ROC, confusion, outcomes, prediction map, sensitivity; PNG
-  and SVG, light and dark; drawn on given axes for reuse by the GUI (ADR-041).
+- Figures (`export.figures`, matplotlib): distances, neighbourhoods, ω and stability, the
+  candidates and the criterion of the agglomerative algorithm, margins, ROC, confusion,
+  outcomes, prediction map, sensitivity; PNG and SVG, light and dark; drawn on given axes for
+  reuse by the GUI (ADR-041).
 - Run report (`export.report`): self-contained `report.html` and `report.pdf` (optional extra
-  `[pdf]`, reportlab), with the two template deviations highlighted first (ADR-041).
+  `[pdf]`, reportlab), with the two switches that deviate from the article highlighted first
+  (ADR-041).
 - `csr run --export FORMATS` and `csr export [RUN]` (`--format`, `--out`, `--object`, `--values`,
   `--sensitivity/--no-sensitivity`, `--decimals`, `--dpi`, `--theme`); `export_result` and the
   `EXPORTERS` registry in Python (ADR-036, ADR-042).
 - Run folders are self-contained: `dataset.json` (the dataset as used) and the switch settings
   in `results.json`; `load_run` repeats a run from its folder and reports differences from the
   stored results (ADR-036).
-- The worked examples of *Template Deviations* are computed by the package from the template's
-  data, shipped as `export/excel/hag_template.json` (ADR-043).
+- The worked examples of the switches sheet are computed by the package from the data of the
+  agglomerative algorithm's check workbook, shipped with the package as JSON (ADR-043).
 - The dataset folder (ADR-035): `datasets/default.dat|.csv` (Heart-Disease (10, 13, 2), the default
   dataset) and `datasets/raw/Heart-Disease/Heart-Disease (270, 13, 2).dat|.csv`, byte for byte;
   `data.catalog` (discovery, ids, `.dat`/`.csv` identity checks, name resolution with the
@@ -173,77 +223,81 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   `[sklearn]`) (ADR-032).
 - Metrics with the workbook's conventions: confusion counts with refusals separate, accuracy,
   coverage, precision/recall/F1 per class and macro, Mann–Whitney AUC on rounded scores, ROC table;
-  margins of the latent features with and without the majorizer (ADR-031).
+  margins of the additional features with and without the majorizing function (ADR-031).
 - Model properties (`core.properties`): Definitions 1, 4 and 6, Property 1, boundary ties and the
   Theorem check (ADR-031).
 - Experiment runner and run folders (`services.runner`: manifest, `results.json`,
   `predictions.csv`, `folds.csv`), switch sensitivity (`services.sensitivity`), `csr run`
   (`--sensitivity`, `--no-save`, `--runs-dir`) and `builtin:<name>` dataset paths (ADR-033).
-- Switch `synthetic.skip_constant` (default off) and the large-data example configuration
+- Switch `synthetic_features.skip_constant` (default off) and the large-data example configuration
   `configs/heart-disease-270-large-data.yaml` (constant features skipped, k ≤ 21), after the
   study of ADR-030: on Heart-Disease (270, 13, 2) the literal k range gives 7 % leave-one-out,
   the large-data setting 81.5 %.
 - `csr validate` covers every computed sheet of the experiment: 11,631 cells in 29 sheets, in
-  workbook order (ADR-034); a golden test checks the template-data tables of *Template Deviations*
-  against the template copy.
+  workbook order (ADR-034); a golden test checks the tables of the switches sheet that use the
+  data of the agglomerative algorithm's check workbook against the copy of that workbook.
 - Documentation: the Evaluation page; ADR-030 – ADR-034.
 
 ### Changed
 
-- The preset configurations contain `synthetic.skip_constant: false`; their hashes change.
+- The preset configurations contain `synthetic_features.skip_constant: false`; their hashes change.
 - `csr config check` also checks the evaluation protocols and baselines
   (`services.configs.config_problems`).
 
-## [0.3.0] — 2026-09-30 — M3 HAG, meta-algorithm, template replication
+## [0.3.0] — 2026-09-30 — M3 agglomerative algorithm, meta-algorithm, check-workbook replication
 
 ### Added
 
-- HAG, Steps 1–5 (`core.hag`), with both template/article switches, the stopping rules and a full
-  trace: every iteration's θ, γ, θ/γ, cr1, q, crit and latent feature; the per-object columns of
-  any candidate block on demand, bit-identical to the grouping (ADR-024). θ/γ = +∞ when γ = 0
+- The hierarchical agglomerative algorithm, Steps 1–5 (`core.additional_features.agglomerative`),
+  with both switches that deviate from the article, the stopping rules and a full trace: every
+  iteration's θ, γ, θ/γ, cr1, q, crit and additional feature; the per-object columns of any
+  candidate block on demand, bit-identical to the grouping (ADR-024). θ/γ = +∞ when γ = 0
   (ADR-025).
-- Majorizing functions (`core.majorizers`): logistic sigmoid (default), tanh, arctan and softsign,
-  scaled to (0, 1) (ADR-026).
-- Meta-algorithm, Steps 1–5 (`core.meta`): B1/B2 at every step for any gradations, the decision
-  rule registry (`article-step-4`, exact comparison, refusal = 0) (ADR-027).
+- Majorizing functions (`core.additional_features.majorizing_functions`): logistic sigmoid
+  (default), tanh, arctan and softsign, scaled to (0, 1) (ADR-026).
+- Meta-algorithm, Steps 1–5 (`core.meta_algorithm`): B1/B2 at every step for any gradations, the
+  decision rule registry (`step-4`, exact comparison, refusal = 0) (ADR-027).
 - The CS-model end to end (`core.model.fit_model`, `CSModel`): the meta-dataset Y = (y, r), the
   training description, `represent` / `classify` / `predict` without a label (Theorem) and
   `classify_training` (resubstitution) (ADR-028).
 - `csr fit` and `csr classify` (`--values`, `--object`) with the B1/B2 explanation.
 - `csr validate` covers Steps 9–12 of the experiment (10,272 cells in 19 sheets, all within
-  3.0e-14) with its inputs read from the workbook, and recognises the HAG template (SET
-  {x₃, x₆, x₁₃, x₄, x₉}, 6,131 cells) and the meta-algorithm template (Class 2) (ADR-029).
-- Copies of the two template workbooks in `tests/data/templates` for CI; golden tests for the
-  switch variants, the ten leave-one-out folds and the template replication; cross-checks with
-  the reference engine on the experiment, Heart-Disease (270, 13, 2) and random datasets.
+  3.0e-14) with its inputs read from the workbook, and recognises the check workbooks of the
+  agglomerative algorithm (SET {x₃, x₆, x₁₃, x₄, x₉}, 6,131 cells) and of the meta-algorithm
+  (Class 2) (ADR-029).
+- Copies of the two check workbooks in `tests/data/` for CI (now `tests/data/workbooks/`); golden
+  tests for the switch variants, the ten leave-one-out folds and the replication of the check
+  workbooks; cross-checks with an independent re-implementation used as a test oracle on the
+  experiment, Heart-Disease (270, 13, 2) and random datasets.
 
 ### Changed
 
 - `services.validation` is a package (`checks`, `context_map`, `model_map`, `experiment`,
-  `templates`); `Check` is generic over the computed subject and may be conditional.
-- `csr config check` also checks the majorizer and the decision rule.
+  `check_workbooks`); `Check` is generic over the computed subject and may be conditional.
+- `csr config check` also checks the majorizing function and the decision rule.
 
 ## [0.2.0] — 2026-09-30 — M2 core pipeline to Ψ(r)
 
 ### Added
 
 - Data layer: immutable `Dataset` schema (types I/J, class order K1, K2, categories, content
-  hash); loaders for the experiment workbook's Dataset sheet, the template's CSV/DAT layout, CSV,
+  hash); loaders for the experiment workbook's Dataset sheet, the extended CSV/DAT layout, CSV,
   XLSX and Parquet (optional `[parquet]` extra) with format detection; built-in datasets
   `heart-disease-10` and `heart-disease-270`.
-- Core Steps 1–8: min–max scale unification fitted on the training objects; the Zhuravlyov metric
+- Core Steps 1–8: min–max normalization fitted on the training objects; the Zhuravlyov metric
   and base operators ρ, ρ_I, ρ_J (empty subsets skipped, ADR-007); neighbour order by
-  (distance, index); permitted k (`formula`, `article`, `explicit`, `range`); μ, χ₁ and
-  formula (5); formulas (1)–(4) and bit masks; formula (6) and the `omega` weights.
+  (distance, index); admissible k (`twice-min-class`, a strategy for the draft's text,
+  `explicit`, `range`); μ, χ₁ and formula (5); formulas (1)–(4) and majority bit chains;
+  formula (6) and the weights ω by formula (4).
 - `fit_context` with an immutable trace of every Step 1–8 table, and
   `ContextModel.represent` — new objects described without their class (Theorem).
 - Plug-in parameter validation (`Registry.make_params`, frozen pydantic dataclasses);
   `csr config check` reports unknown plug-ins and invalid parameters.
-- `csr data list`, `csr data info` (sizes, types, |Kᵢ|, permitted k, r) and
+- `csr data list`, `csr data info` (sizes, types, |Kᵢ|, admissible k, r) and
   `csr validate --against <workbook>` (Steps 1–8: 4,022 cells, all within 4.4e-15).
-- Golden tests from the workbook's cached cells; bit-for-bit cross-checks against the reference
-  engine on the experiment, Heart-Disease (270, 13, 2) and random tie-heavy datasets; leakage
-  tests for the new-object path.
+- Golden tests from the workbook's cached cells; bit-for-bit cross-checks against an independent
+  re-implementation used as a test oracle on the experiment, Heart-Disease (270, 13, 2) and random
+  tie-heavy datasets; leakage tests for the new-object path.
 - Documentation: datasets, extending (plug-ins), ADR-018 – ADR-023.
 
 ### Changed
@@ -260,9 +314,11 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 - Packaging (`src/` layout, setuptools, `csr` console script, `py.typed`), MIT license.
 - Typed experiment configuration (pydantic v2): strict keys, immutable, YAML/TOML/JSON,
-  format-independent SHA-256 hash; `template` (default) and `article` presets in `configs/`.
-- The two template-vs-article switches `hag.centres` (running | final) and `hag.step4_passes`
-  (2 | 1), described once in `config.presets.DEVIATIONS` and flagged by the CLI and file headers.
+  format-independent SHA-256 hash; two presets in `configs/`: the Excel experiment's setting
+  (default; now `excel-experiment`) and the article's (now `default`).
+- The two switches that deviate from the article, `additional_features.class_means`
+  (running | final) and `additional_features.majorizing_passes` (2 | 1), described once in
+  `config.presets.DEVIATIONS` and flagged by the CLI and file headers.
 - Plug-in registry with aliases, parameter types and entry points.
 - Structured logging (key=value console lines, JSON lines per run) and the exception hierarchy.
 - Run folders `runs/<YYYYMMDD_HHMMSS>_<hash>/` with `manifest.yaml` (configuration, hashes, seed,

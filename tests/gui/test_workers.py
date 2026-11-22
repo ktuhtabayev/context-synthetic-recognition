@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 from pytestqt.qtbot import QtBot
 
-from context_synthetic_recognition.config import ExperimentConfig
 from context_synthetic_recognition.data import Dataset
 from context_synthetic_recognition.errors import DatasetError
 from context_synthetic_recognition.evaluation.protocols import EvaluationCancelledError
@@ -22,6 +21,8 @@ from context_synthetic_recognition.gui.workers import (
 )
 from context_synthetic_recognition.log import PACKAGE_LOGGER
 
+from ..conftest import excel_experiment
+
 pytestmark = pytest.mark.gui
 
 
@@ -32,12 +33,12 @@ def test_the_run_job(experiment: Dataset, tmp_path: Path) -> None:
     stages: list[tuple[str, int, int]] = []
     outcome = run_job(
         experiment,
-        ExperimentConfig(),
+        excel_experiment(),
         runs_dir=tmp_path / "runs",
         progress=lambda *report: stages.append(report),
     )
     view = outcome.view
-    assert view.hag.label == "{a₆, a₃, a₁, a₂, a₄}"
+    assert view.agglomerative.label == "{a₆, a₃, a₁, a₂, a₄}"
     assert view.sensitivity is not None  # "auto": ten objects are few enough
     assert len(view.sensitivity) == 4
     assert outcome.folder is not None
@@ -52,7 +53,7 @@ def test_the_run_job(experiment: Dataset, tmp_path: Path) -> None:
 
 
 def test_the_sensitivity_choice(experiment: Dataset) -> None:
-    config = ExperimentConfig()
+    config = excel_experiment()
     never = run_job(experiment, config, sensitivity="no")
     assert never.view.sensitivity is None
     assert never.folder is None  # no runs folder: not saved
@@ -62,7 +63,7 @@ def test_the_sensitivity_choice(experiment: Dataset) -> None:
 
 def test_a_cancelled_run(experiment: Dataset, tmp_path: Path) -> None:
     with pytest.raises(EvaluationCancelledError):
-        run_job(experiment, ExperimentConfig(), runs_dir=tmp_path, cancelled=lambda: True)
+        run_job(experiment, excel_experiment(), runs_dir=tmp_path, cancelled=lambda: True)
     assert list(tmp_path.iterdir()) == []  # nothing is saved
     # cancelling during the switch settings stops them too
     calls = {"count": 0}
@@ -72,18 +73,18 @@ def test_a_cancelled_run(experiment: Dataset, tmp_path: Path) -> None:
         return calls["count"] > 12  # resubstitution and ten leave-one-out folds pass
 
     with pytest.raises(EvaluationCancelledError):
-        run_job(experiment, ExperimentConfig(), runs_dir=tmp_path, cancelled=after_the_run)
+        run_job(experiment, excel_experiment(), runs_dir=tmp_path, cancelled=after_the_run)
     assert list(tmp_path.iterdir()) == []
 
 
 def test_the_open_job(experiment: Dataset, tmp_path: Path) -> None:
-    saved = run_job(experiment, ExperimentConfig(), runs_dir=tmp_path)
+    saved = run_job(experiment, excel_experiment(), runs_dir=tmp_path)
     assert saved.folder is not None
     opened = open_job(saved.folder)
     assert opened.folder == saved.folder
     assert opened.view.run_id == saved.folder.name
     assert opened.view.sensitivity == saved.view.sensitivity  # taken from the folder
-    assert opened.view.hag.label == saved.view.hag.label
+    assert opened.view.agglomerative.label == saved.view.agglomerative.label
     assert opened.warnings == ()
     file = saved.folder / "results.json"
     stored = json.loads(file.read_text(encoding="utf-8"))

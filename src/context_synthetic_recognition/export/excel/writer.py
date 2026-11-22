@@ -207,7 +207,7 @@ class SheetWriter:
     def note_box(
         self, row: int, column: int, width: int, height: int, text: str, style: str
     ) -> None:
-        """A merged note with a medium outer border (the ⚠ boxes beside the HAG blocks)."""
+        """A merged note with a medium outer border (the ⚠ boxes beside the candidate blocks)."""
         self.put(row, column, text, style)
         last_row, last_column = row + height - 1, column + width - 1
         for r in range(row, last_row + 1):

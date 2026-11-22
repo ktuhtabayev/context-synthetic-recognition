@@ -15,11 +15,11 @@ from context_synthetic_recognition import __version__
 from context_synthetic_recognition.cli.app import EXIT_FAILED, app
 from context_synthetic_recognition.config import (
     DatasetConfig,
-    ExperimentConfig,
     load_config,
     preset,
     save_config,
 )
+from context_synthetic_recognition.config.presets import PresetName
 from context_synthetic_recognition.gui import app as gui_app
 from context_synthetic_recognition.gui.settings import (
     RECENT_CONFIGS,
@@ -30,6 +30,7 @@ from context_synthetic_recognition.gui.settings import (
 from context_synthetic_recognition.gui.theme import DARK, LIGHT
 from context_synthetic_recognition.gui.window import SHORTCUTS, MainWindow
 
+from ..conftest import article_switches, workbook_config
 from .conftest import RUN_TIMEOUT, Run
 
 pytestmark = pytest.mark.gui
@@ -51,9 +52,8 @@ def action(window: MainWindow, title: str, text: str) -> Any:
 def test_the_window_before_anything_is_loaded(window: MainWindow) -> None:
     assert window.windowTitle() == "no dataset — Context-synthetic recognition"
     assert window.dataset_label.text() == "No dataset loaded"
-    assert window.preset_label.text() == "preset: template"
-    assert window.deviation_button.text() == "⚠ 2 template calculation(s)"
-    assert "ADR-002" in window.deviation_button.toolTip()
+    assert window.preset_label.text() == "preset: default"
+    assert not window.deviation_button.isVisibleTo(window)  # nothing deviates
     assert window.result_label.text() == ""
     assert [window.sidebar.item(i).text() for i in range(window.sidebar.count())] == [
         "1   Dataset",
@@ -114,15 +114,21 @@ def test_the_menus(window: MainWindow) -> None:
         "Export…",
         "Quit",
     ]
-    assert menu_texts(window, "&Edit") == ["Undo", "Redo", "Template preset", "Article preset"]
+    assert menu_texts(window, "&Edit") == ["Undo", "Redo", "Apply a preset"]
+    presets = [action.text() for action in window.preset_menu.actions()]
+    assert presets == [name.value for name in PresetName]
     assert action(window, "&Run", "Run the experiment").shortcut() == QKeySequence("F5")
     assert action(window, "&File", "Open dataset…").shortcut() == QKeySequence("Ctrl+O")
     assert action(window, "&View", "Results").shortcut() == QKeySequence("Ctrl+4")
     assert not window.undo_action.isEnabled()
-    action(window, "&Edit", "Article preset").trigger()
-    assert window.preset_label.text() == "preset: article"
+    excel = next(a for a in window.preset_menu.actions() if a.text() == "excel-experiment")
+    excel.trigger()
+    assert window.preset_label.text() == "preset: excel-experiment"
+    assert window.deviation_button.text() == "⚠ deviates from the article: 2 setting(s)"
+    assert "ADR-002" in window.deviation_button.toolTip()
     assert window.undo_action.isEnabled()
     window.undo_action.trigger()
+    assert window.preset_label.text() == "preset: default"
     assert window.redo_action.isEnabled()
     action(window, "&View", "Compare").trigger()
     assert window.current_page() is window.compare_page
@@ -140,7 +146,8 @@ def test_help(window: MainWindow) -> None:
     assert shown[0][1].count("\n") == len(SHORTCUTS) - 1
     assert "F5" in shown[0][1]
     assert f"Context-synthetic recognition {__version__}" in shown[1][1]
-    assert "⚠ Two template calculations differ from the article" in shown[1][1]
+    assert "The default preset follows the article." in shown[1][1]
+    assert "“⚠ deviates from the article”" in shown[1][1]
 
 
 # ---------------------------------------------------------------- appearance
@@ -203,19 +210,19 @@ def test_the_window_remembers_its_state(
 
 
 def test_saving_and_opening_a_configuration(loaded: MainWindow, tmp_path: Path) -> None:
-    loaded.configure_page.article_button.click()
+    loaded.configure_page.apply_preset("default")
     target = tmp_path / "experiment.yaml"
     loaded.config_save_dialog = lambda: str(target)
     action(loaded, "&File", "Save configuration as…").trigger()
     saved = load_config(target)
-    assert saved.hag == preset("article").hag
+    assert saved.additional_features == article_switches().additional_features
     assert saved.dataset.path == "heart-disease-10"
     assert loaded.settings.recent(RECENT_CONFIGS) == [str(target.resolve())]
     assert "Configuration saved" in loaded.statusBar().currentMessage()
-    loaded.configure_page.template_button.click()
+    loaded.configure_page.apply_preset("excel-experiment")
     loaded.config_open_dialog = lambda: str(target)
     action(loaded, "&File", "Open configuration…").trigger()
-    assert loaded.state.config.hag == preset("article").hag
+    assert loaded.state.config.additional_features == article_switches().additional_features
     assert not loaded.undo_action.isEnabled()  # a file was opened: the history starts again
     assert loaded.state.dataset is not None
     for dialog in ("config_open_dialog", "config_save_dialog", "run_folder_dialog"):
@@ -223,7 +230,7 @@ def test_saving_and_opening_a_configuration(loaded: MainWindow, tmp_path: Path) 
     loaded.open_config_dialog()
     loaded.save_config_dialog()
     loaded.open_run_dialog()
-    assert loaded.state.config.hag == preset("article").hag
+    assert loaded.state.config.additional_features == article_switches().additional_features
 
 
 def test_a_configuration_brings_its_dataset(window: MainWindow, tmp_path: Path) -> None:
@@ -234,7 +241,7 @@ def test_a_configuration_brings_its_dataset(window: MainWindow, tmp_path: Path) 
     )
     path = tmp_path / "experiment.toml"
     save_config(
-        ExperimentConfig(dataset=DatasetConfig(path="patients.csv", class_column="label"), seed=5),
+        workbook_config(dataset=DatasetConfig(path="patients.csv", class_column="label"), seed=5),
         path,
     )
     assert window.open_config(path)
@@ -245,13 +252,13 @@ def test_a_configuration_brings_its_dataset(window: MainWindow, tmp_path: Path) 
     assert window.state.dataset_source == str(tmp_path / "patients.csv")
     # a configuration that names no dataset keeps the one that is open
     bare = tmp_path / "bare.yaml"
-    save_config(preset("article"), bare)
+    save_config(article_switches(), bare)
     assert window.open_config(bare)
     assert window.state.dataset is dataset
-    assert window.state.config.hag.step4_passes == 1
+    assert window.state.config.additional_features.majorizing_passes == 1
     # … and one whose dataset is missing says so and keeps the settings
     lost = tmp_path / "lost.yaml"
-    save_config(ExperimentConfig(dataset=DatasetConfig(path="gone.csv"), seed=9), lost)
+    save_config(workbook_config(dataset=DatasetConfig(path="gone.csv"), seed=9), lost)
     assert window.open_config(lost)
     assert window.state.config.seed == 9
     assert "gone.csv" in window.statusBar().currentMessage()
@@ -260,7 +267,7 @@ def test_a_configuration_brings_its_dataset(window: MainWindow, tmp_path: Path) 
 
 def test_files_that_cannot_be_opened_or_saved(window: MainWindow, tmp_path: Path) -> None:
     broken = tmp_path / "broken.yaml"
-    broken.write_text("hag: {alpha: 7}\n", encoding="utf-8")
+    broken.write_text("additional_features: {alpha: 7}\n", encoding="utf-8")
     assert not window.open_config(broken)
     assert window.statusBar().currentMessage().startswith("✗ ")
     assert window.settings.recent(RECENT_CONFIGS) == []
@@ -276,12 +283,12 @@ def test_opening_a_run_folder(
     evaluated: MainWindow, run: Run, qtbot: QtBot, tmp_path: Path
 ) -> None:
     evaluated.run_page.runs_dir.setText(str(tmp_path / "runs"))
-    evaluated.configure_page.article_button.click()
+    evaluated.configure_page.apply_preset("default")
     run(evaluated, save=True)  # type: ignore[call-arg]
     folder = evaluated.state.run_folder
     assert folder is not None
     evaluated.state.set_dataset(None)
-    evaluated.configure_page.template_button.click()
+    evaluated.configure_page.apply_preset("excel-experiment")
     evaluated.run_folder_dialog = lambda: str(folder)
     with qtbot.waitSignal(evaluated.run_page.finished, timeout=RUN_TIMEOUT):
         action(evaluated, "&File", "Open run folder…").trigger()
@@ -289,7 +296,9 @@ def test_opening_a_run_folder(
     state = evaluated.state
     assert state.run_folder == folder
     assert state.view.run_id == folder.name  # type: ignore[union-attr]
-    assert state.config.hag.step4_passes == 1  # the run's configuration is current again
+    assert (
+        state.config.additional_features.majorizing_passes == 1
+    )  # the run's configuration is current again
     assert state.dataset is not None
     assert not state.stale
     assert evaluated.settings.recent(RECENT_RUNS)[0] == str(folder)
@@ -308,9 +317,9 @@ def test_opening_whatever_a_path_is(window: MainWindow, tmp_path: Path) -> None:
     assert window.state.dataset is not None
     assert window.state.dataset.m == 4
     config = tmp_path / "experiment.json"
-    save_config(preset("article"), config)
+    save_config(preset("alpha-0.2"), config)
     window.open_path(config)
-    assert window.preset_label.text() == "preset: article"
+    assert window.preset_label.text() == "preset: alpha-0.2"
     window.open_path(tmp_path)  # a folder without a manifest
     assert "is not a run folder" in window.statusBar().currentMessage()
     window.open_path(tmp_path / "missing.dat")
@@ -416,10 +425,10 @@ def test_creating_the_window(qtbot: QtBot, tmp_path: Path, monkeypatch: pytest.M
     assert named.state.dataset is not None
     assert named.state.dataset.m == 270
     config = tmp_path / "experiment.yaml"
-    save_config(preset("article"), config)
+    save_config(article_switches(), config)
     configured = gui_app.create_window(config=config, store=store(tmp_path))
     qtbot.addWidget(configured)
-    assert configured.state.config.hag.step4_passes == 1
+    assert configured.state.config.additional_features.majorizing_passes == 1
     assert configured.state.dataset is not None
     for created in (plain, named, configured):
         created.close()
@@ -534,7 +543,7 @@ def test_the_self_test(
         "ok    language Oʻzbekcha: Tajribani ishga tushirish",
     ]
     assert "ok    default dataset: Heart-Disease (10, 13, 2)" in lines
-    assert "ok    experiment: TUPLAM = {a₆, a₃, a₁, a₂, a₄}" in lines
+    assert "ok    experiment: TUPLAM = {a₁, a₃, a₂}" in lines  # the default preset
     assert "ok    results: a table and a figure" in lines
     assert any(line.startswith("ok    export: excel, csv, json") for line in lines)
     assert lines[-1] == "passed"

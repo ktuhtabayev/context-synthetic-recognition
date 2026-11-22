@@ -17,10 +17,10 @@ import numpy as np
 import numpy.typing as npt
 
 from context_synthetic_recognition.config.models import ExperimentConfig
+from context_synthetic_recognition.core.additional_features.agglomerative import AgglomerativeResult
 from context_synthetic_recognition.core.arrays import FloatArray
-from context_synthetic_recognition.core.hag import HAGResult
 from context_synthetic_recognition.core.model import Classification, CSModel
-from context_synthetic_recognition.core.trace import ContextTrace
+from context_synthetic_recognition.core.trace import PsiTrace
 from context_synthetic_recognition.data.schema import Dataset, Label
 from context_synthetic_recognition.errors import DatasetError
 from context_synthetic_recognition.evaluation.protocols import ProtocolResult
@@ -81,14 +81,14 @@ class RunView:
         return self.result.model
 
     @property
-    def trace(self) -> ContextTrace:
+    def trace(self) -> PsiTrace:
         """The Step 1–8 trace."""
         return self.result.model.trace
 
     @property
-    def hag(self) -> HAGResult:
-        """The HAG of the full fit."""
-        return self.result.model.hag
+    def agglomerative(self) -> AgglomerativeResult:
+        """The hierarchical agglomerative algorithm of the full fit."""
+        return self.result.model.agglomerative
 
     @property
     def labels(self) -> tuple[Label, ...]:
@@ -100,10 +100,13 @@ class RunView:
     def slots(self) -> int:
         """Positions y₀ … of the meta-dataset the workbook lays out: the largest possible |TUPLAM|.
 
-        min(ϰ, r), and never fewer than the features the HAG selected; positions the grouping did
-        not fill are shown as "—", as in the workbook.
+        min(ϰ, r), and never fewer than the features the agglomerative algorithm selected;
+        positions the grouping did not fill are shown as "—", as in the workbook.
         """
-        return max(min(self.hag.settings.kappa, self.hag.r), len(self.hag.tuplam))
+        return max(
+            min(self.agglomerative.settings.kappa, self.agglomerative.r),
+            len(self.agglomerative.tuplam),
+        )
 
     def protocol(self, name: str) -> ProtocolResult | None:
         """The result of a protocol by its canonical name, or ``None`` if it was not run."""

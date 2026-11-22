@@ -9,13 +9,12 @@ from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
 from context_synthetic_recognition.config import (
-    ContextConfig,
     ExperimentConfig,
+    LocalContextConfig,
     OperatorConfig,
     plugin,
 )
-from context_synthetic_recognition.core.context import fit_context
-from context_synthetic_recognition.core.metrics import (
+from context_synthetic_recognition.core.local_context.metrics import (
     METRICS,
     MetricTraits,
     Ranges,
@@ -27,11 +26,14 @@ from context_synthetic_recognition.core.metrics import (
     traits_of,
     zhuravlyov,
 )
+from context_synthetic_recognition.core.local_context.operators import resolve_operators
 from context_synthetic_recognition.core.model import fit_model
-from context_synthetic_recognition.core.operators import resolve_operators
+from context_synthetic_recognition.core.synthetic_features.psi import fit_psi
 from context_synthetic_recognition.data import Dataset
 from context_synthetic_recognition.errors import ConfigError
 from context_synthetic_recognition.services.runner import run_experiment
+
+from .conftest import excel_experiment, workbook_config
 
 HETEROGENEOUS = ("zhuravlyov", "weighted-zhuravlyov", "heom", "gower")
 QUANTITATIVE = (
@@ -56,9 +58,9 @@ def distances(name: str, A: np.ndarray, B: np.ndarray, mask: np.ndarray, **param
     return metric(A, B, mask, 10, values if fit is None else fit(B, mask, values))
 
 
-def operators_of(metric: str, features: object = "all", **params: object) -> ContextConfig:
+def operators_of(metric: str, features: object = "all", **params: object) -> LocalContextConfig:
     spec = plugin(metric, **params)  # type: ignore[arg-type]
-    return ContextConfig(
+    return LocalContextConfig(
         operators=(OperatorConfig(label="ρ*", metric=spec, features=features),)  # type: ignore[arg-type]
     )
 
@@ -171,16 +173,16 @@ def test_hamming_counts_the_differing_nominal_features() -> None:
 def test_manhattan_on_set_i_and_hamming_on_set_j_are_the_workbook_operators(
     experiment: Dataset,
 ) -> None:
-    config = ExperimentConfig(
-        context=ContextConfig(
+    config = workbook_config(
+        local_context=LocalContextConfig(
             operators=(
                 OperatorConfig(label="M", metric=plugin("manhattan"), features="quantitative"),
                 OperatorConfig(label="H", metric=plugin("hamming"), features="nominal"),
             )
         )
     )
-    ours = fit_context(experiment, config).trace.operators
-    workbook = fit_context(experiment).trace.operators  # ρ, ρ_I, ρ_J
+    ours = fit_psi(experiment, config).trace.operators
+    workbook = fit_psi(experiment, excel_experiment()).trace.operators  # ρ, ρ_I, ρ_J
     assert np.array_equal(ours[0].distances, workbook[1].distances)
     assert np.array_equal(ours[1].distances, workbook[2].distances)
 
@@ -351,7 +353,7 @@ def test_a_metric_on_features_of_the_wrong_type_is_a_configuration_error() -> No
         operators_of("weighted-zhuravlyov", "quantitative", feature_weights=[1, 2]), NAMES, QUANT
     )
     # an empty subset is still skipped before the domain is looked at (ADR-007)
-    config = ContextConfig(
+    config = LocalContextConfig(
         operators=(
             OperatorConfig(label="ρ", features="all"),
             OperatorConfig(label="h", metric=plugin("hamming"), features="nominal"),
@@ -375,7 +377,7 @@ def test_an_operator_with_a_fit_step_must_be_fitted_on_the_training_sample() -> 
     assert fitted.state.spread.tolist() == [4.0, np.inf, 2.0]
     assert fitted.distances(train, train, decimals=10)[0, 1] == round(3**0.5, 10)
     # a metric without a fit step is returned as it is
-    default, _ = resolve_operators(ContextConfig(), NAMES, QUANT)
+    default, _ = resolve_operators(LocalContextConfig(), NAMES, QUANT)
     assert default[0].fit_step is None
     assert default[0].fit(train) is default[0]
 
@@ -390,7 +392,9 @@ def test_blocked_distances_equal_one_pass_for_a_fitted_metric(
         operator = operator.fit(Z)
         whole = operator.distances(Z, Z, decimals=10)
         with monkeypatch.context() as patch:
-            patch.setattr("context_synthetic_recognition.core.operators.BLOCK_ELEMENTS", 50)
+            patch.setattr(
+                "context_synthetic_recognition.core.local_context.operators.BLOCK_ELEMENTS", 50
+            )
             assert np.array_equal(operator.distances(Z, Z, decimals=10), whole)
 
 
@@ -400,26 +404,28 @@ def test_blocked_distances_equal_one_pass_for_a_fitted_metric(
 def config_with(metric: str) -> ExperimentConfig:
     domain = traits_of(METRICS.get(metric)).domain
     features = {"any": "all", "quantitative": "quantitative", "nominal": "nominal"}[domain]
-    default = ContextConfig().operators
-    return ExperimentConfig(
-        context=ContextConfig(operators=(*default, *operators_of(metric, features).operators))
+    default = LocalContextConfig().operators
+    return workbook_config(
+        local_context=LocalContextConfig(
+            operators=(*default, *operators_of(metric, features).operators)
+        )
     )
 
 
 @pytest.mark.parametrize("name", [*HETEROGENEOUS[1:], *QUANTITATIVE, *NOMINAL])
 def test_every_metric_runs_through_the_model(experiment: Dataset, name: str) -> None:
     model = fit_model(experiment, config_with(name))
-    trace = model.context.trace
+    trace = model.psi.trace
     assert [o.label for o in trace.operators] == ["ρ", "ρ_I", "ρ_J", "ρ*"]
     assert trace.operators[3].metric == name
     assert trace.r == 8
     # the first three operators are the workbook's: a fourth one does not change them
     assert [f.omega for f in trace.features[:6]] == [
-        f.omega for f in fit_context(experiment).trace.features
+        f.omega for f in fit_psi(experiment, excel_experiment()).trace.features
     ]
     # Theorem: a training object described through the new-object path, left out of its own
     # context, gets exactly its training row — with the training statistics of the metric
-    again = model.context.represent(experiment.X, exclude=np.arange(experiment.m))
+    again = model.psi.represent(experiment.X, exclude=np.arange(experiment.m))
     assert np.array_equal(again.values, np.column_stack([f.values for f in trace.features]))
     assert np.array_equal(again.distances[3], trace.operators[3].distances)
     assert set(model.classify(experiment.X).decisions.tolist()) <= {0, 1, 2}
@@ -431,12 +437,11 @@ def test_the_training_statistics_come_from_the_fold_only(experiment: Dataset) ->
     quantitative = np.flatnonzero(experiment.quantitative)
     X[0, quantitative[0]] = 1e6
     shifted = Dataset(X=X, y=experiment.y, feature_types=experiment.feature_types)
-    config = ExperimentConfig(
-        context=operators_of("gower"),
-        preprocessing={"normalizer": "none"},  # type: ignore[arg-type]
+    config = workbook_config(
+        local_context=operators_of("gower").model_copy(update={"normalizer": plugin("none")}),
     )
-    whole = fit_context(shifted, config)
-    rest = fit_context(shifted.subset(np.arange(1, shifted.m)), config)
+    whole = fit_psi(shifted, config)
+    rest = fit_psi(shifted.subset(np.arange(1, shifted.m)), config)
     spread = whole.operators[0].state.spread[quantitative[0]]
     assert spread == 1e6 - X[1:, quantitative[0]].min()
     assert rest.operators[0].state.spread[quantitative[0]] == np.ptp(X[1:, quantitative[0]])
@@ -446,8 +451,8 @@ def test_the_training_statistics_come_from_the_fold_only(experiment: Dataset) ->
 
 
 def test_leave_one_out_and_the_baselines_with_fitted_metrics(experiment: Dataset) -> None:
-    config = ExperimentConfig(
-        context=ContextConfig(
+    config = workbook_config(
+        local_context=LocalContextConfig(
             operators=(
                 OperatorConfig(label="H", metric=plugin("heom")),
                 OperatorConfig(label="M", metric=plugin("mahalanobis"), features="quantitative"),

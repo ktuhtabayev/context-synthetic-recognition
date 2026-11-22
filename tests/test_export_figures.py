@@ -37,8 +37,8 @@ EXPERIMENT_FIGURES = [
     "distances",
     "neighbourhoods",
     "synthetic-features",
-    "hag-candidates",
-    "hag-criterion",
+    "agglomerative-candidates",
+    "agglomerative-criterion",
     "margins",
     "margin-widths",
     "roc",
@@ -125,8 +125,10 @@ def test_figures_of_other_shapes(name: str) -> None:
     for spec in specs:
         figure = render(spec)
         assert figure.get_axes(), spec.key
-    assert ("margins" in keys) == ("margin-widths" in keys) == (view.hag.p > 0)
-    assert ("hag-candidates" in keys) == any(it.candidates.size for it in view.hag.iterations)
+    assert ("margins" in keys) == ("margin-widths" in keys) == (view.agglomerative.p > 0)
+    assert ("agglomerative-candidates" in keys) == any(
+        it.candidates.size for it in view.agglomerative.iterations
+    )
     assert "sensitivity" not in keys
     for protocol in view.result.protocols:
         assert f"outcomes-{protocol.protocol}" in keys
@@ -138,8 +140,8 @@ def test_which_figures_a_run_has() -> None:
     assert "prediction-map-hold-out" in numeric
     assert "prediction-map-resubstitution" not in numeric
     nominal = [spec.key for spec in figure_specs(shape("nominal"))]
-    assert "margins" not in nominal  # p = 0: no latent feature
-    assert "hag-candidates" not in nominal
+    assert "margins" not in nominal  # p = 0: no additional feature
+    assert "agglomerative-candidates" not in nominal
     assert "prediction-map-repeated-k-fold" not in nominal  # several decisions per object
     heart = [spec.key for spec in figure_specs(shape("heart270"))]
     assert "prediction-map-stratified-k-fold" not in heart  # 270 objects do not fit an axis
@@ -164,14 +166,14 @@ def test_drawing_on_given_axes(experiment_view: RunView) -> None:
     assert [t.get_text() for t in ax.get_xticklabels()][:3] == ["a₁", "a₂", "a₃"]
     _, ax = axes()
     draw_criterion(ax, view)
-    assert ax.get_title() == "HAG criterion (stops: |TUPLAM| = ϰ)"
+    assert ax.get_title() == "hierarchical agglomerative algorithm criterion (stops: |TUPLAM| = ϰ)"
     assert ax.get_ylabel() == "crit = min θ/γ"
     _, ax = axes()
     draw_margin(ax, view, 0, True)
-    assert ax.get_title().split("\n") == ["r₁", "width +0.1482"]
+    assert ax.get_title().split("\n") == ["d₁", "width +0.1482"]
     _, ax = axes()
     draw_margin_widths(ax, view)
-    assert legend(ax) == ["without majorizer", "with majorizer ϕ"]
+    assert legend(ax) == ["without majorizing function", "with majorizing function φ"]
     loo = view.result.protocol("leave-one-out")
     _, ax = axes()
     draw_roc(ax, view, loo)
@@ -196,7 +198,7 @@ def test_drawing_on_given_axes(experiment_view: RunView) -> None:
 
 def test_many_panels_are_capped() -> None:
     literal = shape("literal")
-    assert len(literal.hag.iterations) <= MAX_PANELS
+    assert len(literal.agglomerative.iterations) <= MAX_PANELS
     spec = next(s for s in figure_specs(literal) if s.key == "synthetic-features")
     figure = render(spec)
     # 354 features are not named one by one along the axis
@@ -212,7 +214,7 @@ def test_the_context_of_one_object(experiment_view: RunView) -> None:
     ax = figure.get_axes()[0]
     assert ax.get_title() == "ρ: neighbourhoods of S₃  (radius = distance)"
     circles = [patch for patch in ax.patches if isinstance(patch, Circle)]
-    assert len(circles) == 2  # the permitted k: 3 and 5
+    assert len(circles) == 2  # the admissible k: 3 and 5
     # the circle of k passes through the k-th neighbour: the neighbourhoods are nested
     radii = [float(found.distances[2][found.order[2][k - 1]]) for k in (3, 5)]
     assert [circle.get_radius() for circle in circles] == radii
@@ -227,7 +229,7 @@ def test_the_context_of_one_object(experiment_view: RunView) -> None:
 
 
 def test_the_context_on_large_data() -> None:
-    view = shape("literal")  # 270 objects, 118 permitted k
+    view = shape("literal")  # 270 objects, 118 admissible k
     found = view.trace.operators[1]
     figure = object_context_figure(view, 1, "S", found.distances[0], found.order[0], DARK)
     ax = figure.get_axes()[0]

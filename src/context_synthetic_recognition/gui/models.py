@@ -1,8 +1,8 @@
-"""Tables on screen: a Qt model over the exporters' tables, with the workbook's colour semantics.
+"""Tables on screen: a Qt model over the exporters' tables, coloured by what the cells mean.
 
 The pages show the same :class:`~context_synthetic_recognition.export.tables.Table` objects the
 CSV, LaTeX and report exporters write. :func:`style_for` decides what every column and cell
-*means* (:class:`~.theme.CellRole`): a quantitative or nominal feature, a synthetic or latent
+*means* (:class:`~.theme.CellRole`): a quantitative or nominal feature, a synthetic or additional
 feature, a feature of TUPLAM, a class, a correct or wrong decision, a warning. The palette turns
 the meaning into colours, so both themes show the same semantics.
 """
@@ -30,6 +30,7 @@ from context_synthetic_recognition.export.tables import Cell, Table
 from context_synthetic_recognition.export.text import DEFAULT_DECIMALS, format_cell, is_numeric
 from context_synthetic_recognition.export.view import RunView
 from context_synthetic_recognition.gui.theme import LIGHT, CellRole, Palette
+from context_synthetic_recognition.notation import additional_name, synthetic_name
 
 SORT_ROLE = Qt.ItemDataRole.UserRole + 1
 """Model role holding a key that sorts numbers numerically and S₁₀ after S₉."""
@@ -41,8 +42,18 @@ CellRule = Callable[[int, int, Cell], CellRole | None]
 """(row, column, value) → what the cell means."""
 
 _SUBSCRIPTS = str.maketrans("₀₁₂₃₄₅₆₇₈₉", "0123456789")
-_SYNTHETIC = re.compile(r"a[₀-₉]+")
-_LATENT = re.compile(r"r[₀-₉]+")
+
+
+def _name_pattern(first: str) -> re.Pattern[str]:
+    """A feature name such as ``a₁`` or ``d₁`` (letter of :mod:`~..notation`, subscript digits).
+
+    A subscript ``ₖ`` after the digits makes it another symbol (``d₁ₖ(μ)`` of formula (1)).
+    """
+    return re.compile(re.escape(first.rstrip("₀₁₂₃₄₅₆₇₈₉")) + r"[₀-₉]+(?![ₖ₀-₉])")
+
+
+_SYNTHETIC = _name_pattern(synthetic_name(0))
+_ADDITIONAL = _name_pattern(additional_name(0))
 _CHUNKS = re.compile(r"(\d+)")
 
 CLASS_COLUMNS = frozenset({"Class", "True class", "True"})
@@ -61,10 +72,10 @@ FORMULAS: tuple[tuple[str, str], ...] = (
     ("η", "Contribution η — formula (6)"),
     ("χ₁", "χ₁: K1 objects among the k nearest neighbours (class of S not used)"),
     ("μ", "μ: neighbours of the object's own class among the k nearest"),
-    ("θ/γ", "θ/γ: within-class over between-class distance — HAG STEP 3"),
-    ("θ", "θ = Σ |bₜ − M(own class)| — HAG STEP 3"),
-    ("γ", "γ = Σ |bₜ − M(other class)| — HAG STEP 3"),
-    ("crit", "crit = min θ/γ — HAG STEP 3; the grouping stops when crit ≤ δ"),
+    ("θ/γ", "θ/γ: intra-class similarity over inter-class difference — agglomerative Step 3"),
+    ("θ", "Intra-class similarity θ = Σ |bₜ − M(own class)| — agglomerative Step 3"),
+    ("γ", "Inter-class difference γ = Σ |bₜ − M(other class)| — agglomerative Step 3"),
+    ("crit", "crit = min θ/γ — agglomerative Step 3; the grouping stops when crit ≤ δ"),
     ("score", "score₁ = |B1(a_p)|/|K1|, score₂ = |B2(a_p)|/|K2| — meta-algorithm Step 4"),
     ("B1", "B1(aⱼ): K1 objects with the same gradations a₀ … aⱼ — meta-algorithm Steps 1–3"),
     ("B2", "B2(aⱼ): K2 objects with the same gradations a₀ … aⱼ — meta-algorithm Steps 1–3"),
@@ -137,8 +148,8 @@ def _feature_types(dataset: Dataset | None) -> dict[str, CellRole]:
 def _header_role(name: str, features: dict[str, CellRole], tuplam: set[str]) -> CellRole | None:
     if name in features:
         return features[name]
-    if _LATENT.search(name):
-        return CellRole.LATENT
+    if _ADDITIONAL.search(name):
+        return CellRole.ADDITIONAL
     found = _SYNTHETIC.search(name)
     if found:
         return CellRole.SELECTED if found.group() in tuplam else CellRole.SYNTHETIC
@@ -171,7 +182,7 @@ def style_for(
     objects: set[str] = set(data.object_ids) if data is not None else set()
     if view is not None:
         classes = tuple(view.trace.classes)
-        tuplam = set(view.hag.names)
+        tuplam = set(view.agglomerative.names)
     elif data is not None and len(data.classes) == 2:
         classes = tuple(data.classes)
     columns = table.columns
@@ -222,10 +233,10 @@ def style_for(
         if column in flags:
             return {1: CellRole.GOOD, 0: CellRole.BAD}.get(value)  # type: ignore[arg-type]
         if chosen is None and column < table.labels and isinstance(value, str):
-            # a row that is about a feature: named in the colour of the kind of feature
-            # (not among HAG candidates, where only the chosen q is marked)
-            if _LATENT.fullmatch(value):
-                return CellRole.LATENT
+            # a row that is about a feature: named in the colour of the kind of feature (not
+            # among the candidates of the agglomerative algorithm: only the chosen q is marked)
+            if _ADDITIONAL.fullmatch(value):
+                return CellRole.ADDITIONAL
             if _SYNTHETIC.fullmatch(value):
                 return CellRole.SELECTED if value in tuplam else CellRole.SYNTHETIC
         return _status(value)
