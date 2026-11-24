@@ -5,6 +5,13 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-11-24 — Tables 7 and 8 and a staged Classifiers page
+
+Standard classifiers on the article's training and test samples (Tables 7 and 8), with the
+CS-model beside them, the split files read by the author's convention, CSV files that open in
+Excel, and the *Classifiers* page as a workbench in three steps whose test step classifies the
+objects without their class.
+
 ### Added
 
 - Tables 7 and 8 of the article: SVM, random forest and k-NN on the article's training and test
