@@ -2,6 +2,7 @@
 
 import csv
 import json
+import sys
 from collections.abc import Iterator
 from dataclasses import fields
 from pathlib import Path
@@ -164,7 +165,13 @@ def test_a_dataset_cannot_be_classified(article: StageRun) -> None:
         fitted.methods[0].classify(split.test_part)  # type: ignore[arg-type]
 
 
+@pytest.mark.skipif(
+    sys.version_info < (3, 12),
+    reason="numpy's stubs use Python 3.12 syntax: mypy runs on 3.12 (pyproject.toml)",
+)
 def test_mypy_rejects_a_dataset(tmp_path: Path) -> None:
+    # the same check runs in the type check itself: classifier_parts holds the call with a
+    # "type: ignore[arg-type]" that fails mypy --strict (unused) if a dataset were accepted
     api = pytest.importorskip("mypy.api")
     snippet = tmp_path / "blind.py"
     snippet.write_text(
