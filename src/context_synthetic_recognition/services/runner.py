@@ -4,12 +4,12 @@
 evaluates it — with the configured baselines — under every protocol of ``evaluation.protocols``.
 :func:`save_run` writes ``runs/<YYYYMMDD_HHMMSS>_<hash>/`` with the manifest (configuration,
 hashes, seed, package versions, timings), ``results.json`` (metrics, TUPLAM, margins, properties),
-``predictions.csv`` and ``folds.csv``. The CLI and the GUI call the same functions.
+``predictions.csv`` and ``folds.csv`` (CSV with a byte-order mark, ADR-083). The CLI and the GUI
+call the same functions.
 """
 
 from __future__ import annotations
 
-import csv
 import json
 import time
 from collections.abc import Callable, Sequence
@@ -276,33 +276,53 @@ def save_run(
     save_snapshot(result.dataset, run_dir)
     text = json.dumps(results_dict(result, sensitivity), indent=2, ensure_ascii=False)
     (run_dir / RESULTS_NAME).write_text(text + "\n", encoding="utf-8", newline="\n")
+    # export.run imports this module, so the CSV writer is looked up here
+    from context_synthetic_recognition.export.text import csv_rows, write_csv
+
     ids = result.dataset.object_ids
     labels = result.dataset.y
-    with (run_dir / "predictions.csv").open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.writer(handle, lineterminator="\n")
-        writer.writerow(
-            ["protocol", "method", "repeat", "object", "true", "decision", "predicted", "score"]
+    predictions = [
+        [
+            protocol.protocol,
+            method.method,
+            int(r),
+            ids[int(o)],
+            labels[int(o)],
+            int(d),
+            _label(result, int(d)),
+            repr(float(s)),
+        ]
+        for protocol in result.protocols
+        for method in protocol.methods
+        for o, r, d, s in zip(
+            method.objects, method.repeats, method.decisions, method.scores, strict=True
         )
-        for protocol in result.protocols:
-            for method in protocol.methods:
-                for o, r, d, s in zip(
-                    method.objects, method.repeats, method.decisions, method.scores, strict=True
-                ):
-                    writer.writerow(
-                        [
-                            protocol.protocol,
-                            method.method,
-                            int(r),
-                            ids[int(o)],
-                            labels[int(o)],
-                            int(d),
-                            _label(result, int(d)),
-                            repr(float(s)),
-                        ]
-                    )
-    with (run_dir / "folds.csv").open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.writer(handle, lineterminator="\n")
-        writer.writerow(
+    ]
+    write_csv(
+        run_dir / "predictions.csv",
+        csv_rows(
+            ["protocol", "method", "repeat", "object", "true", "decision", "predicted", "score"],
+            predictions,
+        ),
+    )
+    folds = [
+        [
+            protocol.protocol,
+            fold.number,
+            fold.split.repeat,
+            " ".join(ids[int(i)] for i in fold.split.test),
+            *(fold.class_sizes or ("", "")),
+            " ".join(map(str, fold.admissible_k or ())),
+            fold.r if fold.r is not None else "",
+            " ".join(fold.tuplam_names or ()),
+            fold.undefined or "",
+        ]
+        for protocol in result.protocols
+        for fold in protocol.folds
+    ]
+    write_csv(
+        run_dir / "folds.csv",
+        csv_rows(
             [
                 "protocol",
                 "fold",
@@ -314,23 +334,10 @@ def save_run(
                 "r",
                 "TUPLAM",
                 "undefined",
-            ]
-        )
-        for protocol in result.protocols:
-            for fold in protocol.folds:
-                writer.writerow(
-                    [
-                        protocol.protocol,
-                        fold.number,
-                        fold.split.repeat,
-                        " ".join(ids[int(i)] for i in fold.split.test),
-                        *(fold.class_sizes or ("", "")),
-                        " ".join(map(str, fold.admissible_k or ())),
-                        fold.r if fold.r is not None else "",
-                        " ".join(fold.tuplam_names or ()),
-                        fold.undefined or "",
-                    ]
-                )
+            ],
+            folds,
+        ),
+    )
     return run_dir
 
 

@@ -8,8 +8,8 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 ### Added
 
 - Tables 7 and 8 of the article: SVM, random forest and k-NN on the article's training and test
-  samples, apart from the CS-model's pipeline (ADR-079). The split files are kept byte for byte
-  in `datasets/splits/` and read by `data.splits.load_split_file`. The package `comparison`,
+  samples, apart from the CS-model's pipeline (ADR-079). The split files are kept in
+  `datasets/splits/` and read by `data.splits.load_split_file`. The package `comparison`,
   the service `services.comparison`, `csr compare run | check`, `scripts/run_comparison.py`
   and the desktop application's *Classifiers* page write and check
   `experiments/comparison/` (CSV, Markdown, LaTeX, `summary.json`, checksums); a test pins
@@ -23,6 +23,20 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 - The Windows build carries scikit-learn and the article's split files, so the *Classifiers*
   page works in `csr-gui.exe`. Its self-test also computes Tables 7 and 8 (ADR-081).
+
+### Fixed
+
+- The split files are read by the author's convention (ADR-082): the header gives `m n c` with n
+  the number of features, each object row holds the n values, the class and the split marker, and
+  the last row holds the n types and two empty cells. Three type rows that broke it are
+  corrected, so only those lines and the files' checksums changed; every number of Tables 7 and 8
+  and of the CS-model stays the same. `data.splits.load_split_file` checks the convention and
+  names the file and the row of every departure, and the *Classifiers* page shows the message.
+- CSV files open correctly in Excel: every CSV file the project writes starts with a byte-order
+  mark (ADR-083), so Excel reads it as UTF-8 and no longer shows "—" as "â€”" or α as "Î±". This
+  covers the comparison's and the study's results, the CSV export, the run folders and the
+  desktop application's *Save CSV…*. The committed CSV files differ from the previous ones only
+  by those three bytes.
 
 ## [0.9.0] — 2026-11-22 — rebuild on the article
 

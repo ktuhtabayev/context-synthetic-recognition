@@ -4,6 +4,9 @@ CSV and JSON keep every digit (they are data); Markdown and LaTeX round to a num
 (4 by default, like the workbook's ``0.0000`` cells) and write an undefined value as "—". The
 LaTeX renderer turns the article's notation (ρ_I, a₆, S₁₀, f_k(μ), θ/γ, …) into math mode and
 uses ``booktabs`` rules; long tables become ``longtable`` environments.
+
+Files are UTF-8 with LF line endings (:func:`write_text`); CSV files also start with a byte-order
+mark, so that Excel reads them as UTF-8 (:func:`write_csv`, ADR-083).
 """
 
 from __future__ import annotations
@@ -49,14 +52,35 @@ def is_numeric(table: Table, column: int) -> bool:
 # ---------------------------------------------------------------- CSV and JSON
 
 
-def csv_text(table: Table) -> str:
-    """The table as CSV: a header row, full precision, an empty cell for an undefined value."""
+CSV_ENCODING = "utf-8-sig"
+"""Encoding of every CSV file the project writes: UTF-8 with a byte-order mark, so that Excel
+reads it as UTF-8 (ADR-083). Readers open CSV files with it too: it skips the mark if there is one.
+"""
+
+
+def csv_rows(header: Sequence[Any], rows: Iterable[Sequence[Any]]) -> str:
+    """Rows as CSV text: comma-separated, the header first, LF line ends."""
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
-    writer.writerow(table.columns)
-    for row in table.rows:
-        writer.writerow(["" if v is None else repr(v) if isinstance(v, float) else v for v in row])
+    writer.writerow(header)
+    writer.writerows(rows)
     return buffer.getvalue()
+
+
+def csv_text(table: Table) -> str:
+    """The table as CSV: a header row, full precision, an empty cell for an undefined value."""
+    return csv_rows(
+        table.columns,
+        (
+            ["" if v is None else repr(v) if isinstance(v, float) else v for v in row]
+            for row in table.rows
+        ),
+    )
+
+
+def csv_bytes(text: str) -> bytes:
+    """CSV text as the bytes of a file: the byte-order mark, then UTF-8 (ADR-083)."""
+    return text.encode(CSV_ENCODING)
 
 
 def table_data(table: Table) -> dict[str, Any]:
@@ -349,9 +373,23 @@ def latex_document(keys: Iterable[str], title: str) -> str:
 
 
 def write_text(path: Path, text: str) -> Path:
-    """Write a UTF-8 text file with LF line endings (the same bytes on every platform)."""
+    """Write a UTF-8 text file with LF line endings (the same bytes on every platform).
+
+    For Markdown, LaTeX, JSON, HTML and YAML; a CSV file goes through :func:`write_csv`.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8", newline="\n")
+    return path
+
+
+def write_csv(path: Path, text: str) -> Path:
+    """Write a CSV file: the byte-order mark, then UTF-8 with LF line endings (ADR-083).
+
+    Without the mark Excel reads the file as Windows-1252 and shows "—" as "â€”"; every reader of
+    the project opens CSV files with :data:`CSV_ENCODING`, which skips it.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(csv_bytes(text))
     return path
 
 

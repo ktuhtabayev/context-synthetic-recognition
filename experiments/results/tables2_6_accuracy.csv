@@ -1,4 +1,4 @@
-dataset,split_metric,reading,metric,alpha,training_accuracy,training_refusals,test_accuracy,test_accuracy_answered,test_refusals,tuplam,undefined
+﻿dataset,split_metric,reading,metric,alpha,training_accuracy,training_refusals,test_accuracy,test_accuracy_answered,test_refusals,tuplam,undefined
 Heart,zhuravlyov,literal,zhuravlyov,0.1,82.61,3,77.06,83.17,8,ρ·31 ρ·3 ρ·7 ρ·11 ρ·9,
 Heart,zhuravlyov,literal,zhuravlyov,0.2,82.61,3,77.06,83.17,8,ρ·31 ρ·3 ρ·7 ρ·11 ρ·9,
 Heart,zhuravlyov,literal,euclidean,0.1,67.7,7,60.55,62.86,4,ρ·39 ρ·5 ρ·27 ρ·3 ρ·33,

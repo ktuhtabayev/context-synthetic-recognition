@@ -63,6 +63,8 @@ Settings the article leaves open, as the script records them (`OPEN_SETTINGS`):
 | `experiments/results/summary.json` | the package version, the open settings, every run in full (r, left-out features, TUPLAM, training and test scores with their sizes) and the numbers the article prints |
 | `experiments/checksums.sha256` | SHA-256 of the five result files |
 
+The CSV files start with a byte-order mark, so that Excel reads them as UTF-8 (ADR-083).
+
 ## Comparison with the article
 
 ### R-IPS samples

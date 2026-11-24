@@ -5,7 +5,8 @@ Formats (registry :data:`EXPORTERS`; ``all`` selects every one):
 ``excel``
     ``workbook.xlsx`` — the mirror of the author's Excel experiment (:mod:`.excel`).
 ``csv``
-    ``tables/<key>.csv`` and ``tables/index.csv`` — every table at full precision.
+    ``tables/<key>.csv`` and ``tables/index.csv`` — every table at full precision, with a
+    byte-order mark so that Excel reads them as UTF-8 (ADR-083).
 ``json``
     ``trace.json`` — the same tables in one file, with the run's identification.
 ``markdown``, ``latex``
@@ -21,7 +22,6 @@ The CLI (``csr run --export``, ``csr export``) and the GUI call :func:`export_re
 
 from __future__ import annotations
 
-import csv
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -43,6 +43,7 @@ from context_synthetic_recognition.export.tables import (
 from context_synthetic_recognition.export.text import (
     DEFAULT_DECIMALS,
     INDEX_COLUMNS,
+    csv_rows,
     csv_text,
     index_rows,
     json_text,
@@ -50,6 +51,7 @@ from context_synthetic_recognition.export.text import (
     latex_table,
     markdown_text,
     table_data,
+    write_csv,
     write_text,
 )
 from context_synthetic_recognition.export.theme import THEMES, Theme
@@ -161,13 +163,7 @@ def export_excel(context: ExportContext) -> list[Path]:
 
 
 def _write_index(folder: Path, tables: Sequence[Table], extension: str) -> Path:
-    path = folder / "index.csv"
-    folder.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.writer(handle, lineterminator="\n")
-        writer.writerow(INDEX_COLUMNS)
-        writer.writerows(index_rows(tables, extension))
-    return path
+    return write_csv(folder / "index.csv", csv_rows(INDEX_COLUMNS, index_rows(tables, extension)))
 
 
 @EXPORTERS.register(
@@ -177,7 +173,7 @@ def export_csv(context: ExportContext) -> list[Path]:
     """Every table as a CSV file, with an index."""
     folder = context.folder / "tables"
     tables = list(context.tables)
-    written = [write_text(folder / f"{t.key}.csv", csv_text(t)) for t in tables]
+    written = [write_csv(folder / f"{t.key}.csv", csv_text(t)) for t in tables]
     return [*written, _write_index(folder, tables, ".csv")]
 
 

@@ -694,7 +694,7 @@ validation map keeps the original name, so the experiment workbook validates unc
 
 ## ADR-040 — One table model for CSV, JSON, Markdown, LaTeX and the report
 
-*Accepted, 2026-10-01 (M5).*
+*Accepted, 2026-10-01 (M5). Amended by ADR-083: CSV files carry a byte-order mark.*
 
 - `export.tables` turns a run into plain tables (`Table`: key, title, columns, rows, pipeline
   stage, note) in pipeline order — 44 for the experiment: the data, Steps 1–12, the evaluation
@@ -1448,7 +1448,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
 
 ## ADR-079 — Standard classifiers on the article's training and test samples: Tables 7 and 8 (author)
 
-*Accepted, 2026-11-22.*
+*Accepted, 2026-11-22. Its split-file layout is superseded by ADR-082.*
 
 - The article's training and test samples (split files: features, class and a flag, 0 =
   training, 1 = test) are copied byte for byte to `datasets/splits/<family>/` under neutral names:
@@ -1536,6 +1536,57 @@ blocked objects keep covering, but differ in single objects. The gap is reported
 - The frozen application's self-test also computes Tables 7 and 8 and fails when scikit-learn
   or the split files are missing. Run from source, it checks them only where the project's split
   files are found.
+
+## ADR-082 — The split-file convention (author)
+
+*Accepted, 2026-11-24. Supersedes ADR-079 for the split-file layout.*
+
+- The files in `datasets/splits/` follow the author's convention, which is their specification:
+  - row 1: the object count m, the feature count n and the class count c, e.g. `1000 7 2`. The
+    header counts the features only; empty cells may follow on that row;
+  - rows 2 … m + 1, one per object: the n feature values, then the class (1 or 2) in column n + 1
+    and the split marker (0 = training, 1 = test) in column n + 2;
+  - last row: the n feature types (0 = nominal, 1 = quantitative). Its cells in columns n + 1 and
+    n + 2 are empty, because those columns are not features;
+  - cells are tab-separated, lines end with LF, there is no BOM, decimal commas are allowed, and
+    no line starts with an empty cell.
+- The author changed the headers on purpose from `m, n + 1, c` (`1000 8 2`, `1000 21 2`,
+  `270 14 2`) to `m, n, c` (`1000 7 2`, `1000 20 2`, `270 13 2`), and removed the leading tab of
+  every line. Those headers stay as they are. Three type rows did not fit the convention and were
+  corrected with the author's approval: the Euclidean and Chebyshev splits held `0 0` in columns 8
+  and 9, and Heart's 13th cell held `0     0`. Each now holds the n types followed by two empty
+  cells. The objects, classes, types and samples are unchanged, and so is every number of
+  Tables 7 and 8 and of the CS-model. Only the files' SHA-256 changed, pinned in a test and
+  recorded in `summary.json`.
+- `data.splits.load_split_file` reads n from the header and checks the convention, naming the file
+  and the row of every departure: exactly three numbers in the header; m object rows; exactly
+  n + 2 values in each; the class one of the c classes (1 … c); the marker 0 or 1; exactly n type
+  flags 0/1 in the last row and no other non-empty cell; no row starting with an empty cell. A
+  header that still counts the marker column is reported at the first object row. Decimal commas,
+  LF or CRLF line ends and empty trailing cells are still read. The reading of ADR-079 is gone: it
+  took the header as `m, n + 1, c`, split cells at any whitespace and ignored values after the
+  types.
+
+## ADR-083 — CSV files carry a byte-order mark, so that Excel reads them as UTF-8 (author)
+
+*Accepted, 2026-11-24. Amends ADR-040 for `.csv` files only.*
+
+- Every `.csv` file the project writes starts with the UTF-8 byte-order mark (`EF BB BF`, the
+  encoding `utf-8-sig`) and keeps LF line ends. Without it Excel reads a UTF-8 file as
+  Windows-1252 and shows "—" as "â€”" and α as "Î±".
+- One helper writes them: `export.text.write_csv` (with `csv_bytes` for the files a service builds
+  in memory and `csv_rows` for rows without a `Table`). It is used by the comparison
+  (`table-7.csv`, `table-8.csv`, `cs-model.csv`, `results.csv`), the study
+  (`experiments/results/*.csv`), the export format `csv` (`tables/<key>.csv`, `tables/index.csv`),
+  every run folder (`predictions.csv`, `folds.csv`) and the desktop application's *Save CSV…*
+  button.
+- Markdown, LaTeX, JSON, HTML, YAML and the checksum files stay UTF-8 without a BOM (ADR-040).
+  Copying a table to the clipboard writes no file and has no BOM. The split files (ADR-082) and the
+  author's datasets are inputs and are not rewritten; every reader of a CSV, the project's own
+  loaders included, reads `utf-8-sig`, so a file with or without the mark gives the same data.
+- No number changes: each new CSV equals the previous one with the three bytes in front. Only the
+  checksums that list the CSV files change (`experiments/checksums.sha256`,
+  `experiments/comparison/checksums.sha256`).
 
 ## Open questions for the author
 

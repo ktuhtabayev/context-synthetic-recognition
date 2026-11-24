@@ -1,4 +1,4 @@
-"""Split files: a dataset with a training/test flag column (data/splits.py)."""
+"""Split files: features, class and split marker (data/splits.py, ADR-082)."""
 
 from pathlib import Path
 
@@ -8,25 +8,30 @@ import pytest
 from context_synthetic_recognition.data import FeatureType, FixedSplit, load_split_file
 from context_synthetic_recognition.errors import DatasetError
 
-# leading tabs, decimal commas, CRLF, test rows between training rows, extra trailing type values
-LAYOUT = (
-    "\t5\t3\t2\t\t\t\r\n"
-    "\t0,5\t1\t1\t0\r\n"
-    "\t1,25\t2\t2\t1\r\n"
-    "\t0\t1\t2\t0\r\n"
-    "\t2\t3\t1\t1\r\n"
-    "\t3,5\t2\t1\t0\r\n"
-    "\t1\t0\t0     0\t\t\r\n"
+# the convention: header "m n c" (features only) padded with empty cells, no leading empty cell,
+# tabs, LF, decimal commas, test rows between training rows, the n type flags and two empty cells
+LAYOUT = "".join(
+    [
+        "5\t2\t2\t\n",
+        "0,5\t1\t1\t0\n",
+        "1,25\t2\t2\t1\n",
+        "0\t1\t2\t0\n",
+        "2\t3\t1\t1\n",
+        "3,5\t2\t1\t0\n",
+        "1\t0\t\t\n",
+    ]
 )
+TYPE_ROW = "1\t0\t\t\n"
+FIRST_OBJECT = "0,5\t1\t1\t0\n"
 
 
 def write(tmp_path: Path, text: str, name: str = "split.dat") -> Path:
     path = tmp_path / name
-    path.write_bytes(text.encode("ascii"))
+    path.write_bytes(text.encode("utf-8"))
     return path
 
 
-def test_the_layout_is_read_with_its_variations(tmp_path: Path) -> None:
+def test_the_layout_is_read(tmp_path: Path) -> None:
     split = load_split_file(write(tmp_path, LAYOUT))
     data = split.dataset
     assert data.name == "split"
@@ -41,11 +46,23 @@ def test_the_layout_is_read_with_its_variations(tmp_path: Path) -> None:
     assert split.test_part.y.tolist() == [2, 1]
 
 
-def test_lf_and_spaces_give_the_same_split(tmp_path: Path) -> None:
-    crlf = load_split_file(write(tmp_path, LAYOUT, "a.dat"))
-    lf = load_split_file(write(tmp_path, LAYOUT.replace("\r\n", "\n").replace("\t", "  "), "b.dat"))
-    assert lf.dataset.content_hash() == crlf.dataset.content_hash()
-    assert lf.training.tolist() == crlf.training.tolist()
+@pytest.mark.parametrize(
+    "variant",
+    [
+        LAYOUT.replace("\n", "\r\n"),  # CRLF
+        LAYOUT.replace("\t\n", "\n").replace("\t\n", "\n"),  # no empty trailing cells
+        LAYOUT.replace("\t\t\n", "\t\t\t\t\n"),  # more empty trailing cells
+        "﻿" + LAYOUT,  # a BOM
+        LAYOUT.replace("0,5", "0.5").replace("1,25", "1.25").replace("3,5", "3.5"),  # points
+        LAYOUT + "\n\n",  # blank lines at the end
+    ],
+)
+def test_variants_give_the_same_split(tmp_path: Path, variant: str) -> None:
+    base = load_split_file(write(tmp_path, LAYOUT, "a.dat"))
+    other = load_split_file(write(tmp_path, variant, "b.dat"))
+    assert other.dataset.content_hash() == base.dataset.content_hash()
+    assert other.training.tolist() == base.training.tolist()
+    assert other.test.tolist() == base.test.tolist()
 
 
 def test_a_name_and_feature_types_can_be_given(tmp_path: Path) -> None:
@@ -65,22 +82,106 @@ def test_the_samples_are_read_only(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("text", "message"),
     [
-        ("", "empty"),
-        ("5 3\n", "first row"),
-        ("5 1 2\n" + "1 1 0\n" * 5 + "1\n", "leaves no feature"),
-        (LAYOUT.replace("\t5\t3\t2", "\t6\t3\t2"), "8 rows are expected"),
-        (LAYOUT.replace("\t0,5\t1\t1\t0", "\t0,5\t1\t1"), "object row 1 has 3 values"),
-        (LAYOUT.replace("\t0,5\t1\t1\t0", "\tx\t1\t1\t0"), "'x' is not a number"),
-        (LAYOUT.replace("\t0,5\t1\t1\t0", "\t0,5\t1\t1\t2"), "the flag must be 0"),
-        (LAYOUT.replace("\t1\t0\t0     0\t\t", "\t1"), "type row has 1 flags"),
-        (LAYOUT.replace("\t1\t0\t0     0\t\t", "\t1\t5"), "flags must be 1 or 0"),
-        (LAYOUT.replace("\t5\t3\t2", "\t5\t3\t3"), "c = 3 classes"),
-        ("3 2 2\n1 1 0\n2 2 0\n3 1 0\n1 0\n", "non-empty"),  # no test object
+        ("", "the file is empty"),
+        # the header: exactly three positive integers m, n, c
+        ("5\t2\n", r"row 1 \(the header\) must hold exactly three positive integers"),
+        ("5\t2\t2\t1\n", r"row 1 \(the header\) must hold exactly three"),
+        ("5\t2,5\t2\n", r"row 1 \(the header\) must hold exactly three"),
+        ("\t5\t2\t2\n", r"row 1 \(the header\) must hold exactly three"),
+        (LAYOUT.replace("\t", " "), r"row 1 \(the header\)"),  # spaces do not separate cells
+        # the old header "m, n + 1, c" counted the marker column
+        (
+            LAYOUT.replace("5\t2\t2\t\n", "5\t3\t2\t\n"),
+            (
+                r"row 2 \(object 1\) has 4 values, expected n \+ 2 = 5 \(3 features, the class, "
+                r"the split marker\); the header's n counts the features only"
+            ),
+        ),
+        # m object rows
+        (LAYOUT.replace("5\t2\t2\t\n", "6\t2\t2\t\n"), "m = 6, so 8 rows are expected"),
+        (LAYOUT.replace("5\t2\t2\t\n", "4\t2\t2\t\n"), "m = 4, so 6 rows are expected"),
+        # n + 2 values in every object row
+        (
+            LAYOUT.replace(FIRST_OBJECT, "0,5\t1\t1\n"),
+            r"row 2 \(object 1\) has 3 values, expected n \+ 2 = 4",
+        ),
+        (
+            LAYOUT.replace(FIRST_OBJECT, "0,5\t1\t1\t0\t7\n"),
+            r"row 2 \(object 1\) has 5 values, expected n \+ 2 = 4",
+        ),
+        (
+            LAYOUT.replace(FIRST_OBJECT, "\t0,5\t1\t1\t0\n"),
+            r"row 2 \(object 1\) starts with an empty cell",
+        ),
+        (LAYOUT.replace(FIRST_OBJECT, "0,5\t\t1\t0\n"), r"row 2 \(object 1\), column 2 is empty"),
+        (
+            LAYOUT.replace(FIRST_OBJECT, "x\t1\t1\t0\n"),
+            r"row 2 \(object 1\), column 1: 'x' is not a number",
+        ),
+        (
+            LAYOUT.replace(FIRST_OBJECT, "0     5\t1\t1\t0\n"),
+            r"row 2 \(object 1\), column 1: '0     5' is not a number",
+        ),
+        # the class is one of the c classes
+        (
+            LAYOUT.replace(FIRST_OBJECT, "0,5\t1\t3\t0\n"),
+            (
+                r"row 2 \(object 1\), column 3: the class must be one of the header's c = 2 "
+                r"classes \(1 … 2\), got '3'"
+            ),
+        ),
+        (LAYOUT.replace(FIRST_OBJECT, "0,5\t1\t1,5\t0\n"), "the class must be one of"),
+        (LAYOUT.replace(FIRST_OBJECT, "0,5\t1\ta\t0\n"), "the class must be one of"),
+        (LAYOUT.replace("5\t2\t2\t\n", "5\t2\t3\t\n"), "c = 3 classes, the objects have 2"),
+        # the split marker is 0 or 1
+        (
+            LAYOUT.replace(FIRST_OBJECT, "0,5\t1\t1\t2\n"),
+            (
+                r"row 2 \(object 1\), column 4: the split marker must be 0 \(training\) or 1 "
+                r"\(test\), got '2'"
+            ),
+        ),
+        (LAYOUT.replace(FIRST_OBJECT, "0,5\t1\t1\tx\n"), "the split marker must be 0"),
+        # the type row: exactly n flags 0/1, then only empty cells
+        (
+            LAYOUT.replace(TYPE_ROW, "1\t0\t0\t0\n"),  # the old defect: values after the types
+            r"row 7 \(the type row\), column 3: '0' after the n = 2 type flags",
+        ),
+        (LAYOUT.replace(TYPE_ROW, "1\t0\t\t1\n"), r"row 7 \(the type row\), column 4: '1' after"),
+        (
+            LAYOUT.replace(TYPE_ROW, "1\t0     0\t\t\n"),  # the old defect: a merged cell
+            (
+                r"row 7 \(the type row\), column 2: a type flag must be 0 \(nominal\) or 1 "
+                r"\(quantitative\), got '0     0'"
+            ),
+        ),
+        (LAYOUT.replace(TYPE_ROW, "1\t\t\t\n"), r"row 7 \(the type row\) has 1 type flags"),
+        (LAYOUT.replace(TYPE_ROW, "1\t5\t\t\n"), "column 2: a type flag must be 0"),
+        (
+            LAYOUT.replace(TYPE_ROW, "\t1\t0\t\n"),
+            r"row 7 \(the type row\) starts with an empty cell",
+        ),
+        # both samples non-empty
+        ("3\t1\t2\t\n1\t1\t0\n2\t2\t0\n3\t1\t0\n1\t\t\n", "non-empty"),
     ],
 )
-def test_layout_errors_are_reported(tmp_path: Path, text: str, message: str) -> None:
-    with pytest.raises(DatasetError, match=message):
+def test_layout_errors_name_the_file_and_row(tmp_path: Path, text: str, message: str) -> None:
+    with pytest.raises(DatasetError, match=message) as error:
         load_split_file(write(tmp_path, text))
+    assert str(error.value).startswith("split.dat: ") or "non-empty" in message
+
+
+def test_rows_keep_their_line_numbers_across_blank_lines(tmp_path: Path) -> None:
+    text = LAYOUT.replace(FIRST_OBJECT, "\n" + "0,5\t1\t1\t9\n")
+    with pytest.raises(DatasetError, match=r"row 3 \(object 1\), column 4"):
+        load_split_file(write(tmp_path, text))
+
+
+def test_a_file_that_is_not_utf8_is_reported(tmp_path: Path) -> None:
+    path = tmp_path / "split.dat"
+    path.write_bytes(b"5\t2\t2\n\xff\xfe\n")
+    with pytest.raises(DatasetError, match=r"split\.dat: cannot read the file"):
+        load_split_file(path)
 
 
 def test_a_missing_file_is_reported(tmp_path: Path) -> None:

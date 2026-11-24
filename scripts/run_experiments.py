@@ -26,7 +26,6 @@ The experiment, as the article describes it:
 
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
 import sys
@@ -55,6 +54,7 @@ from context_synthetic_recognition.evaluation.baselines import (
     knn_vote,
 )
 from context_synthetic_recognition.evaluation.metrics import classification_metrics
+from context_synthetic_recognition.export.text import csv_rows, write_csv
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "experiments"
@@ -212,14 +212,9 @@ def knn(dataset: Dataset, train: np.ndarray, test: np.ndarray, metric: str) -> d
     }
 
 
-def write_csv(results: Path, name: str, header: list[str], rows: list[list[Any]]) -> Path:
-    """Write one result table (LF line ends, UTF-8)."""
-    path = results / name
-    with path.open("w", encoding="utf-8", newline="\n") as handle:
-        writer = csv.writer(handle, lineterminator="\n")
-        writer.writerow(header)
-        writer.writerows(rows)
-    return path
+def write_result(results: Path, name: str, header: list[str], rows: list[list[Any]]) -> Path:
+    """Write one result table: CSV with a byte-order mark, UTF-8, LF line ends (ADR-083)."""
+    return write_csv(results / name, csv_rows(header, rows))
 
 
 def run(out: Path = OUT) -> list[Path]:
@@ -322,7 +317,7 @@ def run(out: Path = OUT) -> list[Path]:
                         knn_rows.append([name, split_metric, reading, metric, method, accuracy])
 
     files = [
-        write_csv(
+        write_result(
             results,
             "rips_samples.csv",
             [
@@ -341,7 +336,7 @@ def run(out: Path = OUT) -> list[Path]:
             ],
             samples_rows,
         ),
-        write_csv(
+        write_result(
             results,
             "table1_binary_features.csv",
             [
@@ -354,7 +349,7 @@ def run(out: Path = OUT) -> list[Path]:
             ],
             binary_rows,
         ),
-        write_csv(
+        write_result(
             results,
             "tables2_6_accuracy.csv",
             [
@@ -373,7 +368,7 @@ def run(out: Path = OUT) -> list[Path]:
             ],
             accuracy_rows,
         ),
-        write_csv(
+        write_result(
             results,
             "knn_comparison.csv",
             ["dataset", "split_metric", "reading", "metric", "method", "test_accuracy"],

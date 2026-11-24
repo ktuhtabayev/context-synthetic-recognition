@@ -1,5 +1,6 @@
 """The Classifiers page: Tables 7 and 8 run, written and checked from the interface (ADR-079)."""
 
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -113,6 +114,48 @@ def test_a_comparison_that_fails_is_reported(
     assert "split file not found" in page.problems.text()
     assert page.outcome is None
     page.write()  # nothing to write
+    assert page.run_button.isEnabled()
+
+
+def test_a_split_file_that_breaks_the_convention_is_reported(
+    window: MainWindow, qtbot: QtBot, tmp_path: Path
+) -> None:
+    # the old header "m, n + 1, c" counted the marker column (ADR-082)
+    splits = tmp_path / "splits"
+    shutil.copytree(SPLITS, splits)
+    path = splits / "German" / "German (1000, 20, 2) — training 336 (zhuravlyov).dat"
+    data = path.read_bytes()
+    assert data.startswith(b"1000\t20\t2\t")
+    path.write_bytes(data.replace(b"1000\t20\t2\t", b"1000\t21\t2\t", 1))
+    message = (
+        "⚠ German (1000, 20, 2) — training 336 (zhuravlyov).dat: row 2 (object 1) has 22 values, "
+        "expected n + 2 = 23 (21 features, the class, the split marker); the header's n counts "
+        "the features only"
+    )
+    out = tmp_path / "comparison"
+    page = window.classifiers_page
+    page.splits.setText(str(splits))
+    page.output.setText(str(out))
+
+    with qtbot.waitSignal(page.finished, timeout=RUN_TIMEOUT):
+        page.run_button.click()
+    assert page.status.text() == "Failed."
+    assert page.problems.text() == message
+    assert not page.problems.isHidden()
+    assert page.outcome is None
+    assert not page.write_button.isEnabled()
+    page.write()  # nothing to write
+    assert not out.exists()
+
+    # a check runs the comparison again: the same file and row, and nothing is written
+    shutil.copytree(ROOT / "experiments" / "comparison", out)
+    before = {p.name: p.read_bytes() for p in out.iterdir()}
+    with qtbot.waitSignal(page.finished, timeout=RUN_TIMEOUT):
+        page.check_button.click()
+    assert page.status.text() == "Failed."
+    assert page.problems.text() == message
+    assert page.check is None
+    assert {p.name: p.read_bytes() for p in out.iterdir()} == before
     assert page.run_button.isEnabled()
 
 

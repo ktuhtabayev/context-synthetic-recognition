@@ -49,6 +49,8 @@ from .test_export_tables import EXPERIMENT_TABLES
 runner = CliRunner()
 FORMATS = ["excel", "csv", "json", "markdown", "latex", "figures", "html", "pdf"]
 RUN_FILES = ["dataset.json", "folds.csv", "manifest.yaml", "predictions.csv", "results.json"]
+BOM = b"\xef\xbb\xbf"
+"""The UTF-8 byte-order mark every CSV file starts with (ADR-083)."""
 
 
 def trace_tables(folder: Path) -> dict[str, Any]:
@@ -274,12 +276,12 @@ def test_exporting_every_format(experiment_view: RunView, tmp_path: Path) -> Non
     assert report.passed
     assert report.cells == 11622
     # tables/: one CSV per table and an index
-    with (folder / "tables" / "index.csv").open(encoding="utf-8", newline="") as handle:
+    with (folder / "tables" / "index.csv").open(encoding="utf-8-sig", newline="") as handle:
         index = list(csv.reader(handle))
     assert tuple(index[0]) == INDEX_COLUMNS
     assert [row[1] for row in index[1:]] == EXPERIMENT_TABLES
     assert index[1][0] == "summary.csv"
-    psi = (folder / "tables" / "psi.csv").read_text(encoding="utf-8").splitlines()
+    psi = (folder / "tables" / "psi.csv").read_text(encoding="utf-8-sig").splitlines()
     assert psi[1] == "S₁,2,2,1,2,2,2,2"
     # trace.json: the same tables with what identifies the run
     trace = json.loads((folder / "trace.json").read_text(encoding="utf-8"))
@@ -304,6 +306,8 @@ def test_exporting_every_format(experiment_view: RunView, tmp_path: Path) -> Non
     for path in folder.rglob("*"):
         if path.suffix in {".csv", ".json", ".md", ".tex", ".html", ".svg"}:
             assert b"\r\n" not in path.read_bytes(), path  # the same bytes on every platform
+            # CSV files carry a byte-order mark so that Excel reads them as UTF-8 (ADR-083)
+            assert path.read_bytes().startswith(BOM) == (path.suffix == ".csv"), path
 
 
 def test_the_export_options(experiment_view: RunView, tmp_path: Path) -> None:

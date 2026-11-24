@@ -18,9 +18,9 @@ objects without their class.
 
 ## The article's training and test samples
 
-The splits are kept byte for byte in `datasets/splits/` under neutral names. A test pins their
-checksums. The dataset catalogue does not read this folder, so they are not listed among the
-datasets.
+The splits are kept in `datasets/splits/` under neutral names, in the author's split-file
+convention ([File layout](#file-layout)). A test pins their checksums. The dataset catalogue does
+not read this folder, so they are not listed among the datasets.
 
 | File (`datasets/splits/…`) | Split made with | Features | Training (K1, K2) | Test (K1, K2) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -35,16 +35,34 @@ Tables 7 and 8.
 
 ### File layout
 
-`data.splits.load_split_file` reads the layout into a `FixedSplit` (the dataset and the indices of
-the two samples):
+The split files follow the author's convention (ADR-082):
 
-- line 1: `m`, `n + 1` (the flag column is counted) and the number of classes;
-- m lines: n feature values, the class (1 or 2) and a flag (0 = training, 1 = test);
-- last line: the n feature types (1 = quantitative, 0 = nominal). Further values on that line are
-  ignored.
+- row 1: the object count m, the feature count n and the class count c, e.g. `1000 7 2`. The
+  header counts the features only; empty cells may follow on that row;
+- rows 2 … m + 1, one per object: the n feature values, then the class (1 or 2) in column n + 1
+  and the split marker (0 = training, 1 = test) in column n + 2;
+- last row: the n feature types (0 = nominal, 1 = quantitative). Its cells in columns n + 1 and
+  n + 2 are empty, because those columns are not features.
 
-Values are separated by tabs or spaces, leading and trailing whitespace included. Decimal commas
-are accepted (the German 336 and Heart files use them), and LF and CRLF line ends are both read.
+Cells are tab-separated, lines end with LF, there is no BOM, and decimal commas are allowed (the
+German 336 and Heart files use them). No line starts with an empty cell.
+
+`data.splits.load_split_file` reads the files into a `FixedSplit` (the dataset and the indices of
+the two samples). It takes n from the header and checks the convention: three numbers in the
+header, m object rows of exactly n + 2 values, a class among the c classes, a marker 0 or 1, and
+exactly n type flags 0/1 in the last row with no other non-empty cell. A departure is reported with
+the file and the row (the file's line number). A header that still counts the marker column, such
+as `1000 8 2` for seven features, is reported at the first object row. The loader also reads CRLF
+line ends and empty trailing cells; spaces do not separate cells. `csr compare` and the
+*Classifiers* page stop at the first departure and show the loader's message, for example:
+
+```text
+German (1000, 7, 2) — training 341 (euclidean).dat: row 2 (object 1) has 9 values, expected n + 2 = 10 (8 features, the class, the split marker); the header's n counts the features only
+```
+
+A split file is not an ordinary dataset: the *Dataset* page and `csr data info` read it in the
+dataset layout (n features and the class on each row) and stop at the first object row, which has
+one value too many.
 
 ## Methods and settings
 
@@ -159,6 +177,9 @@ The folder `experiments/comparison/` holds:
 | `results.csv`, `results.md` | every split × method and CS-model: sizes, majority rate, test accuracy, balanced accuracy, refusals, accuracy on the answered objects, training accuracy |
 | `summary.json` | the settings, the versions of numpy and scikit-learn, the SHA-256 of every split file, every number with its counts |
 | `checksums.sha256` | SHA-256 of the files above |
+
+The CSV files start with a byte-order mark, so that Excel reads them as UTF-8 and shows "—" and α
+correctly (ADR-083). The other files are UTF-8 without it.
 
 The run is deterministic. `tests/test_comparison.py` checks the committed checksums and pins every
 number, and a new run must give every file byte for byte. `summary.json` records the versions of

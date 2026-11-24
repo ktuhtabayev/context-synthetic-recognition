@@ -53,7 +53,11 @@ results differ from the stored ones (another package version), the command says 
 | `pdf` | `report.pdf` | the run report (needs the extra `[pdf]`: `pip install -e ".[pdf]"`) |
 
 Text files are UTF-8 with LF line endings; the SVG and PDF files carry no time stamp. The same run
-exports to the same bytes on every platform.
+exports to the same bytes on every platform. CSV files also start with a byte-order mark, so that
+Excel reads them as UTF-8 and shows "—", α and the subscripts correctly (ADR-083); every CSV file
+the project writes has it — the export, the run folder's `predictions.csv` and `folds.csv`, the
+comparison and the study. Read them with the encoding `utf-8-sig` (pandas: `encoding="utf-8-sig"`),
+which also reads a file without the mark.
 
 ## The Excel workbook
 
