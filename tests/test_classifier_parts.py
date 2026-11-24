@@ -309,12 +309,33 @@ def test_the_training_and_test_tabs(article: StageRun) -> None:
 def test_the_sample_options() -> None:
     part = tables_part()
     options = {o.key: o for o in part.sample_options(SPLITS_FOLDER)}
-    assert list(options) == ["article", "336", "341", "367", "76"]
+    assert list(options) == ["article", "336", "341", "367", "76", "601", "722"]
     assert options["article"].label == "All article splits (336, 341, 367) · test 664 / 659 / 633"
     assert options["article"].complete
     assert options["336"].label == "336 · training 336 (196, 140) · test 664"
     assert options["76"].label == "76 · training 76 (36, 40) · test 194"
+    assert options["601"].label == "601 · training 601 (361, 240) · test 1501"
+    assert options["722"].label == "722 · training 722 (467, 255) · test 1380"
     assert all(o.available for o in options.values())
+    assert not any(options[key].complete for key in ("76", "601", "722"))
+
+
+def test_a_spambase_split_runs_through_the_three_stages() -> None:
+    # ADR-088: Spambase's splits are samples of the part, not columns of Tables 7 and 8
+    part = tables_part()
+    groups = part.method_groups(part.option("601"))
+    assert [g.title for g in groups] == ["Table 7", "Table 8", "CS-model"]  # no Zhuravlyov row
+    run = run_stages(part, part.option("601"), SPLITS_FOLDER)
+    (sample,) = run.trained.samples
+    assert sample.data.class_sizes == (361, 240)
+    assert run.predictions.objects[0].m == 1501
+    assert len(run.predictions.decisions["601"]) == 14  # 8 standard methods, 6 CS-models
+    tabs = {t.key: t for t in run.evaluation.tables}
+    assert tabs["table-7"].missing == NEEDS_ARTICLE
+    (everything,) = tabs["all-results"].variants
+    assert {row[0] for row in everything.table.rows} == {"601"}
+    assert len(everything.table.rows) == 14
+    assert part.write_problem(run.evaluation) == WRITES_ARTICLE
 
 
 def test_unavailable_sample_options(tmp_path: Path) -> None:
