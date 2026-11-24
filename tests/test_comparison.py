@@ -69,19 +69,19 @@ runner = CliRunner()
 
 FILES = {
     "German/German (1000, 20, 2) — training 336 (zhuravlyov).dat": (
-        "07ffd6a70af3f77f0eeac28879b079f8cf4e0be42e225bfe919a160e81d34287"
+        "de91b117361122bdf22430a56ea4b2f06582739e037845d2e799a8da46b56135"
     ),
     "German/German (1000, 7, 2) — training 341 (euclidean).dat": (
-        "7ede2eaf898d00b18f9b73e7fd3e541773f3c9d423b83256c1a50e5b7e5d45d0"
+        "2a11746d5b41579140337ee6bc1b53879d06f80c65d3fe32eff00bd857db3052"
     ),
     "German/German (1000, 7, 2) — training 367 (chebyshev).dat": (
-        "3dd7c8a7ab809fe7a6da00fd8bdd2dbcab97fcbd819cf7c8241147b26c6ff8f4"
+        "1c818e6772cae85394d0134e3e29a0d6116d58acee0bb9964d1327f00948f772"
     ),
     "Heart-Disease/Heart-Disease (270, 13, 2) — training 76 (zhuravlyov).dat": (
-        "988f1f2862d2285979176ed4b0670f57f103049da9cdce51ad7d374cc4eea028"
+        "ef9e5c65815b5f7c8e35dc0ad3d462c8394d10e05d299ca723540e202c153833"
     ),
 }
-"""The article's split files, copied byte for byte."""
+"""The article's split files, in the split-file convention (ADR-082)."""
 
 COUNTS = {
     "336": ((336, 196, 140), (664, 504, 160), 20),
