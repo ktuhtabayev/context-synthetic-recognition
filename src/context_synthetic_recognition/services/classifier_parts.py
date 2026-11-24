@@ -365,9 +365,14 @@ BUILTIN_PARTS = ("context_synthetic_recognition.services.comparison_part",)
 
 
 def parts() -> list[ClassifierPart]:
-    """The registered parts (the built-in ones are registered on first use)."""
+    """The registered parts.
+
+    The built-in ones register when their modules are imported here; parts of other packages
+    register through the entry-point group ``context_synthetic_recognition.classifier-parts``.
+    """
     for module in BUILTIN_PARTS:
         importlib.import_module(module)
+    CLASSIFIER_PARTS.load_entry_points()
     return [info.obj for info in CLASSIFIER_PARTS]
 
 

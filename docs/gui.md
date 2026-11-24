@@ -3,7 +3,8 @@
 The desktop application takes an experiment through the whole workflow — **Dataset → Configure →
 Run → Results → New object → Compare → Export** — and shows every table and figure of the
 method for any dataset. An eighth page, **Classifiers**, apart from the workflow, gives the
-article's Tables 7 and 8. The application computes nothing itself: a run is the same
+article's Tables 7 and 8 in three steps: training, the test objects classified without their
+class, and the evaluation. The application computes nothing itself: a run is the same
 `run_experiment` the command line uses, and the pages show the same tables and figures the
 exporters write, so the screen, the Excel mirror and the article's tables cannot disagree.
 
@@ -183,26 +184,58 @@ size. The CSV files open correctly in Excel.
 
 ## 8 · Classifiers
 
-![Classifiers page](images/gui/classifiers.png)
+![Classifiers page: ① Training](images/gui/classifiers-training.png)
 
-Tables 7 and 8 of the article: SVM, random forest and k-NN fitted on the article's training
-samples and scored on its test samples, with the CS-model on the same samples
-([Standard classifiers](comparison.md)). The page is
-apart from the workflow: it needs no dataset and no run. *Run* reads the split files
-(`datasets/splits` of the project) and fits every method in the background (a few seconds).
-The tabs show Table 7, Table 8, the CS-model's table and every split × method. *Write the files* writes them with
-their checksums to the results folder (`experiments/comparison`). *Check the written files*
-compares a results folder with its checksums and a new run, byte for byte. These are the same
-files and checks as `csr compare run` and `csr compare check`. The CSV files open correctly in
-Excel.
+Classifier parts in three steps, apart from the workflow: the page needs no dataset and no run
+(ADR-084). The list of parts on the left starts collapsed while there is one part; **▶** opens
+it. The first part is Tables 7 and 8 of the article: SVM, random forest and k-NN fitted on the
+article's training samples, with the CS-model on the same samples
+([Standard classifiers](comparison.md)). Every setting is fixed (ADR-079, ADR-080): the page
+shows them and offers none to change.
 
-The split files follow the author's convention ([File layout](comparison.md#file-layout)); a file
-that breaks it stops the run, and the warning box names the file and the row.
+- **Samples** — *All article splits (336, 341, 367)*, each split alone, or Heart's split 76;
+  every entry shows its sizes. The samples are read from *Split files* (`datasets\splits` of the
+  project). The split files follow the author's convention
+  ([File layout](comparison.md#file-layout)); a file that breaks it makes the samples
+  unavailable, and the warning box names the file and the row.
+- **The steps** — ① *Training*, ② *Test* and ③ *Evaluation*, each with its state as a symbol
+  and a word: ○ not run, ◔ running, ✓ done, ⟳ out of date (an earlier step was run again, or the
+  samples changed), ⊘ unavailable (the tooltip says why). A step opens when the step before it is
+  done; **Alt+←** and **Alt+→** move between the steps. *Run all* runs the three steps in a row,
+  and the progress bar names the step and the split.
+
+| Step | Button | Tabs |
+|---|---|---|
+| ① Training | *Fit on the training sample* | *Methods* (the methods as in the article, with their fixed settings), *Training sample* (the objects, their features and class: K1 blue, K2 orange), *Training results* (training accuracy as in Definition 2, correct, refusals) |
+| ② Test | *Classify the test sample* | *Test objects* (feature values only — there is no class column), *Predictions* (1 / 2 / 0 per object and method, coloured by the predicted class, with the scores, the most common decision and how many methods give it), *Predicted classes* (K1, K2 and refusals per method, counts and shares) |
+| ③ Evaluation | *Compare with the true classes* | *Table 7*, *Table 8*, *CS-model*, *All results* (as `csr compare run` writes them), *Per object* (✓ correct, ✗ wrong, 0 refusal), *Confusion* (true class × decision and refusals per method), *Check* |
+
+The banner of ② says that the classes are hidden: the test objects are classified from their
+feature values alone, and nothing in that step needs or shows a true class. The banner of ③ says
+that the true classes are revealed. Tables 7 and 8 and the CS-model's table need the three
+article splits; with other samples these tabs say so.
+
+![Classifiers page: ② Test](images/gui/classifiers-test.png)
+
+In ③, *Write the files* writes the comparison with its checksums to the results folder
+(`experiments\comparison`) — for the three article splits only, the files of `csr compare run`.
+*Check the written files* compares a results folder with its checksums and a new run, byte for
+byte, as `csr compare check` does; *Open the folder* shows it. The CSV files open correctly in
+Excel. Per-split tables have a *Split* selector; every table can be sorted, filtered, copied and
+saved, and clicking an object marks it in every table of the step.
+
+![Classifiers page: ③ Evaluation](images/gui/classifiers-evaluation.png)
+
+*Per object* in the dark theme: ✓ and ✗ mark every decision, so the colours are never the only
+cue.
+
+![Classifiers page: per object, dark theme](images/gui/classifiers-dark.png)
 
 The page needs scikit-learn and the split files. The Windows build carries both, and without a
 project folder it writes to `experiments\comparison` under the folder it runs in (ADR-081).
 From source, install the `[sklearn]` extra and start the application in the project, whose
-`datasets\splits` it reads.
+`datasets\splits` it reads. A new part is registered in the services and appears in the list
+without a change to the page ([Adding a part to the Classifiers page](extending.md#adding-a-part-to-the-classifiers-page)).
 
 ## Appearance and what is remembered
 
@@ -248,7 +281,7 @@ either (ADR-054).
 | Ctrl+E | Export |
 | Ctrl+Z / Ctrl+Y | Undo / redo a change of the configuration |
 | Ctrl+1 … Ctrl+8 | Go to a page |
-| Alt+← / Alt+→ | Previous / next table or figure of the results |
+| Alt+← / Alt+→ | Previous / next table or figure of the results; previous / next step of the *Classifiers* page |
 | Ctrl+C | Copy the selected table rows |
 | Ctrl+T | Switch between the light and the dark theme |
 | Ctrl++ / Ctrl+− / Ctrl+0 | Zoom in / out / reset |
