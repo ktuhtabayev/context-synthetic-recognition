@@ -135,8 +135,9 @@ Tests and checks:
 ```text
 configs/            configuration files: default, alpha-0.1, alpha-0.2, excel-experiment,
                     heart-disease-270-large-data
-datasets/           the author's datasets: default (10, 13, 2), raw/Heart-Disease, raw/German;
-                    splits/ = the article's training and test samples
+datasets/           the author's datasets: default (10, 13, 2), raw/<Heterogeneous|Nominal|
+                    Quantitative>/<Family>/ (Heart-Disease, German, Spambase, …);
+                    splits/ = training and test samples (the article's, Spambase's)
 docs/               documentation (mkdocs): glossary, algorithm reference, DECISIONS.md, …
 experiments/        the article's computational experiment: results/*.csv, summary.json, checksums;
                     comparison/ = Tables 7 and 8 (standard classifiers)

@@ -1188,7 +1188,9 @@ repository.*
 - The folders `resources/` and `docs/handoff/` are no longer tracked: they stay on the author's
   disk, ignored by `.gitignore`. The Git history is unchanged. (Later the same day, at the author's
   request, the GitHub Release v0.8.0 and its tag `v0.8.0` were deleted; the 0.8.0 code stays in the
-  history, and v0.9.0 is the only published release.)
+  history. On 2026-11-24, after v0.10.0 was published, the GitHub Release v0.9.0, its download and
+  its tag `v0.9.0` were deleted the same way, at the author's request: v0.10.0 is the only published
+  release.)
 - The four workbooks used as acceptance tests are copied byte for byte to `tests/data/workbooks/`
   under neutral names: *Excel experiment*, *Synthetic features by k-NN*, *Additional features* and
   *Meta-algorithm* (each `[Heart-Disease (10, 13, 2)].xlsx`); a test pins their SHA-256 checksums.
@@ -1721,6 +1723,48 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   included; the command drops the test classes right after (the `AnswerKey` is never built) and
   never writes them. Without `--out` the file is `predictions-<KEY>.csv` in the working folder, so
   `experiments/comparison` keeps the files of `csr compare run`.
+
+## ADR-087 — The datasets by the kind of their features; four kept on the author's disk (author)
+
+*Accepted, 2026-11-24. Amends ADR-035 for the layout of `datasets/raw/`.*
+
+- The author grouped the original datasets by the kind of their features:
+  `datasets/raw/Heterogeneous/` (quantitative and nominal), `Nominal/` and `Quantitative/`, each with
+  one folder per family as before. German and Heart-Disease moved to `Heterogeneous/` byte for byte;
+  their checksums (ADR-073) and ids are unchanged. The catalogue already finds datasets at any
+  depth under `raw/`, so no code changes; a test checks that every dataset sits in the folder of its
+  kind.
+- Seven datasets from open archives join the repository byte for byte, with the author's
+  `ReadMe.txt` and a test that pins their SHA-256: Heart-Failure (299, 12, 2) and Ionosfera
+  (350, 33, 2) (heterogeneous); Molecular-Biology (106, 57, 2), (100, 50, 2) and (100, 10, 2), and
+  Tic-Tac-Toe (958, 9, 2) (nominal); Breast-Cancer-Wisconsin (569, 30, 2) and Spambase (4204, 57, 2)
+  (quantitative).
+- Four stay on the author's disk only, listed in `.gitignore` (*author*): TCGA_LUAD (589, 57772, 2),
+  whose files (391 MB and 421 MB) are larger than GitHub accepts — the project uses no Git LFS
+  (ADR-014), and its read-me stays with them — and Cancer
+  (589, 44, 2), Hypertension (147, 29, 2) and Uzb-Kor (100, 24, 2), which are not from an open
+  archive. Where they are on disk the catalogue reads them; the tests of the dataset folder leave
+  them out, so they pass on the author's machine and in a checkout alike.
+
+## ADR-088 — Spambase's training and test samples (author)
+
+*Accepted, 2026-11-24.*
+
+- Two split files of Spambase, added by the author as `spam1_601e.dat` and `spam1_722en.dat`, are
+  kept under the neutral names of the other split files (ADR-079):
+  `datasets/splits/Spambase/Spambase (2102, 57, 2) — training 601 (euclidean).dat` and
+  `… — training 722 (euclidean).dat`. Each holds the same 2102 objects — half of each class of
+  Spambase (4204, 57, 2) — with 57 quantitative features: raw values in the 601 file, min–max scaled
+  over the 2102 objects in the 722 file; a test checks both relations. Training 601 (361, 240), test
+  1501 (903, 598); training 722 (467, 255), test 1380 (797, 583).
+- They came in the layout ADR-082 replaced and were brought to the convention as the other files
+  were (*author*): the header counts the features only (`2102 57 2` instead of `2102 58 2`), no
+  line starts with a tab, and the type row holds the 57 types followed by two empty cells — the
+  601 file held `0 0` there, the 722 file a merged `0       0`. Every object row is unchanged.
+- The part "Tables 7 and 8" offers them as samples, like Heart's split: the *Classifiers* page runs
+  the three stages on them and `csr compare predict --split 601 | 722` writes their blind
+  predictions. They are not columns of Tables 7 and 8, and no result of theirs is written to
+  `experiments/`. The Windows build carries them with the other split files (ADR-081).
 
 ## Open questions for the author
 

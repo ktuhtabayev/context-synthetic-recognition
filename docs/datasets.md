@@ -39,26 +39,37 @@ Missing values are rejected with an error that names their positions.
 
 ## The dataset folder
 
-The project keeps the author's datasets in `datasets/` (ADR-035):
+The project keeps the author's datasets in `datasets/` (ADR-035), the original datasets grouped
+by the kind of their features (ADR-087):
 
 ```text
 datasets/
   default.dat, default.csv                  the default dataset: Heart-Disease (10, 13, 2)
   raw/
-    Heart-Disease/
-      Heart-Disease (270, 13, 2).dat        original datasets, one folder per family,
-      Heart-Disease (270, 13, 2).csv        named <Name> (m, n, c)
-    German/
-      German (1000, 20, 2).dat, .csv        German (1000, 20, 2), with the author's ReadMe.txt
+    Heterogeneous/                          quantitative and nominal features
+      Heart-Disease/
+        Heart-Disease (270, 13, 2).dat      one folder per family, named <Name> (m, n, c),
+        Heart-Disease (270, 13, 2).csv      the author's ReadMe.txt beside most of them
+      German/, Heart-Failure/, Ionosfera/
+    Nominal/                                nominal features only
+      Molecular-Biology/, Tic-Tac-Toe/
+    Quantitative/                           quantitative features only
+      Breast-Cancer-Wisconsin/, Spambase/
   synthetic/                                reserved for pre-existing synthetic datasets — not read
-  splits/                                   the article's training and test samples (split files
-    German/, Heart-Disease/                 with a training/test flag) — not read by the catalogue
+  splits/                                   training and test samples (split files with a
+    German/, Heart-Disease/, Spambase/      training/test flag) — not read by the catalogue
 ```
 
 The files are the author's, byte for byte (Git stores them unchanged, the hooks leave them alone),
-so their SHA-256 checksums are the same on every machine; German was added in the same way
-(ADR-073), and so were the article's split files in `splits/`, which only the comparison of
-Tables 7 and 8 reads ([Standard classifiers](comparison.md), ADR-079). The synthetic-feature
+so their SHA-256 checksums are the same on every machine, and a test pins them; German was added in
+the same way (ADR-073), and so were the split files in `splits/`, which only the *Classifiers*
+part reads ([Standard classifiers](comparison.md), ADR-079, ADR-088). The catalogue finds a dataset
+at any depth under `raw/`, so its ids do not depend on the kind folder.
+
+Four datasets stay on the author's disk and out of the repository (`.gitignore`): TCGA_LUAD
+(589, 57772, 2), whose two files are larger than GitHub accepts (100 MB), and Cancer
+(589, 44, 2), Hypertension (147, 29, 2) and Uzb-Kor (100, 24, 2), which are not from an open
+archive. Where they are on disk the catalogue lists and reads them like any other dataset. The synthetic-feature
 datasets this project generates from raw data — normalized values, Ψ(r), the meta-description Y —
 are written to run folders by the exporters, with the manifest that says how they were produced.
 
@@ -86,7 +97,7 @@ checks the header against the rows: m rows of n + 1 values, n flags, c classes.
 | nothing / `default` | the default dataset, `datasets/default.dat` |
 | `heart-disease-270`, `german-1000` | a dataset by id (`<name>-<m>`; `-<n>` is added when two datasets would share it) |
 | `Heart-Disease (270, 13, 2)` | the same, by display name |
-| `datasets/raw/Heart-Disease/Heart-Disease (270, 13, 2).csv` | a file, in any supported format |
+| `datasets/raw/Heterogeneous/Heart-Disease/Heart-Disease (270, 13, 2).csv` | a file, in any supported format |
 | `builtin:heart-disease-270` | the package's built-in copy |
 
 When both formats of a dataset exist, the `.dat` is read (the `.csv` of a large dataset may be a
@@ -106,8 +117,9 @@ package's built-in copies are used, and `heart-disease-10` is the default.
 
 ### Adding a dataset
 
-Put `<Name> (m, n, c).dat` (and, if you like, the `.csv`) under `datasets/raw/<Family>/`, run
-`csr data check`, and name it by its id. Other formats (tables with a header row, Excel, Parquet)
+Put `<Name> (m, n, c).dat` (and, if you like, the `.csv`) under
+`datasets/raw/<Kind>/<Family>/` — `Heterogeneous`, `Nominal` or `Quantitative` by the kind of its
+features — run `csr data check`, and name it by its id. Other formats (tables with a header row, Excel, Parquet)
 are read from any path; the catalogue can learn them later through the loader registry.
 
 ## Classes
@@ -123,6 +135,12 @@ Class labels may be integers or text. They are sorted — numbers numerically, t
 | `heart-disease-10` (built in; `default` in the folder) | Heart-Disease (10, 13, 2): the 10 objects of the Excel experiment (\|K1\| = 4, \|K2\| = 6) |
 | `heart-disease-270` (built in and in the folder) | Heart-Disease (270, 13, 2): UCI Statlog (Heart), 6 quantitative + 7 nominal features as flagged in the file, \|K1\| = 150, \|K2\| = 120 |
 | `german-1000` (in the folder) | German (1000, 20, 2): UCI Statlog (German Credit Data), 7 quantitative + 13 nominal features, \|K1\| = 700, \|K2\| = 300 |
+| `heart-failure-299` | Heart-Failure (299, 12, 2): UCI Heart Failure Clinical Records, 7 quantitative + 5 nominal features, \|K1\| = 203, \|K2\| = 96 |
+| `ionosfera-350` | Ionosfera (350, 33, 2): Ionosphere (Kaggle), 32 quantitative + 1 nominal feature, \|K1\| = 125, \|K2\| = 225 |
+| `molecular-biology-106`, `-100-50`, `-100-10` | Molecular-Biology (106, 57, 2): UCI Promoter Gene Sequences, 57 nominal features, \|K1\| = \|K2\| = 53; (100, 50, 2) and (100, 10, 2): 100 of its objects with their first 50 or 10 features, \|K1\| = \|K2\| = 50 |
+| `tic-tac-toe-958` | Tic-Tac-Toe (958, 9, 2): UCI Tic-Tac-Toe Endgame, 9 nominal features, \|K1\| = 332, \|K2\| = 626 |
+| `breast-cancer-wisconsin-569` | Breast-Cancer-Wisconsin (569, 30, 2): UCI Breast Cancer Wisconsin (Diagnostic), 30 quantitative features, \|K1\| = 357, \|K2\| = 212 |
+| `spambase-4204` | Spambase (4204, 57, 2): UCI Spambase without its duplicate rows, 57 quantitative features, \|K1\| = 2528, \|K2\| = 1676 |
 
 ### Heart: the slope as a quantitative feature
 
@@ -164,7 +182,7 @@ the tests). A configuration names a dataset of the folder by id, or a built-in w
 ```text
 > csr data info heart-disease-270
 Heart-Disease (270, 13, 2)
-  source:    …\datasets\raw\Heart-Disease\Heart-Disease (270, 13, 2).dat
+  source:    …\datasets\raw\Heterogeneous\Heart-Disease\Heart-Disease (270, 13, 2).dat
   objects:   m = 270
   features:  n = 13
     I (quantitative) 6: x₁, x₄, x₅, x₈, x₁₀, x₁₂
