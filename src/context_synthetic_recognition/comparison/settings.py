@@ -77,6 +77,22 @@ HEART_SPLIT = SplitSpec(
     "zhuravlyov",
 )
 """Heart's split: readable, not part of Tables 7 and 8."""
+SPAMBASE_SPLITS = (
+    SplitSpec(
+        "601",
+        "Spambase",
+        "Spambase/Spambase (2102, 57, 2) — training 601 (euclidean).dat",
+        "euclidean",
+    ),
+    SplitSpec(
+        "722",
+        "Spambase",
+        "Spambase/Spambase (2102, 57, 2) — training 722 (euclidean).dat",
+        "euclidean",
+    ),
+)
+"""Spambase's splits (ADR-088): readable, not part of Tables 7 and 8. Both hold the same 2102
+objects; the 722 file's values are min–max scaled over them."""
 TABLE_CS_MODEL = "CS-model"
 """Name of the CS-model's table, beside Tables 7 and 8."""
 

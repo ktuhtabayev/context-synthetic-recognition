@@ -6,6 +6,16 @@ resources/
 docs/handoff/
 
 # =========================
+# Datasets kept on the author's disk only (ADR-087): the catalogue reads them there.
+# TCGA_LUAD's files are larger than GitHub accepts (100 MB); the other three are not from an
+# open archive.
+# =========================
+datasets/raw/Quantitative/TCGA_LUAD/
+datasets/raw/Quantitative/Cancer/
+datasets/raw/Quantitative/Hypertension/
+datasets/raw/Nominal/Uzb-Kor/
+
+# =========================
 # Python
 # =========================
 __pycache__/

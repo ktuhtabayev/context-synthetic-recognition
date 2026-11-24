@@ -21,6 +21,7 @@ from context_synthetic_recognition.cli.app import EXIT_FAILED, EXIT_USAGE, app
 from context_synthetic_recognition.comparison import (
     ALPHAS,
     HEART_SPLIT,
+    SPAMBASE_SPLITS,
     SPLITS,
     SplitResult,
     SplitSpec,
@@ -80,6 +81,12 @@ FILES = {
     "Heart-Disease/Heart-Disease (270, 13, 2) — training 76 (zhuravlyov).dat": (
         "ef9e5c65815b5f7c8e35dc0ad3d462c8394d10e05d299ca723540e202c153833"
     ),
+    "Spambase/Spambase (2102, 57, 2) — training 601 (euclidean).dat": (
+        "83f702042e2257832d966676e7287645b83fa4c8710650ca19098678676875af"
+    ),
+    "Spambase/Spambase (2102, 57, 2) — training 722 (euclidean).dat": (
+        "e7aee964e8622ce380847b9d8abd371eecb2d027c8a0a22035e3432b7ceed0b8"
+    ),
 }
 """The article's split files, in the split-file convention (ADR-082)."""
 
@@ -88,8 +95,14 @@ COUNTS = {
     "341": ((341, 173, 168), (659, 527, 132), 7),
     "367": ((367, 190, 177), (633, 510, 123), 7),
     "76": ((76, 36, 40), (194, 114, 80), 13),
+    "601": ((601, 361, 240), (1501, 903, 598), 57),
+    "722": ((722, 467, 255), (1380, 797, 583), 57),
 }
-"""Training (n, K1, K2), test (n, K1, K2) and features of every split (7 quantitative each)."""
+"""Training (n, K1, K2), test (n, K1, K2) and features of every split."""
+QUANTITATIVE = {"336": 7, "341": 7, "367": 7, "76": 7, "601": 57, "722": 57}
+"""Quantitative features of every split."""
+ALL_SPLITS = (*SPLITS, HEART_SPLIT, *SPAMBASE_SPLITS)
+"""Every split file: the three of Tables 7 and 8, Heart's and Spambase's two."""
 
 MAJORITY = {"336": 75.90, "341": 79.97, "367": 80.57}
 """Majority-class rate of the test sample, %."""
@@ -192,17 +205,17 @@ def test_the_split_files_keep_their_bytes() -> None:
     assert found == set(FILES)
     for name, digest in FILES.items():
         assert hashlib.sha256((SPLITS_FOLDER / name).read_bytes()).hexdigest() == digest, name
-    assert {spec.file for spec in (*SPLITS, HEART_SPLIT)} == set(FILES)
+    assert {spec.file for spec in ALL_SPLITS} == set(FILES)
 
 
-@pytest.mark.parametrize("spec", [*SPLITS, HEART_SPLIT], ids=lambda spec: spec.key)
+@pytest.mark.parametrize("spec", ALL_SPLITS, ids=lambda spec: spec.key)
 def test_the_split_files_give_the_articles_samples(spec: SplitSpec) -> None:
     split = load_split_file(SPLITS_FOLDER / spec.file)
     training, test, n = COUNTS[spec.key]
     assert split.training_sizes == training
     assert split.test_sizes == test
     assert split.dataset.n == n
-    assert int(split.dataset.quantitative.sum()) == 7
+    assert int(split.dataset.quantitative.sum()) == QUANTITATIVE[spec.key]
     # the training objects come first, then the test objects
     assert split.training.tolist() == list(range(training[0]))
 
@@ -231,6 +244,22 @@ def test_the_split_files_hold_the_projects_datasets() -> None:
     assert data.quantitative.tolist() == heart.quantitative.tolist()  # the slope too (ADR-072)
     columns = np.flatnonzero(heart.quantitative)
     assert objects(data.X, data.y) == objects(minmax(heart.X, columns), heart.y)
+    # Spambase (ADR-088): the same 2102 objects in both files, half of each class of
+    # Spambase (4204, 57, 2); the 722 file's values are min–max scaled over the 2102 objects
+    raw = load_split_file(SPLITS_FOLDER / SPAMBASE_SPLITS[0].file).dataset
+    scaled = load_split_file(SPLITS_FOLDER / SPAMBASE_SPLITS[1].file).dataset
+    expected = minmax(raw.X, np.arange(raw.n))
+    matched = []
+    for start in range(0, scaled.m, 100):  # the file keeps 6 decimals: matched within 1e-6
+        rows = scaled.X[start : start + 100]
+        gap = np.abs(rows[:, None, :] - expected[None, :, :]).max(axis=2)
+        nearest = gap.argmin(axis=1)
+        assert gap[np.arange(len(rows)), nearest].max() <= 1e-6
+        assert (raw.y[nearest] == scaled.y[start : start + 100]).all()
+        matched += nearest.tolist()
+    assert len(set(matched)) == raw.m  # one to one
+    spambase = load_from_config(DatasetConfig(path="spambase-4204"), ROOT)
+    assert raw.class_sizes == tuple(size // 2 for size in spambase.class_sizes)
 
 
 # ---------------------------------------------------------------- the numbers

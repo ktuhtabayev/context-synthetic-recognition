@@ -5,6 +5,24 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+### Added
+
+- Seven datasets from open archives, with the author's read-me files and pinned checksums
+  (ADR-087): Heart-Failure (299, 12, 2), Ionosfera (350, 33, 2), Molecular-Biology (106, 57, 2),
+  (100, 50, 2) and (100, 10, 2), Tic-Tac-Toe (958, 9, 2), Breast-Cancer-Wisconsin (569, 30, 2) and
+  Spambase (4204, 57, 2).
+- Spambase's two training and test samples (ADR-088), brought to the split-file convention and kept
+  as `datasets/splits/Spambase/Spambase (2102, 57, 2) — training 601 (euclidean).dat` and
+  `… — training 722 (euclidean).dat`: samples of the *Classifiers* page and of
+  `csr compare predict --split 601 | 722`, not part of Tables 7 and 8.
+
+### Changed
+
+- The original datasets are grouped by the kind of their features: `datasets/raw/Heterogeneous/`,
+  `Nominal/` and `Quantitative/` (ADR-087). German and Heart-Disease keep their bytes and ids.
+  TCGA_LUAD (589, 57772, 2) — larger than GitHub accepts — and Cancer, Hypertension and Uzb-Kor stay
+  on the author's disk (`.gitignore`); the catalogue still reads them there.
+
 ## [0.10.0] — 2026-11-24 — Tables 7 and 8 and a staged Classifiers page
 
 Standard classifiers on the article's training and test samples (Tables 7 and 8), with the
@@ -69,6 +87,8 @@ objects without their class.
   by those three bytes.
 
 ## [0.9.0] — 2026-11-22 — rebuild on the article
+
+Its GitHub Release and its tag were removed on 2026-11-24; 0.10.0 includes these changes.
 
 The project is rebuilt on the author's article (ADR-058): its stages, its names and its defaults.
 

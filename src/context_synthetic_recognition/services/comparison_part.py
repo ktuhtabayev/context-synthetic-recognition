@@ -16,7 +16,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from context_synthetic_recognition.comparison import HEART_SPLIT, SPLITS, SplitResult, SplitSpec
+from context_synthetic_recognition.comparison import (
+    HEART_SPLIT,
+    SPAMBASE_SPLITS,
+    SPLITS,
+    SplitResult,
+    SplitSpec,
+)
 from context_synthetic_recognition.comparison.stages import (
     FittedSplit,
     SplitDecisions,
@@ -78,7 +84,7 @@ from context_synthetic_recognition.services.comparison import (
 KEY = "tables-7-8"
 ARTICLE = "article"
 """Key of the option with the three splits of Tables 7 and 8."""
-SPECS: dict[str, SplitSpec] = {spec.key: spec for spec in (*SPLITS, HEART_SPLIT)}
+SPECS: dict[str, SplitSpec] = {spec.key: spec for spec in (*SPLITS, HEART_SPLIT, *SPAMBASE_SPLITS)}
 """Every split the part can read, by key."""
 NEEDS_ARTICLE = (
     "Tables 7 and 8 and the CS-model's table need the three article splits (336, 341, 367): "
@@ -155,7 +161,7 @@ class TablesPart:
         return SampleOption(key, key, (key,))
 
     def sample_options(self, folder: Path | None) -> tuple[SampleOption, ...]:
-        """The three article splits together, each split alone, and Heart's split."""
+        """The three article splits together, each split alone, Heart's split and Spambase's two."""
         try:
             root = _folder(folder)
         except CSRError as error:

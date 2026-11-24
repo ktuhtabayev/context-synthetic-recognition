@@ -28,9 +28,15 @@ not read this folder, so they are not listed among the datasets.
 | `German/German (1000, 7, 2) — training 341 (euclidean).dat` | Euclidean metric | the 7 quantitative, raw values | 341 (173, 168) | 659 (527, 132) |
 | `German/German (1000, 7, 2) — training 367 (chebyshev).dat` | Chebyshev metric | the 7 quantitative, raw values | 367 (190, 177) | 633 (510, 123) |
 | `Heart-Disease/Heart-Disease (270, 13, 2) — training 76 (zhuravlyov).dat` | Zhuravlyov metric | 13: 7 quantitative (the slope too, ADR-072), 6 nominal | 76 (36, 40) | 194 (114, 80) |
+| `Spambase/Spambase (2102, 57, 2) — training 601 (euclidean).dat` | Euclidean metric | the 57 quantitative, raw values | 601 (361, 240) | 1501 (903, 598) |
+| `Spambase/Spambase (2102, 57, 2) — training 722 (euclidean).dat` | Euclidean metric | the 57 quantitative, min–max over the 2102 objects | 722 (467, 255) | 1380 (797, 583) |
 
-Each file holds the same objects as the project's German (1000, 20, 2) or Heart-Disease (270, 13, 2),
-in another order. Object Sᵢ is the file's i-th row. Heart's split can be read but is not part of
+Each German and Heart file holds the same objects as the project's German (1000, 20, 2) or
+Heart-Disease (270, 13, 2), in another order. Object Sᵢ is the file's i-th row. The two Spambase
+files hold the same 2102 objects — half of each class of Spambase (4204, 57, 2); some of them carry
+a value rounded otherwise, mostly in the third decimal — and the 722 file's values are those of the
+601 file min–max scaled over the 2102 objects (ADR-088). Heart's split and Spambase's two can be
+read, run on the *Classifiers* page and predicted with `csr compare predict`, but are not part of
 Tables 7 and 8.
 
 ### File layout
@@ -199,7 +205,7 @@ runs the same three stages, step by step or all at once, and writes and checks t
 files, so the page works there too (ADR-081).
 
 `csr compare predict [--split KEY] [--out FILE]` trains the methods on the training sample of one
-split (336 by default; 341, 367 or 76) and classifies its test objects without their class
+split (336 by default; 341, 367, 76, 601 or 722) and classifies its test objects without their class
 (ADR-086). It writes one CSV file (with a byte-order mark, ADR-083): the object (Sᵢ, its place in
 the file), then one column per method with the decision 1, 2 or 0, empty where a CS-model is
 undefined. There is no class column. The loader reads the whole split file and checks the

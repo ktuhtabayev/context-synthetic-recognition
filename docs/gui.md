@@ -193,8 +193,8 @@ article's training samples, with the CS-model on the same samples
 ([Standard classifiers](comparison.md)). Every setting is fixed (ADR-079, ADR-080): the page
 shows them and offers none to change.
 
-- **Samples** — *All article splits (336, 341, 367)*, each split alone, or Heart's split 76;
-  every entry shows its sizes. The samples are read from *Split files* (`datasets\splits` of the
+- **Samples** — *All article splits (336, 341, 367)*, each split alone, Heart's split 76, or
+  Spambase's splits 601 and 722; every entry shows its sizes. The samples are read from *Split files* (`datasets\splits` of the
   project). The split files follow the author's convention
   ([File layout](comparison.md#file-layout)); a file that breaks it makes the samples
   unavailable, and the warning box names the file and the row.

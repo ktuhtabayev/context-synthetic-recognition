@@ -923,7 +923,7 @@ def compare_check(out: ComparisonFolder = None, splits: SplitsFolder = None) -> 
 @compare_app.command("predict")
 def compare_predict(
     split: Annotated[
-        str, typer.Option("--split", help="The split: 336 (default), 341, 367 or 76.")
+        str, typer.Option("--split", help="The split: 336 (default), 341, 367, 76, 601 or 722.")
     ] = "336",
     out: Annotated[
         Path | None,

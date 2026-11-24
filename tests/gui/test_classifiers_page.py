@@ -77,6 +77,8 @@ def test_the_page_lists_the_parts(window: MainWindow, qtbot: QtBot) -> None:
         "341 · training 341 (173, 168) · test 659",
         "367 · training 367 (190, 177) · test 633",
         "76 · training 76 (36, 40) · test 194",
+        "601 · training 601 (361, 240) · test 1501",
+        "722 · training 722 (467, 255) · test 1380",
     ]
     assert states(view) == [StepState.NOT_RUN] * 3
     assert view.training_view.action.text() == "Fit on the training sample"
