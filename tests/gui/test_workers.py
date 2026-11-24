@@ -1,5 +1,6 @@
 """Background work: the jobs (plain Python) and the thread that runs them."""
 
+import gc
 import json
 import logging
 import time
@@ -13,6 +14,8 @@ from context_synthetic_recognition.errors import DatasetError
 from context_synthetic_recognition.evaluation.protocols import EvaluationCancelledError
 from context_synthetic_recognition.export import ExportOptions, RunView
 from context_synthetic_recognition.gui.workers import (
+    COLLECTOR,
+    CollectorPause,
     LogBridge,
     Task,
     export_job,
@@ -128,6 +131,40 @@ def test_a_task_reports_its_result(qtbot: QtBot) -> None:
     assert done.args == [42]
     assert task.wait(10_000)
     qtbot.waitUntil(lambda: progress == [("half", 1, 2)])
+
+
+def test_no_garbage_collection_while_a_task_works(qtbot: QtBot) -> None:
+    # ADR-089: a collection in a worker would destroy Qt objects outside their thread
+    assert gc.isenabled()
+    seen: list[tuple[bool, int]] = []
+
+    def work(*, progress: object, cancelled: object) -> None:
+        seen.append((gc.isenabled(), COLLECTOR.workers))
+
+    task = Task.with_progress(work)
+    with qtbot.waitSignal(task.succeeded, timeout=10_000):
+        task.start()
+    assert task.wait(10_000)
+    assert seen == [(False, 1)]
+    assert gc.isenabled()
+    assert COLLECTOR.workers == 0
+
+
+def test_the_collector_pause_counts_its_workers() -> None:
+    pause = CollectorPause()
+    with pause:
+        with pause:  # two workers at once
+            assert not gc.isenabled()
+            assert pause.workers == 2
+        assert not gc.isenabled()  # one still works
+    assert gc.isenabled()
+    gc.disable()  # switched off by someone else: it stays off
+    try:
+        with pause:
+            pass
+        assert not gc.isenabled()
+    finally:
+        gc.enable()
 
 
 def test_a_task_reports_errors(qtbot: QtBot, caplog: pytest.LogCaptureFixture) -> None:
