@@ -10,7 +10,9 @@ Python on top of the services, so they are tested without a thread.
 
 from __future__ import annotations
 
+import gc
 import logging
+import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -387,11 +389,53 @@ class LogBridge(QObject):
         logging.getLogger(PACKAGE_LOGGER).removeHandler(self.handler)
 
 
+class CollectorPause:
+    """Python's cyclic garbage collector is off while any worker works (ADR-089).
+
+    A collection runs in whichever thread allocates when a threshold is reached. In a worker it
+    would free the wrappers of Qt objects left for collection — the widgets of a closed window —
+    and so destroy them outside the interface's thread, which crashes Qt with an access
+    violation. The collector is therefore switched off while a worker runs (the last worker to
+    end switches it back on), and :meth:`Task.start` collects in the interface's thread first.
+    """
+
+    def __init__(self) -> None:
+        """No worker yet."""
+        self._lock = threading.Lock()
+        self._workers = 0
+        self._was_enabled = True
+
+    @property
+    def workers(self) -> int:
+        """Workers running now."""
+        return self._workers
+
+    def __enter__(self) -> None:
+        """A worker starts: the first one switches the collector off."""
+        with self._lock:
+            if self._workers == 0:
+                self._was_enabled = gc.isenabled()
+                gc.disable()
+            self._workers += 1
+
+    def __exit__(self, *_: object) -> None:
+        """A worker ends: the last one switches the collector back on (if it was on)."""
+        with self._lock:
+            self._workers -= 1
+            if self._workers == 0 and self._was_enabled:
+                gc.enable()
+
+
+COLLECTOR = CollectorPause()
+"""The pause of the garbage collector shared by every :class:`Task`."""
+
+
 class Task(QThread):
     """One function in a worker thread.
 
     The function receives ``progress`` and ``cancelled`` keyword arguments if it is created with
-    :meth:`with_progress`; its return value arrives with :attr:`succeeded`.
+    :meth:`with_progress`; its return value arrives with :attr:`succeeded`. Python's garbage
+    collector does not run while the work runs (:class:`CollectorPause`).
     """
 
     progressed = Signal(str, int, int)
@@ -430,16 +474,22 @@ class Task(QThread):
         """Ask the work to stop at its next check."""
         self._cancel = True
 
+    def start(self, priority: QThread.Priority = QThread.Priority.InheritPriority) -> None:
+        """Collect garbage in the interface's thread, then start the worker."""
+        gc.collect()
+        super().start(priority)
+
     def run(self) -> None:
-        """Thread entry point: run the work and report how it ended."""
-        try:
-            result = self._work(self)
-        except EvaluationCancelledError:
-            self.cancelled.emit()
-        except (CSRError, OSError) as error:
-            self.failed.emit(str(error))
-        except Exception as error:  # the interface must survive a bug in a worker
-            logging.getLogger(PACKAGE_LOGGER).exception("unexpected error in a background task")
-            self.failed.emit(f"unexpected error: {type(error).__name__}: {error}")
-        else:
-            self.succeeded.emit(result)
+        """Thread entry point: run the work and report how it ended (no collection meanwhile)."""
+        with COLLECTOR:
+            try:
+                result = self._work(self)
+            except EvaluationCancelledError:
+                self.cancelled.emit()
+            except (CSRError, OSError) as error:
+                self.failed.emit(str(error))
+            except Exception as error:  # the interface must survive a bug in a worker
+                logging.getLogger(PACKAGE_LOGGER).exception("unexpected error in a background task")
+                self.failed.emit(f"unexpected error: {type(error).__name__}: {error}")
+            else:
+                self.succeeded.emit(result)

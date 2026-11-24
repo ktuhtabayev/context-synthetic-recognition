@@ -1766,6 +1766,20 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   predictions. They are not columns of Tables 7 and 8, and no result of theirs is written to
   `experiments/`. The Windows build carries them with the other split files (ADR-081).
 
+## ADR-089 — No garbage collection in a worker thread
+
+*Accepted, 2026-11-24.*
+
+- Python's cyclic garbage collector runs in whichever thread allocates when a threshold is reached.
+  In a worker thread (`gui.workers.Task`) it can free the Python wrappers of Qt objects that wait
+  for collection — the widgets of a closed window — and so destroy them outside the interface's
+  thread. Qt then crashes with an access violation. It happened in CI on main (Python 3.11 and
+  3.13) after the *Classifiers* page started more workers, during the test suite.
+- A `Task` therefore collects garbage in the interface's thread when it starts, and the collector
+  is switched off while any worker works (`gui.workers.CollectorPause`, counted, so overlapping
+  workers are safe); the last worker to end switches it back on, unless it was off before.
+  Reference counting still frees everything without a cycle while a worker runs.
+
 ## Open questions for the author
 
 *Open, 2026-11-22.* Each is flagged where it is used; none is decided silently.

@@ -23,6 +23,12 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   TCGA_LUAD (589, 57772, 2) — larger than GitHub accepts — and Cancer, Hypertension and Uzb-Kor stay
   on the author's disk (`.gitignore`); the catalogue still reads them there.
 
+### Fixed
+
+- The desktop application could crash with an access violation when Python's garbage collector ran
+  in a worker thread and freed Qt objects there; workers now pause the collector, and it collects
+  in the interface's thread (ADR-089).
+
 ## [0.10.0] — 2026-11-24 — Tables 7 and 8 and a staged Classifiers page
 
 Standard classifiers on the article's training and test samples (Tables 7 and 8), with the
