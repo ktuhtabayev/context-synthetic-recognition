@@ -137,7 +137,8 @@ Tables use the colour semantics of the Excel mirror:
   is marked in every table, and *Neighbourhood of the selected object* draws its neighbours with
   the nested k-neighbourhoods.
 - **Filter, copy, save** — filter rows by text, copy the selected rows (**Ctrl+C**, pastes into
-  Excel), save the table as CSV at full precision. *Decimals* changes only what is shown.
+  Excel), save the table as CSV at full precision; the file opens correctly in Excel ("—", α and
+  the subscripts included, ADR-083). *Decimals* changes only what is shown.
 
 ![Results: predictions](images/gui/results-predictions.png)
 
@@ -178,7 +179,7 @@ repeats a run from its folder and shows all its tables and figures.
 Writes the run on screen in the ticked formats — the Excel mirror, CSV, JSON, Markdown, LaTeX,
 figures, the HTML and PDF report ([Exporting](exporting.md)) — into the run folder (or a folder of
 your choice) in the background, and lists what was written and what was left out because of its
-size.
+size. The CSV files open correctly in Excel.
 
 ## 8 · Classifiers
 
@@ -192,7 +193,11 @@ apart from the workflow: it needs no dataset and no run. *Run* reads the split f
 The tabs show Table 7, Table 8, the CS-model's table and every split × method. *Write the files* writes them with
 their checksums to the results folder (`experiments/comparison`). *Check the written files*
 compares a results folder with its checksums and a new run, byte for byte. These are the same
-files and checks as `csr compare run` and `csr compare check`.
+files and checks as `csr compare run` and `csr compare check`. The CSV files open correctly in
+Excel.
+
+The split files follow the author's convention ([File layout](comparison.md#file-layout)); a file
+that breaks it stops the run, and the warning box names the file and the row.
 
 The page needs scikit-learn and the split files. The Windows build carries both, and without a
 project folder it writes to `experiments\comparison` under the folder it runs in (ADR-081).
