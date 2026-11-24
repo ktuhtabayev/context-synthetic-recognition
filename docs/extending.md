@@ -17,6 +17,7 @@ a function with the signature of its kind; it may declare a parameter type, whic
 | baseline | `evaluation.baselines.BASELINES` | `(BaselineInput, params) → [BaselineOutput]` | `knn-vote` |
 | dataset format | `data.loaders.LOADERS` | `(path, LoadOptions) → Dataset` | detected |
 | export format | `export.run.EXPORTERS` | `(ExportContext) → [Path]` | `all` ([Exporting](exporting.md)) |
+| classifier part | `services.classifier_parts.CLASSIFIER_PARTS` | the protocol `ClassifierPart`: train, classify without the class, evaluate ([below](#adding-a-part-to-the-classifiers-page)) | `tables-7-8` |
 
 ## Built-in metrics and normalizers
 
@@ -167,3 +168,124 @@ A package can register plug-ins through entry points; `Registry.load_entry_point
 [project.entry-points."context_synthetic_recognition.metrics"]
 lorentzian = "my_package.metrics:lorentzian"
 ```
+
+## Adding a part to the Classifiers page
+
+The *Classifiers* page of the desktop application shows **classifier parts**: units of work in
+three stages — ① *Training* on the training sample, ② *Test*, where the test objects are
+classified without their class, and ③ *Evaluation* against the true classes (ADR-084). The page
+renders any part of the registry `services.classifier_parts.CLASSIFIER_PARTS` from its protocol
+alone, so a new part is registered in the services and the page does not change.
+
+A part is an object with `key`, `title`, `description` and these methods (types of
+`services.classifier_parts` and `data.samples`):
+
+| Method | Returns | What it gets |
+|---|---|---|
+| `default_folder()` | the folder its samples are read from by default, or `None` | — |
+| `sample_options(folder)` | `SampleOption`s: what it runs on, with sizes, or why one is unavailable | the folder |
+| `load(option, folder)` | a `SampleSet`: training samples with their classes, the test objects as `UnlabelledSample`s and, apart, their `AnswerKey`s | the option |
+| `method_groups(option)` | `MethodGroup`s: the methods with their fixed settings (the *Methods* tab) | the option |
+| `train(option, training)` | a `TrainedPart`: per split the methods' training decisions, and the fitted state in `fitted` | the training samples only |
+| `classify(trained, unlabelled)` | `Predictions`: per split and method a `Decisions` (1, 2 or 0 per object, the scores if any) | the trained part and objects **without a class** |
+| `evaluate(predictions, answers)` | an `Evaluation`: per split and method the `ClassificationMetrics` | the decisions and the answer keys |
+
+`train`, `classify` and `evaluate` also take an optional `progress(what, done, total)`. A stage
+result may carry the part's own tabs in `tables` (`StageTable`s); without them the part still gets
+*Training sample*, *Training results*, *Test objects*, *Predictions*, *Predicted classes*, *Per
+object* and *Confusion*. A part that also has `write_problem(evaluation)`, `write(evaluation,
+folder)` and `default_output()` gets *Write the files*; one with `check(folder, splits)` gets
+*Check the written files* and the *Check* tab.
+
+The smallest part — one sample of seven objects, one method that takes the class of the nearest
+training object (`tests/dummy_part.py`, which the tests register and run through the page):
+
+```python
+from pathlib import Path
+
+import numpy as np
+
+from context_synthetic_recognition.data import Dataset, FeatureType
+from context_synthetic_recognition.data.samples import AnswerKey, Decisions, UnlabelledSample
+from context_synthetic_recognition.services.classifier_parts import (
+    CLASSIFIER_PARTS,
+    Evaluation,
+    MethodGroup,
+    MethodInfo,
+    MethodTraining,
+    Predictions,
+    SampleOption,
+    SampleSet,
+    TrainedPart,
+    TrainingSample,
+    metrics_against,
+)
+
+TYPES = (FeatureType.QUANTITATIVE,)
+
+
+def nearest(training: Dataset, X: np.ndarray, *, leave_out: bool) -> np.ndarray:
+    """The class code (1 or 2) of the nearest training object on x₁."""
+    distances = np.abs(X[:, :1] - training.X[:, 0][None, :])
+    if leave_out:  # Definition 2: a training object is not its own neighbour
+        np.fill_diagonal(distances, np.inf)
+    return training.class_index[np.argmin(distances, axis=1)] + 1
+
+
+class NearestPart:
+    key = "nearest"
+    title = "Nearest object"
+    description = "Four training objects, three test objects, one trivial method."
+
+    def default_folder(self) -> Path | None:
+        return None
+
+    def sample_options(self, folder):
+        return (SampleOption("toy", "Toy", ("toy",), "training 4 (2, 2) · test 3"),)
+
+    def load(self, option, folder):
+        training = Dataset(
+            X=np.array([[0.0], [1.0], [10.0], [11.0]]), y=[1, 1, 2, 2], feature_types=TYPES
+        )
+        objects = np.array([4, 5, 6])
+        test = UnlabelledSample(objects, np.array([[0.5], [10.5], [2.0]]), TYPES, ("x₁",), "toy")
+        answers = AnswerKey(objects, np.array([1, 2, 2]), (1, 2), "toy")
+        return SampleSet(option, (TrainingSample("toy", "Toy", training),), (test,), (answers,))
+
+    def method_groups(self, option):
+        method = MethodInfo("nearest", "Nearest object", "all (1)", ("toy",))
+        return (MethodGroup("Trivial", "The class of the nearest training object.", (method,)),)
+
+    def train(self, option, training, progress=None):
+        (sample,) = training
+        decided = nearest(sample.data, sample.data.X, leave_out=True)
+        methods = {"toy": (MethodTraining("nearest", "Nearest object", decided),)}
+        return TrainedPart(self.key, option, training, methods, fitted=sample.data)
+
+    def classify(self, trained, unlabelled, progress=None):
+        (sample,) = unlabelled  # feature values only: there is no class to read
+        decisions = {
+            "toy": {"nearest": Decisions(nearest(trained.fitted, sample.X, leave_out=False))}
+        }
+        return Predictions(self.key, trained, unlabelled, decisions)
+
+    def evaluate(self, predictions, answers, progress=None):
+        (key,) = answers
+        metrics = {"toy": metrics_against(predictions.decisions["toy"], key)}
+        return Evaluation(self.key, predictions, answers, metrics)
+
+
+CLASSIFIER_PARTS.add(NearestPart.key, NearestPart())
+```
+
+Rules a part keeps:
+
+- **Blind test.** `classify` reads feature values only. `UnlabelledSample` has no class field,
+  `data.samples.require_unlabelled` rejects anything else at run time, and mypy rejects a
+  `Dataset` (ADR-085). The classes of the test objects reach `evaluate` only, as `AnswerKey`s.
+- **Training on the training sample only**: scaling, encodings and neighbours are fitted there.
+- **No computation in the interface**: the page calls the part in a worker thread; whatever a tab
+  shows is a `StageTable` the part or the services build.
+- **Registration**: a module of the package adds itself to `BUILTIN_PARTS`; a part of another
+  package registers through the entry-point group `context_synthetic_recognition.classifier-parts`
+  (see [Plug-ins from other packages](#plug-ins-from-other-packages)).

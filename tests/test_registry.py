@@ -84,6 +84,19 @@ def test_replace_swaps_the_plugin_and_its_aliases() -> None:
     assert "lp" not in metrics
 
 
+def test_remove_takes_the_plugin_and_its_aliases_away() -> None:
+    metrics: Registry[object] = Registry("metrics")
+    metrics.add("minkowski", euclidean, aliases=("lp",))
+    metrics.add("manhattan", manhattan)
+    assert metrics.remove("lp").obj is euclidean
+    assert "minkowski" not in metrics
+    assert "lp" not in metrics
+    assert metrics.names() == ["manhattan"]
+    with pytest.raises(RegistryError, match="Unknown metrics 'minkowski'"):
+        metrics.remove("minkowski")
+    metrics.add("minkowski", manhattan)  # the name is free again
+
+
 def test_iteration_and_repr_keep_registration_order() -> None:
     metrics: Registry[object] = Registry("metrics")
     metrics.add("manhattan", manhattan)

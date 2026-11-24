@@ -1,7 +1,8 @@
 """The ``csr`` command.
 
 Commands: ``config`` (show, init, check), ``data`` (list, check, info), ``compare`` (run,
-check: Tables 7 and 8, standard classifiers on the article's training and test samples), ``fit``
+check, predict: Tables 7 and 8, standard classifiers on the article's training and test samples,
+and their blind predictions), ``fit``
 (the CS-model: Ψ(r), the agglomerative algorithm and the meta-dataset), ``classify`` (an object
 through the meta-algorithm, step by step), ``run`` (fit and evaluate under every configured
 protocol, write a run folder, optionally export it), ``export`` (a run folder as Excel mirror,
@@ -52,7 +53,7 @@ from context_synthetic_recognition.export import (
     resolve_formats,
 )
 from context_synthetic_recognition.export.run import AUTO_SENSITIVITY_OBJECTS
-from context_synthetic_recognition.export.text import markdown_table
+from context_synthetic_recognition.export.text import markdown_table, write_csv
 from context_synthetic_recognition.gui import GUI_EXTRA_HINT
 from context_synthetic_recognition.log import configure_logging
 from context_synthetic_recognition.notation import (
@@ -61,12 +62,14 @@ from context_synthetic_recognition.notation import (
     subscript,
     synthetic_name,
 )
+from context_synthetic_recognition.services.classifier_parts import predictions_csv
 from context_synthetic_recognition.services.comparison import (
     check_comparison,
     default_output,
     run_comparison,
     write_comparison,
 )
+from context_synthetic_recognition.services.comparison_part import blind_predictions
 from context_synthetic_recognition.services.configs import config_problems
 from context_synthetic_recognition.services.datasets import parse_object, summarize
 from context_synthetic_recognition.services.runner import (
@@ -915,6 +918,43 @@ def compare_check(out: ComparisonFolder = None, splits: SplitsFolder = None) -> 
         typer.echo("comparison check FAILED", err=True)
         raise typer.Exit(EXIT_FAILED)
     typer.echo("comparison check passed")
+
+
+@compare_app.command("predict")
+def compare_predict(
+    split: Annotated[
+        str, typer.Option("--split", help="The split: 336 (default), 341, 367 or 76.")
+    ] = "336",
+    out: Annotated[
+        Path | None,
+        typer.Option(
+            "--out", "-o", help="The CSV file; default: predictions-<split>.csv in this folder."
+        ),
+    ] = None,
+    splits: SplitsFolder = None,
+) -> None:
+    """Train on a split's training sample; write the blind predictions of its test objects."""
+
+    def progress(what: str, done: int, total: int) -> None:
+        if what.rpartition(" · ")[2] != "done":
+            typer.echo(f"  {what}")
+
+    try:
+        predictions = blind_predictions(split, splits, progress)
+        path = write_csv(
+            out or Path(f"predictions-{split}.csv"), predictions_csv(predictions, split)
+        )
+    except CSRError as error:
+        raise _fail(error) from error
+    (objects,) = predictions.objects
+    (sample,) = predictions.trained.samples
+    sizes = ", ".join(map(str, sample.data.class_sizes))
+    typer.echo(
+        f"trained on {sample.data.m} training objects ({sizes}); "
+        f"{objects.m} test objects classified without their class by "
+        f"{len(predictions.decisions[split])} methods"
+    )
+    typer.echo(f"written to {path} (no class column)")
 
 
 # ---------------------------------------------------------------- csr gui

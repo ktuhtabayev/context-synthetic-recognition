@@ -86,6 +86,35 @@ Reported for every split and method:
   on them.
 - **sample sizes**.
 
+## Three stages and the blind test
+
+The comparison runs in three stages (`comparison.stages`, ADR-084):
+
+1. **Training** (`fit_split`): every method is fitted on the training sample — scaling, one-hot
+   categories, the k-NN neighbours and the CS-model — and classifies the training objects
+   (resubstitution, Definition 2).
+2. **Test** (`classify_split`): every fitted method classifies the test objects from an
+   `UnlabelledSample`: their place in the file, their feature values, and the feature types and
+   names. **It has no class field and no split marker.** `FixedSplit.test_objects()` builds it from
+   the test sample by dropping the class column.
+3. **Evaluation** (`evaluate_split`): the decisions are compared with the true classes, which are
+   kept apart in an `AnswerKey` (`FixedSplit.test_answers()`) that only this stage receives.
+
+`compare_split` is the three stages in a row, so `csr compare run` and the pinned numbers go
+through them. The blindness is tested, not only designed (ADR-085):
+
+- shuffling, flipping or deleting the classes of the test objects changes no decision and no score
+  of SVM, random forest, any k-NN row or any CS-model;
+- a `Dataset` (which carries the classes) is rejected by `classify` at run time and by mypy, which
+  the test suite runs on such a call.
+
+SVM and random forest come from the project's baselines, which fit and predict in one call. Their
+fitted state is the training sample with the fixed options, and the test stage fits them again on
+it. The fit is deterministic (`random_state = 42`), so the decisions are those of a single fit. The
+k-NN vote keeps the training sample as its model; the CS-model keeps the fitted model and
+classifies with it (the Theorem). The three stages on the three article splits give the files of
+`experiments/comparison/` byte for byte.
+
 ## Results
 
 Test accuracy, %. These tables repeat `experiments/comparison/table-7.md` and `table-8.md`; a test
@@ -160,12 +189,24 @@ This repeats `experiments/comparison/cs-model.md`.
 .\.venv\Scripts\csr.exe compare run                      # writes experiments\comparison\
 .\.venv\Scripts\csr.exe compare run -o C:\temp\tables    # … or another folder
 .\.venv\Scripts\csr.exe compare check                    # checksums + a new run, byte for byte
+.\.venv\Scripts\csr.exe compare predict --split 341      # the blind predictions of one split
 .\.venv\Scripts\python.exe scripts\run_comparison.py     # the same as compare run
 ```
 
 `--splits` names another folder of split files. In the desktop application, the *Classifiers* page
-runs, writes and checks the same files ([Desktop application](gui.md)). The Windows build carries
-scikit-learn and a copy of the split files, so the page works there too (ADR-081).
+runs the same three stages, step by step or all at once, and writes and checks the same files
+([Desktop application](gui.md)). The Windows build carries scikit-learn and a copy of the split
+files, so the page works there too (ADR-081).
+
+`csr compare predict [--split KEY] [--out FILE]` trains the methods on the training sample of one
+split (336 by default; 341, 367 or 76) and classifies its test objects without their class
+(ADR-086). It writes one CSV file (with a byte-order mark, ADR-083): the object (Sᵢ, its place in
+the file), then one column per method with the decision 1, 2 or 0, empty where a CS-model is
+undefined. There is no class column. The loader reads the whole split file and checks the
+convention, the classes included; the command keeps only the training sample and the test
+objects' feature values, builds no answer key and writes no class. Without `--out` the file is
+`predictions-<KEY>.csv` in the working folder, so `experiments/comparison/` keeps exactly the files
+of `csr compare run`.
 
 The folder `experiments/comparison/` holds:
 

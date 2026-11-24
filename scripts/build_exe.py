@@ -29,6 +29,8 @@ from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
 
+from context_synthetic_recognition.services.classifier_parts import BUILTIN_PARTS
+
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 WORK = ROOT / "build" / "pyinstaller"
@@ -57,7 +59,9 @@ HIDDEN = (
     "sklearn.naive_bayes",
 )
 COLLECTED = ("reportlab",)
-"""Packages imported by name at run time (the PDF report): taken whole, with their data."""
+"""Packages imported by name at run time (the PDF report): taken whole, with their data. The
+parts of the Classifiers page are imported by name too (``BUILTIN_PARTS``, ADR-084): hidden
+imports."""
 SPLITS = ROOT / "datasets" / "splits"
 """The article's split files, carried in the package's data (ADR-081)."""
 BUNDLED_SPLITS = f"{PACKAGE}/data/split_files"
@@ -107,7 +111,7 @@ def build() -> Path:
     ]
     for module in EXCLUDED:
         arguments += ["--exclude-module", module]
-    for module in HIDDEN:
+    for module in (*HIDDEN, *BUILTIN_PARTS):
         arguments += ["--hidden-import", module]
     for package in COLLECTED:
         arguments += ["--collect-submodules", package, "--collect-data", package]

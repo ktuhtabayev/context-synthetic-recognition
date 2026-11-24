@@ -1588,6 +1588,140 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   checksums that list the CSV files change (`experiments/checksums.sha256`,
   `experiments/comparison/checksums.sha256`).
 
+## ADR-084 — The *Classifiers* page as a staged workbench of classifier parts
+
+*Accepted, 2026-11-24. Amends ADR-079 for the desktop application.*
+
+- The *Classifiers* page stays one entry of the main sidebar. Inside it, a **classifier part** is
+  a unit of work in three stages: ① *Training* on the training sample, ② *Test*, where the test
+  objects are classified without their class, and ③ *Evaluation*, where the decisions are
+  compared with the true classes. The comparison of ADR-079 and ADR-080 is the first part,
+  "Tables 7 and 8" (standard classifiers and the CS-model). Further parts are registered in the
+  services; the page does not change.
+- Modules:
+  - `data.samples`: `UnlabelledSample` and `AnswerKey` (ADR-085).
+  - `comparison.stages` (pure): the comparison in three stages, `fit_split`, `classify_split` and
+    `evaluate_split`. `compare_split` is these three in a row, so `csr compare run`, the pinned
+    numbers and the byte-for-byte test exercise the staged code.
+  - `services.classifier_parts`: the protocol `ClassifierPart`, the registry `CLASSIFIER_PARTS`
+    (a `core.registry.Registry`), the stage types and the tables every part gets.
+  - `services.comparison_part`: the part "Tables 7 and 8", registered under `tables-7-8`.
+  - `gui.workbench`: `PartView`, the stepper and the three step views; `gui.pages.classifiers`:
+    the page with the list of parts.
+- The protocol (types of `services.classifier_parts`):
+  - `key`, `title`, `description`, and `default_folder()`, the folder its samples are read from
+    by default;
+  - `sample_options(folder) → (SampleOption, …)`: what the part can run on, each with its sizes,
+    and with the reason when it is unavailable; `load(option, folder) → SampleSet`: the training
+    samples with their classes, the test objects as `UnlabelledSample`s and, apart, their
+    `AnswerKey`s;
+  - `method_groups(option) → (MethodGroup, …)`: the methods grouped as in the article, each with
+    its fixed settings as text;
+  - `train(training) → TrainedPart`: the fitted methods and the training report (resubstitution,
+    Definition 2);
+  - `classify(trained, unlabelled) → Predictions`: per split, method and object the decision 1, 2
+    or 0 and the score where the method gives one;
+  - `evaluate(predictions, answers) → Evaluation`: the metrics per method, the part's own tables
+    and the correctness of every object;
+  - optional capabilities, found by `isinstance` on runtime-checkable protocols:
+    `write(evaluation, folder)` with `write_problem(evaluation)` and `default_output()`, and
+    `check(folder, splits)`. "Tables 7 and 8" has both: the files and the check of
+    `csr compare run | check`.
+  - The registry gains `Registry.remove`, so that a test can register a part and take it away;
+    built-in parts are the modules of `BUILTIN_PARTS`, imported on first use, and a part of
+    another package registers through the entry-point group
+    `context_synthetic_recognition.classifier-parts`.
+- Every stage result carries the part's extra tabs (`StageTable`). The tabs every part gets are
+  built in the services from the stage results: *Methods*, *Training sample* and *Training
+  results*; *Test objects*, *Predictions* and *Predicted classes*; *Per object* and *Confusion*.
+  A per-split table carries one variant per split, chosen in the tab. A table states the meaning
+  of its columns (class, decision, outcome, status), and the page colours by meaning: K1 blue, K2
+  orange, refusal grey, correct green ✓, wrong red ✗. A part without extra tabs still works; a
+  test registers a dummy part and runs it through the page.
+- How the comparison maps onto the stages: *Training* fits the k-NN vote and the CS-model on the
+  training sample and classifies the training objects (resubstitution, Definition 2). SVM and
+  random forest are scikit-learn estimators inside the `svm` and `random-forest` baselines, which
+  fit and predict in one call; their fitted state is the training sample with the fixed options,
+  and *Test* fits them again on it, deterministically (ADR-085). *Evaluation* builds the same
+  `SplitResult`s as before, so Tables 7 and 8, the CS-model's table, the results table and the
+  files of `experiments/comparison` are the same byte for byte. Tables 7 and 8 and the CS-model's
+  table need the three article splits; with fewer splits these tabs say so, and writing is allowed
+  only for the full set.
+- The page (wireframe at 1360 × 860; the parts list collapses to a narrow strip):
+
+  ```text
+  ┌────────────┬─────────────────────────────────────────────────────────────────────────────┐
+  │ PARTS   ◀  │ Tables 7 and 8 — standard classifiers and the CS-model                      │
+  │ ● Tables   │ one-line description                                                        │
+  │   7 and 8  │ Samples [All article splits (336, 341, 367) ▾] Split files [datasets\…] [Browse…] │
+  │            │ [① Training ✓ done] ─ [② Test ○ not run] ─ [③ Evaluation ○ not run]  [Run all] ▓▓░ │
+  │            │ ┌─ step view ─────────────────────────────────────────────────────────────┐ │
+  │            │ │ banner · action button                                                  │ │
+  │            │ │ [tab] [tab] [tab]                                                       │ │
+  │            │ │ (Split [336 ▾] for per-split tables) table with filter, copy, Save CSV  │ │
+  │            │ └─────────────────────────────────────────────────────────────────────────┘ │
+  │            │ status line · ⚠ warning box                                                 │
+  └────────────┴─────────────────────────────────────────────────────────────────────────────┘
+  ```
+
+  - ① *Training*: the button *Fit on the training sample*; tabs *Methods* (read-only fixed
+    settings, shown before any run), *Training sample* (the objects with their features and
+    class), *Training results* (method × split: training accuracy, correct, refusals).
+  - ② *Test*: the banner "Classes hidden: the test objects are classified from their feature
+    values only", the button *Classify the test sample*; tabs *Test objects* (feature values
+    only — the class column does not exist), *Predictions* (object × method: 1 / 2 / 0 coloured by
+    the predicted class, never green or red; the score where there is one; *Agreement* and *Most
+    common*), *Predicted classes* (method × split: predicted K1, K2 and refusals, counts and
+    shares).
+  - ③ *Evaluation*: the banner "True classes revealed", the button *Compare with the true
+    classes*; tabs *Table 7*, *Table 8*, *CS-model*, *All results*, *Per object* (✓ / ✗ / 0
+    against the true class), *Confusion* (2 × 2 and refusals per method and split) and *Check*;
+    the results folder, *Write the files*, *Check the written files*, *Open the folder*.
+  - Step states, each shown by an icon and a word, never by colour alone: ○ not run, ◔ running,
+    ✓ done, ⟳ out of date (an earlier step was run again, or the samples or the split folder
+    changed), ⊘ unavailable (the tooltip says why). A step can be opened only when the step before
+    it is done. Alt+← / Alt+→ move between the steps, as on the *Results* page.
+  - *Run all* runs the three stages in one worker; the progress bar names the stage and the split.
+  - Every stage, the reading of the sample options and the check run in a worker thread
+    (`gui.workers.Task`); the window waits for them on closing. The page computes nothing and
+    never offers to change a setting (ADR-079, ADR-080).
+
+## ADR-085 — The blind test: `UnlabelledSample` and `AnswerKey`
+
+*Accepted, 2026-11-24.*
+
+- The input of the *Test* stage is `data.samples.UnlabelledSample`: the indices of the objects in
+  their file, their feature values, the feature types and the feature names. It has no class
+  field and no split marker. `FixedSplit.test_objects()` builds it from the test sample by
+  dropping the class column; `FixedSplit.test_answers()` builds the `AnswerKey` (the same indices
+  and the true classes), which only the *Evaluation* stage receives.
+- Every fitted method of a part classifies through `classify(unlabelled)`, and a part's
+  `classify(trained, unlabelled)` takes nothing else. A `Dataset` (which carries classes) is
+  rejected: by mypy (a static assertion in `services.classifier_parts`, which fails the type check
+  if a `Dataset` were ever accepted) and at run time (`TypeError`).
+- SVM and random forest are fitted again on the training sample at the *Test* stage: the project's
+  baselines fit and predict in one call, and splitting them would change the plug-in signature of
+  every baseline. The fit is deterministic (fixed options, `random_state = 42`), so the decisions
+  are the same as those of a single fit. The k-NN vote keeps the training sample as its model;
+  the CS-model keeps the fitted `CSModel` and classifies with `CSModel.classify` (the Theorem).
+- Tests prove the blindness: shuffling, flipping or deleting the classes of the test objects
+  changes no decision and no score of any method — SVM, random forest, every k-NN row and every
+  CS-model.
+
+## ADR-086 — `csr compare predict`: the blind predictions as a file
+
+*Accepted, 2026-11-24.*
+
+- `csr compare predict [--split KEY] [--out FILE] [--splits FOLDER]` trains the methods of
+  "Tables 7 and 8" on the training sample of one split (336 by default; 341, 367 or 76) and
+  classifies its test objects without their class. It writes one CSV file through the project's
+  CSV writer (ADR-083): the object, then one column per method with the decision 1, 2 or 0. There
+  is no class column.
+- The loader reads the whole split file and checks the convention (ADR-082), the classes
+  included; the command drops the test classes right after (the `AnswerKey` is never built) and
+  never writes them. Without `--out` the file is `predictions-<KEY>.csv` in the working folder, so
+  `experiments/comparison` keeps the files of `csr compare run`.
+
 ## Open questions for the author
 
 *Open, 2026-11-22.* Each is flagged where it is used; none is decided silently.

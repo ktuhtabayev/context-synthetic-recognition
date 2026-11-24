@@ -18,11 +18,34 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   per metric, min–max on the training sample, odd k = 3 … 41, the zero value, α = 0.1 and 0.2.
   It is written to a separate `cs-model` table beside Tables 7 and 8, and its rows are added to the
   results and the summary. Its balanced accuracy stays between 48 % and 57 %.
+- Classifier parts (ADR-084): units of work in three stages — training on the training sample,
+  the test objects classified without their class, and the evaluation against the true classes.
+  The protocol and the registry `services.classifier_parts.CLASSIFIER_PARTS` (with
+  `Registry.remove`); Tables 7 and 8 are the first part. A new part is registered in the services
+  and appears on the *Classifiers* page without a change to the page (`docs/extending.md`).
+- The blind test (ADR-085): `data.samples.UnlabelledSample` (the objects' places, feature values,
+  types and names, and no class), `AnswerKey` (the classes, kept apart for the evaluation) and
+  `Decisions`; `FixedSplit.test_objects()` and `test_answers()`. Tests show that shuffling,
+  flipping or deleting the test classes changes no prediction of any method, and that a dataset
+  with classes is rejected at run time and by mypy.
+- `csr compare predict [--split KEY] [--out FILE]` writes the blind predictions of one split's test
+  objects as CSV: the object and one column per method, no class column (ADR-086).
 
 ### Changed
 
 - The Windows build carries scikit-learn and the article's split files, so the *Classifiers*
-  page works in `csr-gui.exe`. Its self-test also computes Tables 7 and 8 (ADR-081).
+  page works in `csr-gui.exe`. Its self-test also computes Tables 7 and 8 (ADR-081), and checks
+  that the classifier parts are registered.
+- The *Classifiers* page is a staged workbench (ADR-084): a list of parts, the samples (the three
+  article splits, each split alone, Heart's split, with their sizes), and the steps ① Training,
+  ② Test (the classes hidden: test objects, predictions, predicted classes) and ③ Evaluation (the
+  classes revealed: Tables 7 and 8, the CS-model's table, all results, per object, confusion,
+  check, writing the files). Each step shows its state by a symbol and a word (not run, running,
+  done, out of date, unavailable); *Run all* runs the three in a row; Alt+← / Alt+→ move between
+  the steps. Run all on the three article splits gives today's tables and files byte for byte.
+- The comparison runs in three stages (`comparison.stages`); `compare_split` is the three in a row
+  and gives the same numbers. Its SVM and random forest are fitted again on the training sample at
+  the test stage, deterministically (ADR-085).
 
 ### Fixed
 

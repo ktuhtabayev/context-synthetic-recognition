@@ -85,6 +85,7 @@ SHORTCUTS: tuple[tuple[str, str], ...] = (
     ("Ctrl+Z / Ctrl+Y", mark("Undo / redo a change of the configuration")),
     ("Ctrl+1 … Ctrl+8", mark("Go to a page")),
     ("Alt+Left / Alt+Right", mark("Previous / next table or figure of the results")),
+    ("Alt+Left / Alt+Right", mark("Previous / next step of the Classifiers page")),
     ("Ctrl+C", mark("Copy the selected table rows")),
     ("Ctrl+T", mark("Switch between the light and the dark theme")),
     ("Ctrl++ / Ctrl+− / Ctrl+0", mark("Zoom in / out / reset")),
@@ -337,6 +338,8 @@ class MainWindow(QMainWindow):
     def _step(self, direction: int) -> None:
         if self.current_page() is self.results_page:
             self.results_page.step(direction)
+        elif self.current_page() is self.classifiers_page:
+            self.classifiers_page.step(direction)
 
     def _refresh(self) -> None:
         """Enable what is possible now and update the title and the status bar."""

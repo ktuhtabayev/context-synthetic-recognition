@@ -4,12 +4,14 @@ Run from the repository root::
 
     .\.venv\Scripts\python.exe scripts\gui_screenshots.py
     .\.venv\Scripts\python.exe scripts\gui_screenshots.py --target somewhere-else
+    .\.venv\Scripts\python.exe scripts\gui_screenshots.py --only classifiers
 
 The application runs the experiment on Heart-Disease (10, 13, 2) for real — the default settings
 (the article), then the excel-experiment preset — and every page is grabbed at 1360 × 860; the
-window is then rebuilt in Russian and in Uzbek for the two language images. Nothing appears on
-screen: the window is laid out by the native Windows platform (for the system fonts) but never
-mapped.
+window is then rebuilt in Russian and in Uzbek for the two language images. The *Classifiers*
+page is grabbed at each of its three steps after *Run all*, and once in the dark theme;
+``--only classifiers`` makes just those four images. Nothing appears on screen: the window is
+laid out by the native Windows platform (for the system fonts) but never mapped.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ import os
 import shutil
 import tempfile
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"  # the same pixels on every screen
@@ -55,11 +58,48 @@ def run(app: QApplication, window: MainWindow) -> None:
     pump(app)
 
 
+def classifiers(
+    app: QApplication, window: MainWindow, work: Path, shot: Callable[[str], None]
+) -> None:
+    """The Classifiers page: Run all on the article's splits, one image per step, one dark."""
+    # the article's split files under relative paths: no path of this machine is shown
+    shutil.copytree(ROOT / "datasets" / "splits", work / "datasets" / "splits")
+    page = window.classifiers_page
+    window.go_to(page)
+    view = page.view
+    view.splits.setText(str(Path("datasets") / "splits"))
+    view.output.setText(str(Path("experiments") / "comparison"))
+    ended: list[bool] = []
+    view.finished.connect(lambda: ended.append(True))
+    for start in (view.read_options, view.run_all):
+        ended.clear()
+        start()
+        while not ended:
+            pump(app, 0.05)
+    view.finished.disconnect()
+    pump(app)
+    view.go_to_step(0)
+    view.training_view.open("training-results")
+    shot("classifiers-training")
+    view.go_to_step(1)
+    view.test_view.open("predictions")
+    shot("classifiers-test")
+    view.go_to_step(2)
+    view.evaluation_view.open("table-7")
+    shot("classifiers-evaluation")
+    window.set_theme("dark")
+    view.evaluation_view.open("per-object")
+    shot("classifiers-dark")
+    window.set_theme("light")
+
+
 def main() -> None:
     """Drive the application through the workflow and save one image per page."""
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--target", type=Path, default=TARGET, help="folder for the images")
-    target = parser.parse_args().target.resolve()
+    parser.add_argument("--only", choices=("classifiers",), help="make the images of one page only")
+    arguments = parser.parse_args()
+    target = arguments.target.resolve()
     target.mkdir(parents=True, exist_ok=True)
     app = create_application([])
     with tempfile.TemporaryDirectory() as scratch:
@@ -78,6 +118,12 @@ def main() -> None:
             window.grab().save(str(target / f"{name}.png"))
             print("saved", name)  # noqa: T201 - a script
 
+        if arguments.only == "classifiers":
+            classifiers(app, window, work, shot)
+            window.close()
+            pump(app)
+            os.chdir(ROOT)
+            return
         shot("dataset")
         window.go_to(window.configure_page)
         shot("configure")
@@ -113,16 +159,8 @@ def main() -> None:
         shot("compare")
         window.go_to(window.export_page)
         shot("export")
-        # Tables 7 and 8, apart from the workflow: the article's split files under relative paths
-        shutil.copytree(ROOT / "datasets" / "splits", work / "datasets" / "splits")
-        classifiers = window.classifiers_page
-        classifiers.splits.setText(str(Path("datasets") / "splits"))
-        classifiers.output.setText(str(Path("experiments") / "comparison"))
-        window.go_to(classifiers)
-        classifiers.start()
-        while classifiers.is_running():
-            pump(app, 0.05)
-        shot("classifiers")
+        # Tables 7 and 8, apart from the workflow
+        classifiers(app, window, work, shot)
         window.set_theme("dark")
         window.go_to(results)
         results.open("table", "agglomerative-candidates")

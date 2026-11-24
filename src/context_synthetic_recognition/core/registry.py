@@ -187,6 +187,16 @@ class Registry(Generic[T]):
             added += 1
         return added
 
+    def remove(self, name: str) -> PluginInfo[T]:
+        """Unregister the plug-in ``name`` (or an alias of it) and its aliases.
+
+        Raises:
+            RegistryError: Unknown name.
+        """
+        info = self.info(name)
+        self._remove(info.name)
+        return info
+
     def _remove(self, key: str) -> None:
         info = self._plugins.pop(key)
         for alias in info.aliases:
