@@ -722,7 +722,9 @@ def test_decimals_filter_copy_and_save(evaluated: MainWindow, tmp_path: Path) ->
     target = tmp_path / "margins.csv"
     panel.save_dialog = lambda suggested: str(target) if suggested == "margins.csv" else ""
     panel.save_button.click()
-    lines = target.read_text(encoding="utf-8").splitlines()
+    # a byte-order mark, so that Excel reads the file as UTF-8 (ADR-083)
+    assert target.read_bytes().startswith("﻿Additional feature,".encode())
+    lines = target.read_text(encoding="utf-8-sig").splitlines()
     assert lines[0].startswith("Additional feature,Variant,")
     assert len(lines) == 9
     assert "0.14817726709828" in lines[1]  # the file keeps every digit
@@ -1023,6 +1025,12 @@ def test_the_export_page(evaluated: MainWindow, qtbot: QtBot, tmp_path: Path) ->
     assert summary.folder == tmp_path / "out"
     assert list(summary.files) == ["csv", "json"]
     assert (tmp_path / "out" / "trace.json").is_file()
+    # the CSV files open as UTF-8 in Excel: they start with a byte-order mark (ADR-083)
+    for path in summary.files["csv"]:
+        assert path.read_bytes().startswith(b"\xef\xbb\xbf"), path
+    index = (tmp_path / "out" / "tables" / "index.csv").read_text(encoding="utf-8-sig")
+    assert index.startswith("file,key,group,title,rows,columns,note\n")
+    assert not (tmp_path / "out" / "trace.json").read_bytes().startswith(b"\xef\xbb\xbf")
     assert page.status.text() == f"{summary.count} files written to {tmp_path / 'out'}"
     report = page.report.toPlainText().splitlines()
     assert report[0] == f"csv: tables/  ({len(EXPERIMENT_TABLES) + 1} file(s))"

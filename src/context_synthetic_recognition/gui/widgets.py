@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 
 from context_synthetic_recognition.export.figures import FigureSpec, render, save_figure
 from context_synthetic_recognition.export.tables import Cell, Table
-from context_synthetic_recognition.export.text import DEFAULT_DECIMALS, csv_text, write_text
+from context_synthetic_recognition.export.text import DEFAULT_DECIMALS, csv_text, write_csv
 from context_synthetic_recognition.gui.canvas import Canvas
 from context_synthetic_recognition.gui.i18n import tr
 from context_synthetic_recognition.gui.models import SortProxy, TableModel, TableStyle
@@ -361,7 +361,7 @@ class TablePanel(QWidget):
             return
         path = self.save_dialog(f"{table.key}.csv")
         if path:
-            write_text(Path(path), csv_text(table))
+            write_csv(Path(path), csv_text(table))
 
 
 def table_as_tsv(table: Table) -> str:
