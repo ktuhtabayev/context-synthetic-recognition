@@ -184,9 +184,9 @@ def test_csr_run_with_a_config_and_sensitivity(tmp_path: Path) -> None:
 
 
 def test_csr_run_errors() -> None:
-    missing = runner.invoke(app, ["run", "cancer-589", "--no-save"])
+    missing = runner.invoke(app, ["run", "no-such-dataset-7", "--no-save"])
     assert missing.exit_code == EXIT_USAGE
-    assert "unknown dataset 'cancer-589'" in missing.output
+    assert "unknown dataset 'no-such-dataset-7'" in missing.output
 
 
 def test_config_problems_cover_the_evaluation_plugins() -> None:

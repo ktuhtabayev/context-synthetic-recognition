@@ -1,15 +1,18 @@
 """The project's dataset folder: discovery, identity checks and name resolution.
 
-Layout (the author's; ADR-035)::
+Layout (the author's; ADR-035, ADR-087)::
 
     datasets/
       default.dat, default.csv         the default dataset (Heart-Disease (10, 13, 2))
-      raw/<Family>/<Name (m, n, c)>.dat|.csv
-                                       original datasets,
-                                       e.g. raw/Heart-Disease/Heart-Disease (270, 13, 2).dat
+      raw/<Kind>/<Family>/<Name (m, n, c)>.dat|.csv
+                                       original datasets by the kind of their features:
+                                       Heterogeneous, Nominal, Quantitative; e.g. raw/
+                                       Heterogeneous/Heart-Disease/Heart-Disease (270, 13, 2).dat
       synthetic/                       reserved for pre-existing synthetic datasets — not read
-      splits/                          the article's training and test samples — not read here
+      splits/                          training and test samples of fixed splits — not read here
                                        (:mod:`.splits`, ADR-079)
+
+Datasets are found at any depth under ``raw/``, so the kind folders need no configuration.
 
 Every file is in the extended layout (:func:`~context_synthetic_recognition.data.loaders.
 load_extended_layout`): a first row ``m n c``; m rows of n feature values and the class label; a
