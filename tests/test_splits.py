@@ -5,7 +5,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from context_synthetic_recognition.data import FeatureType, FixedSplit, load_split_file
+from context_synthetic_recognition.data import (
+    AnswerKey,
+    Decisions,
+    FeatureType,
+    FixedSplit,
+    UnlabelledSample,
+    load_split_file,
+)
 from context_synthetic_recognition.errors import DatasetError
 
 # the convention: header "m n c" (features only) padded with empty cells, no leading empty cell,
@@ -44,6 +51,36 @@ def test_the_layout_is_read(tmp_path: Path) -> None:
     assert split.test_sizes == (2, 1, 1)
     assert split.training_part.object_ids == ("S₁", "S₃", "S₅")
     assert split.test_part.y.tolist() == [2, 1]
+
+
+def test_the_test_objects_and_their_answer_key(tmp_path: Path) -> None:
+    # ADR-085: the test objects without their class, the classes kept apart
+    split = load_split_file(write(tmp_path, LAYOUT))
+    objects = split.test_objects()
+    assert objects.name == "split: test sample"
+    assert objects.objects.tolist() == [1, 3]
+    assert objects.object_ids == ("S₂", "S₄")
+    assert objects.X.tolist() == [[1.25, 2.0], [2.0, 3.0]]
+    assert objects.feature_names == ("x₁", "x₂")
+    assert objects.quantitative.tolist() == [True, False]
+    assert (objects.m, objects.n) == (2, 2)
+    assert not hasattr(objects, "y")
+    answers = split.test_answers("key")
+    assert answers.classes.tolist() == [2, 1]
+    assert answers.labels == (1, 2)
+    assert answers.sizes == (2, 1, 1)
+    assert answers.matches(objects)
+    with pytest.raises(DatasetError, match="class codes must be 1 … 2"):
+        AnswerKey(answers.objects, np.array([1, 3]), (1, 2))
+    with pytest.raises(DatasetError, match="2 classes for 1 objects"):
+        AnswerKey(np.array([1]), np.array([1, 2]), (1, 2))
+    with pytest.raises(DatasetError, match="need a \\(q × n\\) array with q = 3"):
+        UnlabelledSample(np.array([0, 1, 2]), objects.X, objects.feature_types, ("a", "b"))
+    with pytest.raises(DatasetError, match="2 features, 2 types, 1 names"):
+        UnlabelledSample(objects.objects, objects.X, objects.feature_types, ("a",))
+    assert Decisions(None).same_as(Decisions(None))
+    assert not Decisions(np.array([1])).same_as(Decisions(np.array([2])))
+    assert not Decisions(np.array([1]), np.array([0.5])).same_as(Decisions(np.array([1])))
 
 
 @pytest.mark.parametrize(

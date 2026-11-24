@@ -17,7 +17,9 @@ the file's rows in the file's order — not the order of the original dataset �
 of row i + 1.
 
 A :class:`FixedSplit` holds every object with its class: the classes of the test objects are
-needed to score a method, never to classify (methods get the test objects' features only).
+needed to score a method, never to classify. :meth:`FixedSplit.test_objects` gives the test
+objects without their class and :meth:`FixedSplit.test_answers` their classes, kept apart
+(:mod:`.samples`, ADR-085).
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ import numpy as np
 
 from context_synthetic_recognition.core.arrays import IntArray, readonly
 from context_synthetic_recognition.data.loaders import _number
+from context_synthetic_recognition.data.samples import AnswerKey, UnlabelledSample
 from context_synthetic_recognition.data.schema import Dataset, FeatureType, as_labels
 from context_synthetic_recognition.errors import DatasetError
 
@@ -89,6 +92,30 @@ class FixedSplit:
     def test_part(self) -> Dataset:
         """The test objects as a dataset (their classes are for scoring only)."""
         return self.dataset.subset(self.test)
+
+    def test_objects(self, name: str | None = None) -> UnlabelledSample:
+        """The test objects without their class: what the *Test* stage classifies (ADR-085)."""
+        data = self.dataset
+        return UnlabelledSample(
+            self.test,
+            data.X[self.test],
+            data.feature_types,
+            data.feature_names,
+            name or f"{data.name}: test sample",
+        )
+
+    def test_answers(self, name: str | None = None) -> AnswerKey:
+        """The true classes of the test objects, kept apart: only *Evaluation* reads them.
+
+        The class codes follow the classes of the whole file (1 = K1, 2 = K2, …).
+        """
+        data = self.dataset
+        return AnswerKey(
+            self.test,
+            data.class_index[self.test] + 1,
+            data.classes,
+            name or f"{data.name}: test sample",
+        )
 
     def sizes(self, indices: IntArray) -> tuple[int, ...]:
         """Number of objects and of each class (K1, K2, …) among ``indices``."""

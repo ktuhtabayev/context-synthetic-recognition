@@ -16,7 +16,6 @@ from context_synthetic_recognition.comparison.cs_model import (
 from context_synthetic_recognition.comparison.methods import (
     MethodResult,
     SplitResult,
-    compare_split,
     comparison_config,
     knn_key,
 )
@@ -29,6 +28,7 @@ from context_synthetic_recognition.comparison.settings import (
     SplitSpec,
     percent,
 )
+from context_synthetic_recognition.comparison.stages import compare_split
 
 __all__ = [
     "ALPHAS",

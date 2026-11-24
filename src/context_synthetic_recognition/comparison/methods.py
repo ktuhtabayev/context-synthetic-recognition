@@ -14,29 +14,25 @@ Every setting is fixed here, before any run, and nothing is chosen on the test o
   smaller training index (ADR-008).
 
 Each method is fitted on the training sample only and classifies the test objects without their
-class. Reported per method: the accuracy on the test sample (the tables' cells), the balanced
-accuracy (mean recall of the two classes), the accuracy on the training sample — resubstitution as
-in Definition 2, so a k-NN training object is not its own neighbour — and, per split, the sample
-sizes and the majority-class rate of the test sample.
+class: :mod:`.stages` runs the comparison in three stages (training, test, evaluation), and
+:func:`~.stages.compare_split` is the three in a row. Reported per method: the accuracy on the
+test sample (the tables' cells), the balanced accuracy (mean recall of the two classes), the
+accuracy on the training sample — resubstitution as in Definition 2, so a k-NN training object
+is not its own neighbour — and, per split, the sample sizes and the majority-class rate of the
+test sample.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-import numpy as np
-
-from context_synthetic_recognition.comparison.cs_model import CSModelResult, run_cs_model
+from context_synthetic_recognition.comparison.cs_model import CSModelResult
 from context_synthetic_recognition.comparison.settings import (
     DISTANCE_DECIMALS,
-    KNN_KS,
     KNN_METRICS,
     METHOD_TITLES,
     METRIC_TITLES,
     SEED,
-    SKLEARN_OPTIONS,
-    TABLE_7,
-    TABLE_8,
     SplitSpec,
 )
 from context_synthetic_recognition.config import (
@@ -46,18 +42,8 @@ from context_synthetic_recognition.config import (
     plugin,
 )
 from context_synthetic_recognition.core.arrays import IntArray, readonly
-from context_synthetic_recognition.data.schema import Dataset
-from context_synthetic_recognition.data.splits import FixedSplit
-from context_synthetic_recognition.evaluation.baselines import (
-    BASELINES,
-    BaselineInput,
-    KnnVoteParams,
-    SklearnParams,
-    knn_vote,
-)
 from context_synthetic_recognition.evaluation.metrics import (
     ClassificationMetrics,
-    classification_metrics,
 )
 
 
@@ -160,80 +146,4 @@ def comparison_config(spec: SplitSpec) -> ExperimentConfig:
             operators=tuple(operators),
             distance_decimals=DISTANCE_DECIMALS,
         ),
-    )
-
-
-def _sizes(dataset: Dataset) -> tuple[int, int, int]:
-    k1, k2 = (int(c) for c in np.bincount(dataset.class_index, minlength=2))
-    return dataset.m, k1, k2
-
-
-def compare_split(spec: SplitSpec, split: FixedSplit) -> SplitResult:
-    """Fit every method and the CS-model on the training sample; classify the test sample.
-
-    Raises:
-        ValueError: The split does not have two classes.
-    """
-    if len(split.dataset.classes) != 2:
-        raise ValueError(f"{spec.key}: the comparison needs two classes")
-    config = comparison_config(spec)
-    train, test = split.training_part, split.test_part
-    on_test = BaselineInput(train, test.X, None, config)
-    on_training = BaselineInput(train, train.X, np.arange(train.m, dtype=np.int64), config)
-    truth_test = test.class_index + 1
-    truth_training = train.class_index + 1
-    n_quantitative = int(train.quantitative.sum())
-    results: list[MethodResult] = []
-
-    for key, options in SKLEARN_OPTIONS.items():
-        baseline = BASELINES.get(key)
-        params = SklearnParams(options=dict(options))
-        (tested,) = baseline(on_test, params)
-        (trained,) = baseline(on_training, params)
-        results.append(
-            MethodResult(
-                key=key,
-                method=key,
-                metric=None,
-                k=None,
-                features="all",
-                n_features=train.n,
-                table=TABLE_7,
-                test_decisions=tested.decisions,
-                training_decisions=trained.decisions,
-                test=classification_metrics(truth_test, tested.decisions),
-                training=classification_metrics(truth_training, trained.decisions),
-            )
-        )
-
-    for metric in (*KNN_METRICS, *spec.extra_knn):
-        printed = metric in KNN_METRICS
-        params_knn = KnnVoteParams(ks=KNN_KS, operators=(METRIC_TITLES[metric],))
-        tested_knn = knn_vote(on_test, params_knn)
-        trained_knn = knn_vote(on_training, params_knn)
-        for k, t, r in zip(KNN_KS, tested_knn, trained_knn, strict=True):
-            results.append(
-                MethodResult(
-                    key=knn_key(metric, k),
-                    method="knn",
-                    metric=metric,
-                    k=k,
-                    features="quantitative" if printed else "all",
-                    n_features=n_quantitative if printed else train.n,
-                    table=TABLE_8 if printed else None,
-                    test_decisions=t.decisions,
-                    training_decisions=r.decisions,
-                    test=classification_metrics(truth_test, t.decisions),
-                    training=classification_metrics(truth_training, r.decisions),
-                )
-            )
-
-    return SplitResult(
-        spec=spec,
-        training_sizes=_sizes(train),
-        test_sizes=_sizes(test),
-        n_features=train.n,
-        n_quantitative=n_quantitative,
-        methods=tuple(results),
-        cs_model=run_cs_model(spec, split),
     )
