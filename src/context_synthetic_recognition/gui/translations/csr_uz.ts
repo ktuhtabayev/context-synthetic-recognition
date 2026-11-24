@@ -24,116 +24,28 @@
         <translation>JSON</translation>
     </message>
     <message>
-        <source>Table 7</source>
-        <translation>7-jadval</translation>
-    </message>
-    <message>
-        <source>Table 8</source>
-        <translation>8-jadval</translation>
-    </message>
-    <message>
-        <source>CS-model</source>
-        <translation>CS-model</translation>
-    </message>
-    <message>
-        <source>All results</source>
-        <translation>Barcha natijalar</translation>
-    </message>
-    <message>
-        <source>Check</source>
-        <translation>Tekshirish</translation>
-    </message>
-    <message>
         <source>Classifiers</source>
         <translation>Klassifikatorlar</translation>
     </message>
     <message>
-        <source>Tables 7 and 8: SVM, random forest and k-NN fitted on the article's training samples and scored on its test samples, with the CS-model on the same samples. Apart from the workflow: no dataset or run is needed.</source>
-        <translation>7- va 8-jadvallar: maqoladagi oʻrgatuvchi tanlanmalarda oʻrgatilgan va uning test tanlanmalarida baholangan SVM, tasodifiy oʻrmon va k-NN, shuningdek oʻsha tanlanmalardagi CS-model. Asosiy ish jarayonidan alohida: maʼlumotlar ham, hisoblash ham kerak emas.</translation>
+        <source>Classifier parts in three steps: training on the training sample, the test objects classified without their class, and the comparison with the true classes. Apart from the workflow: no dataset or run is needed.</source>
+        <translation>Klassifikator qismlari uch qadamda: oʻrgatuvchi tanlanmada oʻrgatish, test obyektlarini sinfisiz sinflash va haqiqiy sinflar bilan solishtirish. Asosiy ish jarayonidan alohida: maʼlumotlar ham, hisoblash ham kerak emas.</translation>
     </message>
     <message>
-        <source>The folder of the split files (datasets/splits)</source>
-        <translation>Boʻlinish fayllari papkasi (datasets/splits)</translation>
+        <source>Parts</source>
+        <translation>Qismlar</translation>
     </message>
     <message>
-        <source>Where the tables are written (experiments/comparison)</source>
-        <translation>Jadvallar yoziladigan papka (experiments/comparison)</translation>
+        <source>Hide the parts</source>
+        <translation>Qismlarni yashirish</translation>
     </message>
     <message>
-        <source>Browse…</source>
-        <translation>Tanlash…</translation>
+        <source>Show the parts</source>
+        <translation>Qismlarni koʻrsatish</translation>
     </message>
     <message>
         <source>Run</source>
         <translation>Hisoblash</translation>
-    </message>
-    <message>
-        <source>Fit every method and the CS-model on the training samples (a few seconds)</source>
-        <translation>Har bir usulni va CS-modelni oʻrgatuvchi tanlanmalarda oʻrgatish (bir necha soniya)</translation>
-    </message>
-    <message>
-        <source>Write the files</source>
-        <translation>Fayllarni yozish</translation>
-    </message>
-    <message>
-        <source>The tables as CSV, Markdown and LaTeX, the results and their checksums</source>
-        <translation>Jadvallar CSV, Markdown va LaTeX koʻrinishida, natijalar va ularning nazorat yigʻindilari</translation>
-    </message>
-    <message>
-        <source>Check the written files</source>
-        <translation>Yozilgan fayllarni tekshirish</translation>
-    </message>
-    <message>
-        <source>Compare the files of the results folder with their checksums and a new run</source>
-        <translation>Natijalar papkasidagi fayllarni ularning nazorat yigʻindilari va yangi hisoblash bilan solishtirish</translation>
-    </message>
-    <message>
-        <source>Open the folder</source>
-        <translation>Papkani ochish</translation>
-    </message>
-    <message>
-        <source>Not run yet.</source>
-        <translation>Hali hisoblanmagan.</translation>
-    </message>
-    <message>
-        <source>Running…</source>
-        <translation>Hisoblanmoqda…</translation>
-    </message>
-    <message>
-        <source>Checking…</source>
-        <translation>Tekshirilmoqda…</translation>
-    </message>
-    <message>
-        <source>Failed.</source>
-        <translation>Amalga oshmadi.</translation>
-    </message>
-    <message>
-        <source>Split files</source>
-        <translation>Boʻlinish fayllari</translation>
-    </message>
-    <message>
-        <source>Results folder</source>
-        <translation>Natijalar papkasi</translation>
-    </message>
-    <message>
-        <source>Done: {n} splits from {folder} ({versions}). Not written yet.</source>
-        <translation>Tayyor: {folder} papkasidan {n} ta boʻlinish ({versions}). Fayllar hali yozilmagan.</translation>
-    </message>
-    <message>
-        <source>{n} files written to {folder}</source>
-        <translation>Yozilgan fayllar soni: {n}; papka: {folder}</translation>
-    </message>
-    <message>
-        <source>Check passed: {folder}</source>
-        <translation>Tekshiruvdan oʻtdi: {folder}</translation>
-    </message>
-    <message>
-        <source>Check failed: {n} problem(s) in {folder}</source>
-        <translation>Tekshiruvdan oʻtmadi: {folder} papkasida {n} ta muammo</translation>
-    </message>
-    <message>
-        <source>Split {stage}…</source>
-        <translation>Boʻlinish {stage}…</translation>
     </message>
     <message>
         <source>Created (UTC)</source>
@@ -158,6 +70,10 @@
     <message>
         <source>Tick two or more runs to see them side by side. Differences are marked; the second tab lists the settings that differ.</source>
         <translation>Yonma-yon koʻrish uchun ikki yoki undan ortiq hisoblashni belgilang. Farqlar ajratib koʻrsatilgan; ikkinchi varaqda farq qiluvchi sozlamalar keltirilgan.</translation>
+    </message>
+    <message>
+        <source>Browse…</source>
+        <translation>Tanlash…</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -712,6 +628,10 @@
         <translation>Rasmlar ranglari</translation>
     </message>
     <message>
+        <source>Open the folder</source>
+        <translation>Papkani ochish</translation>
+    </message>
+    <message>
         <source>Export folder</source>
         <translation>Eksport papkasi</translation>
     </message>
@@ -750,6 +670,10 @@
     <message>
         <source>note: {note}</source>
         <translation>izoh: {note}</translation>
+    </message>
+    <message>
+        <source>{n} files written to {folder}</source>
+        <translation>Yozilgan fayllar soni: {n}; papka: {folder}</translation>
     </message>
     <message>
         <source>Export failed: {message}</source>
@@ -1140,6 +1064,10 @@
         <translation>Natijalarning oldingi / keyingi jadvali yoki rasmi</translation>
     </message>
     <message>
+        <source>Previous / next step of the Classifiers page</source>
+        <translation>Klassifikatorlar sahifasining oldingi / keyingi qadami</translation>
+    </message>
+    <message>
         <source>Copy the selected table rows</source>
         <translation>Jadvalning tanlangan satrlaridan nusxa olish</translation>
     </message>
@@ -1338,6 +1266,286 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
     <message>
         <source>{path} is not a run folder</source>
         <translation>{path} hisoblash papkasi emas</translation>
+    </message>
+    <message>
+        <source>① Training</source>
+        <translation>① Oʻrgatish</translation>
+    </message>
+    <message>
+        <source>② Test</source>
+        <translation>② Test</translation>
+    </message>
+    <message>
+        <source>③ Evaluation</source>
+        <translation>③ Baholash</translation>
+    </message>
+    <message>
+        <source>Methods</source>
+        <translation>Usullar</translation>
+    </message>
+    <message>
+        <source>Training results</source>
+        <translation>Oʻrgatish natijalari</translation>
+    </message>
+    <message>
+        <source>Test objects</source>
+        <translation>Test obyektlari</translation>
+    </message>
+    <message>
+        <source>Predictions</source>
+        <translation>Bashoratlar</translation>
+    </message>
+    <message>
+        <source>Predicted classes</source>
+        <translation>Bashorat qilingan sinflar</translation>
+    </message>
+    <message>
+        <source>Per object</source>
+        <translation>Obyektlar boʻyicha</translation>
+    </message>
+    <message>
+        <source>Confusion</source>
+        <translation>Xatolar matritsasi</translation>
+    </message>
+    <message>
+        <source>Check</source>
+        <translation>Tekshirish</translation>
+    </message>
+    <message>
+        <source>Table 7</source>
+        <translation>7-jadval</translation>
+    </message>
+    <message>
+        <source>Table 8</source>
+        <translation>8-jadval</translation>
+    </message>
+    <message>
+        <source>CS-model</source>
+        <translation>CS-model</translation>
+    </message>
+    <message>
+        <source>All results</source>
+        <translation>Barcha natijalar</translation>
+    </message>
+    <message>
+        <source>not run</source>
+        <translation>bajarilmagan</translation>
+    </message>
+    <message>
+        <source>running</source>
+        <translation>bajarilmoqda</translation>
+    </message>
+    <message>
+        <source>done</source>
+        <translation>bajarildi</translation>
+    </message>
+    <message>
+        <source>out of date</source>
+        <translation>eskirgan</translation>
+    </message>
+    <message>
+        <source>unavailable</source>
+        <translation>mavjud emas</translation>
+    </message>
+    <message>
+        <source>The split whose table is shown</source>
+        <translation>Jadvali koʻrsatilgan boʻlinish</translation>
+    </message>
+    <message>
+        <source>Split</source>
+        <translation>Boʻlinish</translation>
+    </message>
+    <message>
+        <source>What the part runs on, with the sizes of the samples</source>
+        <translation>Qism nimada bajariladi, tanlanmalar hajmi bilan</translation>
+    </message>
+    <message>
+        <source>The folder the samples are read from</source>
+        <translation>Tanlanmalar oʻqiladigan papka</translation>
+    </message>
+    <message>
+        <source>Run all</source>
+        <translation>Hammasini bajarish</translation>
+    </message>
+    <message>
+        <source>Training, test and evaluation in a row</source>
+        <translation>Oʻrgatish, test va baholash ketma-ket</translation>
+    </message>
+    <message>
+        <source>Fit every method on the training sample, with its fixed settings</source>
+        <translation>Har bir usulni oʻzgarmas sozlamalari bilan oʻrgatuvchi tanlanmada oʻrgatish</translation>
+    </message>
+    <message>
+        <source>Classify the test objects from their feature values; their classes are not used</source>
+        <translation>Test obyektlarini alomatlarining qiymatlari boʻyicha sinflash; ularning sinflari ishlatilmaydi</translation>
+    </message>
+    <message>
+        <source>Compare every decision with the true class of the object</source>
+        <translation>Har bir qarorni obyektning haqiqiy sinfi bilan solishtirish</translation>
+    </message>
+    <message>
+        <source>Where the files are written and checked</source>
+        <translation>Fayllar yoziladigan va tekshiriladigan joy</translation>
+    </message>
+    <message>
+        <source>Write the files</source>
+        <translation>Fayllarni yozish</translation>
+    </message>
+    <message>
+        <source>Check the written files</source>
+        <translation>Yozilgan fayllarni tekshirish</translation>
+    </message>
+    <message>
+        <source>Compare the files of the results folder with their checksums and a new run</source>
+        <translation>Natijalar papkasidagi fayllarni ularning nazorat yigʻindilari va yangi hisoblash bilan solishtirish</translation>
+    </message>
+    <message>
+        <source>Not run yet.</source>
+        <translation>Hali hisoblanmagan.</translation>
+    </message>
+    <message>
+        <source>The samples have not been read yet.</source>
+        <translation>Tanlanmalar hali oʻqilmagan.</translation>
+    </message>
+    <message>
+        <source>Choose the samples.</source>
+        <translation>Tanlanmalarni tanlang.</translation>
+    </message>
+    <message>
+        <source>Compare with the true classes first.</source>
+        <translation>Avval haqiqiy sinflar bilan solishtiring.</translation>
+    </message>
+    <message>
+        <source>Reading the samples…</source>
+        <translation>Tanlanmalar oʻqilmoqda…</translation>
+    </message>
+    <message>
+        <source>The samples changed.</source>
+        <translation>Tanlanmalar oʻzgardi.</translation>
+    </message>
+    <message>
+        <source>Split files</source>
+        <translation>Boʻlinish fayllari</translation>
+    </message>
+    <message>
+        <source>Results folder</source>
+        <translation>Natijalar papkasi</translation>
+    </message>
+    <message>
+        <source>Fitting on the training sample…</source>
+        <translation>Oʻrgatuvchi tanlanmada oʻrgatilmoqda…</translation>
+    </message>
+    <message>
+        <source>Classifying the test objects without their class…</source>
+        <translation>Test obyektlari sinfisiz sinflanmoqda…</translation>
+    </message>
+    <message>
+        <source>Comparing with the true classes…</source>
+        <translation>Haqiqiy sinflar bilan solishtirilmoqda…</translation>
+    </message>
+    <message>
+        <source>Running the three steps…</source>
+        <translation>Uch qadam bajarilmoqda…</translation>
+    </message>
+    <message>
+        <source>① Training was run again.</source>
+        <translation>① Oʻrgatish qayta bajarildi.</translation>
+    </message>
+    <message>
+        <source>② Test was run again.</source>
+        <translation>② Test qayta bajarildi.</translation>
+    </message>
+    <message>
+        <source>Compared with the true classes.</source>
+        <translation>Haqiqiy sinflar bilan solishtirildi.</translation>
+    </message>
+    <message>
+        <source>Training, test and evaluation done.</source>
+        <translation>Oʻrgatish, test va baholash bajarildi.</translation>
+    </message>
+    <message>
+        <source>Writing the files…</source>
+        <translation>Fayllar yozilmoqda…</translation>
+    </message>
+    <message>
+        <source>Checking…</source>
+        <translation>Tekshirilmoqda…</translation>
+    </message>
+    <message>
+        <source>Failed.</source>
+        <translation>Amalga oshmadi.</translation>
+    </message>
+    <message>
+        <source>Samples</source>
+        <translation>Tanlanmalar</translation>
+    </message>
+    <message>
+        <source>Fit on the training sample</source>
+        <translation>Oʻrgatuvchi tanlanmada oʻrgatish</translation>
+    </message>
+    <message>
+        <source>Classify the test sample</source>
+        <translation>Test tanlanmani sinflash</translation>
+    </message>
+    <message>
+        <source>Classes hidden: the test objects are classified from their feature values only.</source>
+        <translation>Sinflar yashirilgan: test obyektlari faqat alomatlarining qiymatlari boʻyicha sinflanadi.</translation>
+    </message>
+    <message>
+        <source>Compare with the true classes</source>
+        <translation>Haqiqiy sinflar bilan solishtirish</translation>
+    </message>
+    <message>
+        <source>True classes revealed: the decisions are compared with the test objects' classes.</source>
+        <translation>Haqiqiy sinflar ochildi: qarorlar test obyektlarining sinflari bilan solishtiriladi.</translation>
+    </message>
+    <message>
+        <source>The tables as CSV, Markdown and LaTeX, the results and their checksums</source>
+        <translation>Jadvallar CSV, Markdown va LaTeX koʻrinishida, natijalar va ularning nazorat yigʻindilari</translation>
+    </message>
+    <message>
+        <source>Fit the methods to see the training sample and results.</source>
+        <translation>Oʻrgatuvchi tanlanma va natijalarni koʻrish uchun usullarni oʻrgating.</translation>
+    </message>
+    <message>
+        <source>Not classified yet.</source>
+        <translation>Hali sinflanmagan.</translation>
+    </message>
+    <message>
+        <source>Not compared yet.</source>
+        <translation>Hali solishtirilmagan.</translation>
+    </message>
+    <message>
+        <source>The split folder changed.</source>
+        <translation>Boʻlinishlar papkasi oʻzgardi.</translation>
+    </message>
+    <message>
+        <source>Opens when the step before it is done.</source>
+        <translation>Oldingi qadam bajarilganda ochiladi.</translation>
+    </message>
+    <message>
+        <source>Samples read from {folder}.</source>
+        <translation>Tanlanmalar {folder} dan oʻqildi.</translation>
+    </message>
+    <message>
+        <source>Fitted on {n} training sample(s) from {folder}.</source>
+        <translation>{folder} dagi {n} ta oʻrgatuvchi tanlanmada oʻrgatildi.</translation>
+    </message>
+    <message>
+        <source>{n} test object(s) classified without their class.</source>
+        <translation>{n} ta test obyekti sinfisiz sinflandi.</translation>
+    </message>
+    <message>
+        <source>Check passed: {folder}</source>
+        <translation>Tekshiruvdan oʻtdi: {folder}</translation>
+    </message>
+    <message>
+        <source>Check failed: {n} problem(s) in {folder}</source>
+        <translation>Tekshiruvdan oʻtmadi: {folder} papkasida {n} ta muammo</translation>
+    </message>
+    <message>
+        <source>Check the written files to see this.</source>
+        <translation>Buni koʻrish uchun yozilgan fayllarni tekshiring.</translation>
     </message>
 </context>
 <context>

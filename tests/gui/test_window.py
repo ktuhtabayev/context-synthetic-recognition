@@ -548,6 +548,7 @@ def test_the_self_test(
     assert "ok    experiment: TUPLAM = {a₁, a₃, a₂}" in lines  # the default preset
     assert "ok    results: a table and a figure" in lines
     assert any(line.startswith("ok    export: excel, csv, json") for line in lines)
+    assert "ok    classifier parts: tables-7-8" in lines
     # from source and away from the project there are no split files to compute Tables 7, 8
     assert "ok    comparison: not checked here — no datasets folder found" in lines[-2]
     assert lines[-1] == "passed"

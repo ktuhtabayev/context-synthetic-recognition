@@ -286,6 +286,15 @@ QLabel#decision {{
     font-weight: 600;
 }}
 
+QLabel#stepBanner {{
+    background-color: {c.accent_soft};
+    border: 1px solid {c.accent};
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-weight: 600;
+}}
+QLabel#stepLine {{ color: {c.border_strong}; }}
+
 /* ---- cards */
 QFrame#card, QGroupBox {{
     background-color: {c.surface};
@@ -373,6 +382,15 @@ QPushButton#primary:disabled {{
     color: {c.disabled_text};
     border: 1px solid {c.border};
 }}
+
+QPushButton#step {{ padding: 5px 10px; }}
+QPushButton#step:checked {{
+    background-color: {c.accent_soft};
+    border: 1px solid {c.accent};
+    font-weight: 600;
+}}
+QPushButton#step:disabled {{ background-color: {c.window}; color: {c.disabled_text}; }}
+QPushButton#partsToggle {{ padding: 4px 7px; }}
 
 /* ---- tables and trees */
 QTableView, QTreeWidget, QListWidget, QFrame#card QTableView, QGroupBox QTableView,

@@ -24,116 +24,28 @@
         <translation>JSON</translation>
     </message>
     <message>
-        <source>Table 7</source>
-        <translation>Таблица 7</translation>
-    </message>
-    <message>
-        <source>Table 8</source>
-        <translation>Таблица 8</translation>
-    </message>
-    <message>
-        <source>CS-model</source>
-        <translation>CS-модель</translation>
-    </message>
-    <message>
-        <source>All results</source>
-        <translation>Все результаты</translation>
-    </message>
-    <message>
-        <source>Check</source>
-        <translation>Проверка</translation>
-    </message>
-    <message>
         <source>Classifiers</source>
         <translation>Классификаторы</translation>
     </message>
     <message>
-        <source>Tables 7 and 8: SVM, random forest and k-NN fitted on the article's training samples and scored on its test samples, with the CS-model on the same samples. Apart from the workflow: no dataset or run is needed.</source>
-        <translation>Таблицы 7 и 8: SVM, случайный лес и k-NN, обученные на обучающих выборках статьи и оценённые на её тестовых выборках, и CS-модель на тех же выборках. Отдельно от основного процесса: набор данных и запуск не нужны.</translation>
+        <source>Classifier parts in three steps: training on the training sample, the test objects classified without their class, and the comparison with the true classes. Apart from the workflow: no dataset or run is needed.</source>
+        <translation>Части классификаторов в три шага: обучение на обучающей выборке, классификация тестовых объектов без их класса и сравнение с истинными классами. Отдельно от основного процесса: набор данных и запуск не нужны.</translation>
     </message>
     <message>
-        <source>The folder of the split files (datasets/splits)</source>
-        <translation>Папка файлов разбиений (datasets/splits)</translation>
+        <source>Parts</source>
+        <translation>Части</translation>
     </message>
     <message>
-        <source>Where the tables are written (experiments/comparison)</source>
-        <translation>Куда записываются таблицы (experiments/comparison)</translation>
+        <source>Hide the parts</source>
+        <translation>Скрыть части</translation>
     </message>
     <message>
-        <source>Browse…</source>
-        <translation>Обзор…</translation>
+        <source>Show the parts</source>
+        <translation>Показать части</translation>
     </message>
     <message>
         <source>Run</source>
         <translation>Запуск</translation>
-    </message>
-    <message>
-        <source>Fit every method and the CS-model on the training samples (a few seconds)</source>
-        <translation>Обучить каждый метод и CS-модель на обучающих выборках (несколько секунд)</translation>
-    </message>
-    <message>
-        <source>Write the files</source>
-        <translation>Записать файлы</translation>
-    </message>
-    <message>
-        <source>The tables as CSV, Markdown and LaTeX, the results and their checksums</source>
-        <translation>Таблицы в форматах CSV, Markdown и LaTeX, результаты и их контрольные суммы</translation>
-    </message>
-    <message>
-        <source>Check the written files</source>
-        <translation>Проверить записанные файлы</translation>
-    </message>
-    <message>
-        <source>Compare the files of the results folder with their checksums and a new run</source>
-        <translation>Сравнить файлы папки результатов с их контрольными суммами и с новым запуском</translation>
-    </message>
-    <message>
-        <source>Open the folder</source>
-        <translation>Открыть папку</translation>
-    </message>
-    <message>
-        <source>Not run yet.</source>
-        <translation>Ещё не запускалось.</translation>
-    </message>
-    <message>
-        <source>Running…</source>
-        <translation>Выполняется…</translation>
-    </message>
-    <message>
-        <source>Checking…</source>
-        <translation>Проверка…</translation>
-    </message>
-    <message>
-        <source>Failed.</source>
-        <translation>Не удалось.</translation>
-    </message>
-    <message>
-        <source>Split files</source>
-        <translation>Файлы разбиений</translation>
-    </message>
-    <message>
-        <source>Results folder</source>
-        <translation>Папка результатов</translation>
-    </message>
-    <message>
-        <source>Done: {n} splits from {folder} ({versions}). Not written yet.</source>
-        <translation>Готово: разбиений {n} из {folder} ({versions}). Файлы ещё не записаны.</translation>
-    </message>
-    <message>
-        <source>{n} files written to {folder}</source>
-        <translation>Записано файлов: {n}; папка: {folder}</translation>
-    </message>
-    <message>
-        <source>Check passed: {folder}</source>
-        <translation>Проверка пройдена: {folder}</translation>
-    </message>
-    <message>
-        <source>Check failed: {n} problem(s) in {folder}</source>
-        <translation>Проверка не пройдена: проблем {n} в {folder}</translation>
-    </message>
-    <message>
-        <source>Split {stage}…</source>
-        <translation>Разбиение {stage}…</translation>
     </message>
     <message>
         <source>Created (UTC)</source>
@@ -158,6 +70,10 @@
     <message>
         <source>Tick two or more runs to see them side by side. Differences are marked; the second tab lists the settings that differ.</source>
         <translation>Отметьте два или более запусков, чтобы увидеть их рядом. Различия выделены; на второй вкладке перечислены отличающиеся настройки.</translation>
+    </message>
+    <message>
+        <source>Browse…</source>
+        <translation>Обзор…</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -712,6 +628,10 @@
         <translation>Цвета рисунков</translation>
     </message>
     <message>
+        <source>Open the folder</source>
+        <translation>Открыть папку</translation>
+    </message>
+    <message>
         <source>Export folder</source>
         <translation>Папка экспорта</translation>
     </message>
@@ -750,6 +670,10 @@
     <message>
         <source>note: {note}</source>
         <translation>примечание: {note}</translation>
+    </message>
+    <message>
+        <source>{n} files written to {folder}</source>
+        <translation>Записано файлов: {n}; папка: {folder}</translation>
     </message>
     <message>
         <source>Export failed: {message}</source>
@@ -1140,6 +1064,10 @@
         <translation>Предыдущая / следующая таблица или рисунок результатов</translation>
     </message>
     <message>
+        <source>Previous / next step of the Classifiers page</source>
+        <translation>Предыдущий / следующий шаг страницы классификаторов</translation>
+    </message>
+    <message>
         <source>Copy the selected table rows</source>
         <translation>Копировать выбранные строки таблицы</translation>
     </message>
@@ -1338,6 +1266,286 @@ The default preset follows the article. Settings that deviate from it are switch
     <message>
         <source>{path} is not a run folder</source>
         <translation>{path} не является папкой запуска</translation>
+    </message>
+    <message>
+        <source>① Training</source>
+        <translation>① Обучение</translation>
+    </message>
+    <message>
+        <source>② Test</source>
+        <translation>② Тест</translation>
+    </message>
+    <message>
+        <source>③ Evaluation</source>
+        <translation>③ Оценка</translation>
+    </message>
+    <message>
+        <source>Methods</source>
+        <translation>Методы</translation>
+    </message>
+    <message>
+        <source>Training results</source>
+        <translation>Результаты обучения</translation>
+    </message>
+    <message>
+        <source>Test objects</source>
+        <translation>Тестовые объекты</translation>
+    </message>
+    <message>
+        <source>Predictions</source>
+        <translation>Предсказания</translation>
+    </message>
+    <message>
+        <source>Predicted classes</source>
+        <translation>Предсказанные классы</translation>
+    </message>
+    <message>
+        <source>Per object</source>
+        <translation>По объектам</translation>
+    </message>
+    <message>
+        <source>Confusion</source>
+        <translation>Матрица ошибок</translation>
+    </message>
+    <message>
+        <source>Check</source>
+        <translation>Проверка</translation>
+    </message>
+    <message>
+        <source>Table 7</source>
+        <translation>Таблица 7</translation>
+    </message>
+    <message>
+        <source>Table 8</source>
+        <translation>Таблица 8</translation>
+    </message>
+    <message>
+        <source>CS-model</source>
+        <translation>CS-модель</translation>
+    </message>
+    <message>
+        <source>All results</source>
+        <translation>Все результаты</translation>
+    </message>
+    <message>
+        <source>not run</source>
+        <translation>не выполнен</translation>
+    </message>
+    <message>
+        <source>running</source>
+        <translation>выполняется</translation>
+    </message>
+    <message>
+        <source>done</source>
+        <translation>выполнен</translation>
+    </message>
+    <message>
+        <source>out of date</source>
+        <translation>устарел</translation>
+    </message>
+    <message>
+        <source>unavailable</source>
+        <translation>недоступен</translation>
+    </message>
+    <message>
+        <source>The split whose table is shown</source>
+        <translation>Разбиение, таблица которого показана</translation>
+    </message>
+    <message>
+        <source>Split</source>
+        <translation>Разбиение</translation>
+    </message>
+    <message>
+        <source>What the part runs on, with the sizes of the samples</source>
+        <translation>На чём выполняется часть, с объёмами выборок</translation>
+    </message>
+    <message>
+        <source>The folder the samples are read from</source>
+        <translation>Папка, из которой читаются выборки</translation>
+    </message>
+    <message>
+        <source>Run all</source>
+        <translation>Выполнить всё</translation>
+    </message>
+    <message>
+        <source>Training, test and evaluation in a row</source>
+        <translation>Обучение, тест и оценка подряд</translation>
+    </message>
+    <message>
+        <source>Fit every method on the training sample, with its fixed settings</source>
+        <translation>Обучить каждый метод на обучающей выборке с его фиксированными настройками</translation>
+    </message>
+    <message>
+        <source>Classify the test objects from their feature values; their classes are not used</source>
+        <translation>Классифицировать тестовые объекты по значениям признаков; их классы не используются</translation>
+    </message>
+    <message>
+        <source>Compare every decision with the true class of the object</source>
+        <translation>Сравнить каждое решение с истинным классом объекта</translation>
+    </message>
+    <message>
+        <source>Where the files are written and checked</source>
+        <translation>Куда записываются и где проверяются файлы</translation>
+    </message>
+    <message>
+        <source>Write the files</source>
+        <translation>Записать файлы</translation>
+    </message>
+    <message>
+        <source>Check the written files</source>
+        <translation>Проверить записанные файлы</translation>
+    </message>
+    <message>
+        <source>Compare the files of the results folder with their checksums and a new run</source>
+        <translation>Сравнить файлы папки результатов с их контрольными суммами и с новым запуском</translation>
+    </message>
+    <message>
+        <source>Not run yet.</source>
+        <translation>Ещё не запускалось.</translation>
+    </message>
+    <message>
+        <source>The samples have not been read yet.</source>
+        <translation>Выборки ещё не прочитаны.</translation>
+    </message>
+    <message>
+        <source>Choose the samples.</source>
+        <translation>Выберите выборки.</translation>
+    </message>
+    <message>
+        <source>Compare with the true classes first.</source>
+        <translation>Сначала сравните с истинными классами.</translation>
+    </message>
+    <message>
+        <source>Reading the samples…</source>
+        <translation>Чтение выборок…</translation>
+    </message>
+    <message>
+        <source>The samples changed.</source>
+        <translation>Выборки изменились.</translation>
+    </message>
+    <message>
+        <source>Split files</source>
+        <translation>Файлы разбиений</translation>
+    </message>
+    <message>
+        <source>Results folder</source>
+        <translation>Папка результатов</translation>
+    </message>
+    <message>
+        <source>Fitting on the training sample…</source>
+        <translation>Обучение на обучающей выборке…</translation>
+    </message>
+    <message>
+        <source>Classifying the test objects without their class…</source>
+        <translation>Классификация тестовых объектов без их класса…</translation>
+    </message>
+    <message>
+        <source>Comparing with the true classes…</source>
+        <translation>Сравнение с истинными классами…</translation>
+    </message>
+    <message>
+        <source>Running the three steps…</source>
+        <translation>Выполнение трёх шагов…</translation>
+    </message>
+    <message>
+        <source>① Training was run again.</source>
+        <translation>① Обучение выполнено заново.</translation>
+    </message>
+    <message>
+        <source>② Test was run again.</source>
+        <translation>② Тест выполнен заново.</translation>
+    </message>
+    <message>
+        <source>Compared with the true classes.</source>
+        <translation>Сравнено с истинными классами.</translation>
+    </message>
+    <message>
+        <source>Training, test and evaluation done.</source>
+        <translation>Обучение, тест и оценка выполнены.</translation>
+    </message>
+    <message>
+        <source>Writing the files…</source>
+        <translation>Запись файлов…</translation>
+    </message>
+    <message>
+        <source>Checking…</source>
+        <translation>Проверка…</translation>
+    </message>
+    <message>
+        <source>Failed.</source>
+        <translation>Не удалось.</translation>
+    </message>
+    <message>
+        <source>Samples</source>
+        <translation>Выборки</translation>
+    </message>
+    <message>
+        <source>Fit on the training sample</source>
+        <translation>Обучить на обучающей выборке</translation>
+    </message>
+    <message>
+        <source>Classify the test sample</source>
+        <translation>Классифицировать тестовую выборку</translation>
+    </message>
+    <message>
+        <source>Classes hidden: the test objects are classified from their feature values only.</source>
+        <translation>Классы скрыты: тестовые объекты классифицируются только по значениям их признаков.</translation>
+    </message>
+    <message>
+        <source>Compare with the true classes</source>
+        <translation>Сравнить с истинными классами</translation>
+    </message>
+    <message>
+        <source>True classes revealed: the decisions are compared with the test objects' classes.</source>
+        <translation>Истинные классы открыты: решения сравниваются с классами тестовых объектов.</translation>
+    </message>
+    <message>
+        <source>The tables as CSV, Markdown and LaTeX, the results and their checksums</source>
+        <translation>Таблицы в форматах CSV, Markdown и LaTeX, результаты и их контрольные суммы</translation>
+    </message>
+    <message>
+        <source>Fit the methods to see the training sample and results.</source>
+        <translation>Обучите методы, чтобы увидеть обучающую выборку и результаты.</translation>
+    </message>
+    <message>
+        <source>Not classified yet.</source>
+        <translation>Ещё не классифицировано.</translation>
+    </message>
+    <message>
+        <source>Not compared yet.</source>
+        <translation>Ещё не сравнивалось.</translation>
+    </message>
+    <message>
+        <source>The split folder changed.</source>
+        <translation>Папка разбиений изменилась.</translation>
+    </message>
+    <message>
+        <source>Opens when the step before it is done.</source>
+        <translation>Открывается, когда выполнен предыдущий шаг.</translation>
+    </message>
+    <message>
+        <source>Samples read from {folder}.</source>
+        <translation>Выборки прочитаны из {folder}.</translation>
+    </message>
+    <message>
+        <source>Fitted on {n} training sample(s) from {folder}.</source>
+        <translation>Обучено на обучающих выборках ({n}) из {folder}.</translation>
+    </message>
+    <message>
+        <source>{n} test object(s) classified without their class.</source>
+        <translation>Тестовых объектов, классифицированных без их класса: {n}.</translation>
+    </message>
+    <message>
+        <source>Check passed: {folder}</source>
+        <translation>Проверка пройдена: {folder}</translation>
+    </message>
+    <message>
+        <source>Check failed: {n} problem(s) in {folder}</source>
+        <translation>Проверка не пройдена: проблем {n} в {folder}</translation>
+    </message>
+    <message>
+        <source>Check the written files to see this.</source>
+        <translation>Проверьте записанные файлы, чтобы увидеть это.</translation>
     </message>
 </context>
 </TS>

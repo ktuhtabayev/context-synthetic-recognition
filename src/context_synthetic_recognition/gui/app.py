@@ -21,6 +21,7 @@ from context_synthetic_recognition.gui.i18n import LANGUAGES, SOURCE_LANGUAGE, s
 from context_synthetic_recognition.gui.settings import APPLICATION, ORGANIZATION, Settings
 from context_synthetic_recognition.gui.window import APP_TITLE, MainWindow
 from context_synthetic_recognition.gui.workers import comparison_job, export_job
+from context_synthetic_recognition.services.classifier_parts import parts
 from context_synthetic_recognition.services.comparison import splits_folder
 
 
@@ -182,6 +183,9 @@ def _self_test(app: QApplication, lines: list[str]) -> bool:
             )
             missing = [f for f in formats if not written.files.get(f)]
             check(f"export: {', '.join(formats)} ({written.count} files)", not missing)
+        # the Classifiers page lists the registered parts (imported by name: ADR-084)
+        found = [part.key for part in parts()]
+        check(f"classifier parts: {', '.join(found) or 'none'}", "tables-7-8" in found)
         _check_comparison(check)
         window.close()
         app.processEvents()
@@ -193,8 +197,9 @@ def self_test(report: Path | None = None) -> int:
 
     The window is built by the platform but never mapped on screen: every language is loaded,
     the default dataset is opened, the experiment is run in the worker thread, a table and a
-    figure of the results are drawn, the run is exported and Tables 7 and 8 are computed. The
-    user's settings are not touched and nothing is written besides the report.
+    figure of the results are drawn, the run is exported, the classifier parts are registered and
+    Tables 7 and 8 are computed. The user's settings are not touched and nothing is written
+    besides the report.
 
     Args:
         report: A file to write what was checked to (a windowed program has no console).

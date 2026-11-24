@@ -3,8 +3,9 @@
 A :class:`Task` runs one function in a worker thread and reports through signals (which Qt
 delivers in the interface's thread): progress, log lines, the result or the error. The functions
 themselves — :func:`run_job`, :func:`open_job`, :func:`export_job`, :func:`comparison_job`,
-:func:`comparison_check_job` — are plain Python on top of the services, so they are tested
-without a thread.
+:func:`comparison_check_job` and the stages of a classifier part (:func:`part_train_job`,
+:func:`part_classify_job`, :func:`part_evaluate_job`, :func:`part_run_all_job` …) — are plain
+Python on top of the services, so they are tested without a thread.
 """
 
 from __future__ import annotations
@@ -19,8 +20,8 @@ from PySide6.QtCore import QObject, QThread, Signal
 
 from context_synthetic_recognition.comparison import SPLITS
 from context_synthetic_recognition.config import ExperimentConfig
-from context_synthetic_recognition.data import Dataset
-from context_synthetic_recognition.errors import CSRError
+from context_synthetic_recognition.data import AnswerKey, Dataset, UnlabelledSample
+from context_synthetic_recognition.errors import ConfigError, CSRError
 from context_synthetic_recognition.evaluation.protocols import EvaluationCancelledError
 from context_synthetic_recognition.export import (
     ExportOptions,
@@ -31,6 +32,19 @@ from context_synthetic_recognition.export import (
 )
 from context_synthetic_recognition.export.run import AUTO_SENSITIVITY_OBJECTS
 from context_synthetic_recognition.log import PACKAGE_LOGGER
+from context_synthetic_recognition.services import classifier_parts as parts
+from context_synthetic_recognition.services.classifier_parts import (
+    CheckablePart,
+    ClassifierPart,
+    Evaluation,
+    PartCheck,
+    Predictions,
+    SampleOption,
+    SampleSet,
+    StageTable,
+    TrainedPart,
+    WritablePart,
+)
 from context_synthetic_recognition.services.comparison import (
     ComparisonCheck,
     ComparisonOutcome,
@@ -160,6 +174,180 @@ def comparison_check_job(
     if progress is not None:
         progress("done", len(SPLITS), len(SPLITS))
     return check
+
+
+# ---------------------------------------------------------------- the Classifiers page (ADR-084)
+
+
+@dataclass(frozen=True, eq=False)
+class TrainingStep:
+    """① Training of a classifier part, with the tabs to show."""
+
+    samples: SampleSet
+    trained: TrainedPart
+    tabs: tuple[StageTable, ...]
+    """The tabs of the *Training* step."""
+    test_tabs: tuple[StageTable, ...]
+    """The tabs of the *Test* step before the objects are classified (*Test objects*)."""
+
+
+@dataclass(frozen=True, eq=False)
+class TestStep:
+    """② Test: the decisions for the objects classified without their class, with the tabs."""
+
+    predictions: Predictions
+    tabs: tuple[StageTable, ...]
+
+
+@dataclass(frozen=True, eq=False)
+class EvaluationStep:
+    """③ Evaluation: the decisions against the true classes, with the tabs."""
+
+    evaluation: Evaluation
+    tabs: tuple[StageTable, ...]
+    write_problem: str = ""
+    """Why the evaluation cannot be written (empty if it can, or if the part writes nothing)."""
+
+
+@dataclass(frozen=True, eq=False)
+class StagesDone:
+    """The three steps run in a row."""
+
+    training: TrainingStep
+    test: TestStep
+    evaluation: EvaluationStep
+
+
+@dataclass(frozen=True)
+class CheckOutcome:
+    """A check of written results, with its tab."""
+
+    check: PartCheck
+    tab: StageTable
+
+
+def part_options_job(
+    part: ClassifierPart,
+    folder: Path | None,
+    *,
+    progress: Progress | None = None,
+    cancelled: Cancelled | None = None,
+) -> tuple[tuple[SampleOption, StageTable], ...]:
+    """What a part can run on, each option with its *Methods* tab."""
+    del cancelled
+    options = part.sample_options(folder)
+    found = tuple((option, parts.methods_table(part.method_groups(option))) for option in options)
+    if progress is not None:
+        progress("done", 1, 1)
+    return found
+
+
+def _training_step(part: ClassifierPart, samples: SampleSet, trained: TrainedPart) -> TrainingStep:
+    keys = [s.key for s in samples.training]
+    return TrainingStep(
+        samples,
+        trained,
+        parts.training_view(part, trained.option, trained),
+        (parts.unlabelled_table(samples.test, keys),),
+    )
+
+
+def _evaluation_step(part: ClassifierPart, evaluation: Evaluation) -> EvaluationStep:
+    problem = part.write_problem(evaluation) if isinstance(part, WritablePart) else ""
+    return EvaluationStep(evaluation, parts.evaluation_view(evaluation), problem)
+
+
+def part_train_job(
+    part: ClassifierPart,
+    option: SampleOption,
+    folder: Path | None,
+    *,
+    progress: Progress | None = None,
+    cancelled: Cancelled | None = None,
+) -> TrainingStep:
+    """① Read the samples and fit the part's methods on the training samples."""
+    del cancelled
+    samples, trained = parts.train(part, option, folder, progress)
+    return _training_step(part, samples, trained)
+
+
+def part_classify_job(
+    part: ClassifierPart,
+    trained: TrainedPart,
+    unlabelled: tuple[UnlabelledSample, ...],
+    *,
+    progress: Progress | None = None,
+    cancelled: Cancelled | None = None,
+) -> TestStep:
+    """② Classify the test objects from their feature values only."""
+    del cancelled
+    predictions = parts.classify(part, trained, unlabelled, progress)
+    return TestStep(predictions, parts.prediction_view(predictions))
+
+
+def part_evaluate_job(
+    part: ClassifierPart,
+    predictions: Predictions,
+    answers: tuple[AnswerKey, ...],
+    *,
+    progress: Progress | None = None,
+    cancelled: Cancelled | None = None,
+) -> EvaluationStep:
+    """③ Compare the decisions with the true classes."""
+    del cancelled
+    return _evaluation_step(part, parts.evaluate(part, predictions, answers, progress))
+
+
+def part_run_all_job(
+    part: ClassifierPart,
+    option: SampleOption,
+    folder: Path | None,
+    *,
+    progress: Progress | None = None,
+    cancelled: Cancelled | None = None,
+) -> StagesDone:
+    """The three steps in a row; the progress names the stage and the split."""
+    del cancelled
+    run = parts.run_stages(part, option, folder, progress)
+    return StagesDone(
+        _training_step(part, run.samples, run.trained),
+        TestStep(run.predictions, parts.prediction_view(run.predictions)),
+        _evaluation_step(part, run.evaluation),
+    )
+
+
+def part_write_job(
+    part: ClassifierPart,
+    evaluation: Evaluation,
+    folder: Path,
+    *,
+    progress: Progress | None = None,
+    cancelled: Cancelled | None = None,
+) -> list[Path]:
+    """Write a part's evaluation to a results folder."""
+    del cancelled
+    if not isinstance(part, WritablePart):
+        raise ConfigError(f"{part.title}: this part writes no files")
+    written = part.write(evaluation, folder)
+    if progress is not None:
+        progress("done", 1, 1)
+    return written
+
+
+def part_check_job(
+    part: ClassifierPart,
+    folder: Path,
+    splits: Path | None,
+    *,
+    progress: Progress | None = None,
+    cancelled: Cancelled | None = None,
+) -> CheckOutcome:
+    """Check a results folder against its checksums and a new run."""
+    del cancelled
+    if not isinstance(part, CheckablePart):
+        raise ConfigError(f"{part.title}: this part checks no files")
+    checked = part.check(folder, splits, progress)
+    return CheckOutcome(checked, parts.check_tab(checked))
 
 
 class _SignalHandler(logging.Handler):
