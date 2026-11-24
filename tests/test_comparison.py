@@ -405,8 +405,15 @@ def test_the_checksums_of_the_committed_results() -> None:
 
 
 def test_the_committed_tables_hold_the_pinned_numbers() -> None:
-    seven = (OUT / "table-7.csv").read_text(encoding="utf-8").splitlines()
+    seven = (OUT / "table-7.csv").read_text(encoding="utf-8-sig").splitlines()
     assert seven[1:] == ["SVM,74.85,50.68,61.14", "Random Forest,74.25,56.45,59.87"]
+    # the CSV files carry a byte-order mark, so that Excel reads them as UTF-8 (ADR-083)
+    for name in ("table-7.csv", "table-8.csv", "cs-model.csv", "results.csv"):
+        data = (OUT / name).read_bytes()
+        assert data.startswith(b"\xef\xbb\xbf"), name
+        assert data.count(b"\xef\xbb\xbf") == 1, name
+    for name in ("table-7.md", "table-7.tex", "summary.json", CHECKSUMS):
+        assert not (OUT / name).read_bytes().startswith(b"\xef\xbb\xbf"), name
     eight = (OUT / "table-8.md").read_text(encoding="utf-8")
     assert "| Chebyshev | 54.37 / 56.78 | 58.88 / 59.64 | 59.08 / 60.19 |" in eight
     tex = (OUT / "table-7.tex").read_text(encoding="utf-8")

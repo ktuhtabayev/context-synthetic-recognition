@@ -1,4 +1,4 @@
-dataset,reading,metric,synthetic_features,binary_features,article_binary_features
+﻿dataset,reading,metric,synthetic_features,binary_features,article_binary_features
 Heart,literal,zhuravlyov,20,20,30
 Heart,literal,euclidean,20,20,30
 Heart,literal,chebyshev,20,20,30

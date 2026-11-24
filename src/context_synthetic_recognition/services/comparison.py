@@ -39,6 +39,7 @@ from context_synthetic_recognition.data.splits import load_split_file
 from context_synthetic_recognition.errors import DatasetError
 from context_synthetic_recognition.export.tables import Cell, Table
 from context_synthetic_recognition.export.text import (
+    csv_bytes,
     csv_text,
     json_text,
     latex_table,
@@ -156,7 +157,10 @@ def render_files(
     versions: Mapping[str, str],
     inputs: Mapping[str, str],
 ) -> dict[str, bytes]:
-    """The output files' contents (UTF-8, LF line ends), the checksums last."""
+    """The output files' contents (UTF-8, LF line ends), the checksums last.
+
+    The CSV files start with a byte-order mark, so that Excel reads them as UTF-8 (ADR-083).
+    """
     table7, table8, cs_model, results_table = tables
     texts = {
         "table-7.csv": csv_text(table7),
@@ -172,7 +176,10 @@ def render_files(
         "results.md": markdown_text(results_table, DECIMALS, level=2),
         "summary.json": json_text(summary_data(results, versions=versions, inputs=inputs)),
     }
-    files = {name: text.encode("utf-8") for name, text in texts.items()}
+    files = {
+        name: csv_bytes(text) if name.endswith(".csv") else text.encode("utf-8")
+        for name, text in texts.items()
+    }
     files[CHECKSUMS] = "".join(f"{sha256(data)}  {name}\n" for name, data in files.items()).encode()
     return files
 

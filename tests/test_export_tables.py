@@ -21,6 +21,9 @@ from context_synthetic_recognition.export.tables import (
     table_specs,
 )
 from context_synthetic_recognition.export.text import (
+    CSV_ENCODING,
+    csv_bytes,
+    csv_rows,
     csv_text,
     format_cell,
     index_rows,
@@ -32,6 +35,7 @@ from context_synthetic_recognition.export.text import (
     markdown_table,
     markdown_text,
     table_data,
+    write_csv,
     write_text,
 )
 from context_synthetic_recognition.export.wording import (
@@ -360,6 +364,20 @@ def test_csv_keeps_every_digit(tables: TableSet) -> None:
     rows = list(csv.reader(io.StringIO(csv_text(tables["margins"]))))
     assert float(rows[1][7]) == tables["margins"].rows[0][7]
     assert "\r" not in text
+
+
+def test_csv_files_open_as_utf8_in_excel(tmp_path: Path) -> None:
+    # ADR-083: a byte-order mark, then the same UTF-8 text with LF line ends
+    text = csv_text(SMALL)
+    assert csv_bytes(text) == b"\xef\xbb\xbf" + text.encode("utf-8")
+    path = write_csv(tmp_path / "sub" / "small.csv", text)
+    assert path.read_bytes() == csv_bytes(text)
+    assert path.read_text(encoding=CSV_ENCODING) == text  # the mark is skipped on reading
+    assert path.read_text(encoding="utf-8").startswith("﻿Feature,ω,")
+    assert csv_rows(("a", "b"), [(1, "—"), (2.5, "α")]) == "a,b\n1,—\n2.5,α\n"
+    # other text files have no mark
+    plain = write_text(tmp_path / "small.md", "# —\n")
+    assert plain.read_bytes() == "# —\n".encode()
 
 
 def test_json_form(tables: TableSet) -> None:

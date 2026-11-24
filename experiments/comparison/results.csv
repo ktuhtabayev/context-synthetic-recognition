@@ -1,4 +1,4 @@
-Split,Split metric,Method,Features,Table,Training,Training K1,Training K2,Test,Test K1,Test K2,"Majority rate, %","Test accuracy, %","Balanced accuracy, %",Test correct,Test refusals,"Answered accuracy, %","Training accuracy, %",Training correct
+﻿Split,Split metric,Method,Features,Table,Training,Training K1,Training K2,Test,Test K1,Test K2,"Majority rate, %","Test accuracy, %","Balanced accuracy, %",Test correct,Test refusals,"Answered accuracy, %","Training accuracy, %",Training correct
 336,Zhuravlyov,SVM,all (20),Table 7,336,196,140,664,504,160,75.9,74.85,70.63,497,0,74.85,83.63,281
 336,Zhuravlyov,Random Forest,all (20),Table 7,336,196,140,664,504,160,75.9,74.25,69.81,493,0,74.25,100.0,336
 336,Zhuravlyov,"k-NN Euclidean, k = 3",quantitative (7),Table 8,336,196,140,664,504,160,75.9,57.38,50.6,381,0,57.38,58.93,198

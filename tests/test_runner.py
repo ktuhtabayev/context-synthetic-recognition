@@ -69,12 +69,15 @@ def test_save_run(experiment: Dataset, tmp_path: Path) -> None:
     assert results["protocols"]["leave-one-out"]["methods"]["CS-model"]["accuracy"] == 0.2
     assert results["deviations"] == ["ADR-002", "ADR-003"]
     assert results == results_dict(result)
-    with (folder / "predictions.csv").open(encoding="utf-8") as handle:
+    # CSV files start with a byte-order mark, so that Excel reads them as UTF-8 (ADR-083)
+    assert (folder / "predictions.csv").read_bytes().startswith(b"\xef\xbb\xbfprotocol,")
+    with (folder / "predictions.csv").open(encoding="utf-8-sig") as handle:
         rows = list(csv.DictReader(handle))
     assert len(rows) == 2 * 7 * experiment.m  # two protocols × (CS-model + 6 baselines)
     refused = [r for r in rows if r["protocol"] == "leave-one-out" and r["method"] == "CS-model"]
     assert [r["predicted"] for r in refused][:3] == ["1", "", ""]
-    with (folder / "folds.csv").open(encoding="utf-8") as handle:
+    assert (folder / "folds.csv").read_bytes().startswith(b"\xef\xbb\xbfprotocol,fold,")
+    with (folder / "folds.csv").open(encoding="utf-8-sig") as handle:
         folds = list(csv.DictReader(handle))
     assert len(folds) == 1 + experiment.m
     assert folds[2]["k"] == "3"

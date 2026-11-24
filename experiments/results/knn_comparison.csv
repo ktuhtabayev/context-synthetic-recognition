@@ -1,4 +1,4 @@
-dataset,split_metric,reading,metric,method,test_accuracy
+﻿dataset,split_metric,reading,metric,method,test_accuracy
 Heart,zhuravlyov,literal,zhuravlyov,"k-NN vote ρ, k = 1",75.23
 Heart,zhuravlyov,literal,zhuravlyov,"k-NN vote ρ, k = 3",77.98
 Heart,zhuravlyov,literal,zhuravlyov,"k-NN vote ρ, k = 5",78.9

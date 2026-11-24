@@ -31,6 +31,9 @@ def test_the_checksums_of_the_committed_results() -> None:
     for line in lines:
         digest, name = line.split("  ")
         assert hashlib.sha256((EXPERIMENTS / name).read_bytes()).hexdigest() == digest, name
+        # the CSV files carry a byte-order mark, so that Excel reads them as UTF-8 (ADR-083)
+        bom = (EXPERIMENTS / name).read_bytes().startswith(b"\xef\xbb\xbf")
+        assert bom == name.endswith(".csv"), name
 
 
 @pytest.mark.slow
@@ -50,7 +53,7 @@ def test_a_new_run_reproduces_every_result_byte_for_byte(tmp_path: Path) -> None
 
 
 def rows(name: str) -> list[dict[str, str]]:
-    with (EXPERIMENTS / "results" / name).open(encoding="utf-8", newline="") as handle:
+    with (EXPERIMENTS / "results" / name).open(encoding="utf-8-sig", newline="") as handle:
         return list(csv.DictReader(handle))
 
 
