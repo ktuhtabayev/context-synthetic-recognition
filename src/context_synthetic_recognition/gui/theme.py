@@ -215,6 +215,7 @@ def stylesheet(colours: Palette, scale: float = 1.0) -> str:
     small = round(size * 0.9, 2)
     large = round(size * 1.35, 2)
     check = (ASSETS / "check.svg").as_posix()
+    partial = (ASSETS / "partial.svg").as_posix()
     return f"""
 QWidget {{
     background-color: {c.window};
@@ -352,6 +353,23 @@ QTableWidget::indicator:checked {{
     background-color: {c.accent};
     border: 1px solid {c.accent};
     image: url({check});
+}}
+QTreeView::indicator {{
+    width: 14px;
+    height: 14px;
+    border: 1px solid {c.border_strong};
+    border-radius: 3px;
+    background-color: {c.surface};
+}}
+QTreeView::indicator:checked {{
+    background-color: {c.accent};
+    border: 1px solid {c.accent};
+    image: url({check});
+}}
+QTreeView::indicator:indeterminate {{
+    background-color: {c.accent};
+    border: 1px solid {c.accent};
+    image: url({partial});
 }}
 QCheckBox::indicator:disabled, QGroupBox::indicator:disabled {{
     background-color: {c.disabled};

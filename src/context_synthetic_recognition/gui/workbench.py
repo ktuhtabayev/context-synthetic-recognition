@@ -410,6 +410,9 @@ class StepView(QWidget):
 
 KEY_ROLE = Qt.ItemDataRole.UserRole
 """Where a split's item keeps its key."""
+TREE_HEIGHT = 270
+"""The height the samples (and what a part adds beside them) start with, as far as the steps below
+leave room; the splitter between them changes it."""
 
 
 class SampleTreeView(QTreeWidget):
@@ -429,7 +432,7 @@ class SampleTreeView(QTreeWidget):
         self.setObjectName("samples")
         self.setHeaderHidden(True)
         self.setUniformRowHeights(True)
-        self.setMinimumHeight(96)
+        self.setMinimumSize(200, 96)
         self.setToolTip(tr("Tick the samples to run on: a split, a dataset, or several of them"))
         self._last: tuple[str, ...] = ()
         self._filling = False
@@ -565,15 +568,16 @@ class PartView(QWidget):
         self.refresh_samples.setToolTip(tr("Read the split folder again"))
         self.refresh_samples.clicked.connect(self.read_samples)
         folder_row = QHBoxLayout()
+        folder_row.addWidget(QLabel(tr("Samples")))
+        folder_row.addSpacing(12)
         folder_row.addWidget(QLabel(tr("Split files")))
         folder_row.addWidget(self.splits, 1)
         folder_row.addWidget(self.browse_splits)
         folder_row.addWidget(self.refresh_samples)
         samples_column = QVBoxLayout()
         samples_column.setContentsMargins(0, 0, 0, 0)
-        samples_column.addWidget(QLabel(tr("Samples")))
-        samples_column.addWidget(self.samples, 1)
         samples_column.addLayout(folder_row)
+        samples_column.addWidget(self.samples, 1)
         self.choosers = QHBoxLayout()
         """The samples, and beside them what a part adds (the designs)."""
         self.choosers.setContentsMargins(0, 0, 0, 0)
@@ -683,7 +687,7 @@ class PartView(QWidget):
         self.splitter.addWidget(self.top)
         self.splitter.addWidget(steps)
         self.splitter.setStretchFactor(1, 1)
-        self.splitter.setSizes([190, 600])
+        self.splitter.setSizes([TREE_HEIGHT, 600])
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
