@@ -14,7 +14,7 @@ from enum import Enum
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QShowEvent
+from PySide6.QtGui import QDesktopServices, QFont, QShowEvent, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -40,7 +40,13 @@ from context_synthetic_recognition.gui.i18n import mark, tr
 from context_synthetic_recognition.gui.models import TableStyle
 from context_synthetic_recognition.gui.settings import Settings
 from context_synthetic_recognition.gui.theme import LIGHT, CellRole, Palette
-from context_synthetic_recognition.gui.widgets import TablePanel, WarningBox, hint, section_title
+from context_synthetic_recognition.gui.widgets import (
+    FigurePanel,
+    TablePanel,
+    WarningBox,
+    hint,
+    section_title,
+)
 from context_synthetic_recognition.gui.workers import (
     CheckOutcome,
     EvaluationStep,
@@ -68,6 +74,15 @@ from context_synthetic_recognition.services.classifier_parts import (
     WritablePart,
     methods_table,
 )
+from context_synthetic_recognition.services.design_outputs import all_designs_table
+from context_synthetic_recognition.services.design_runs import DesignablePart
+from context_synthetic_recognition.services.designs import (
+    DIRECT,
+    GROUPS,
+    DesignResult,
+    EvaluationDesign,
+    designs,
+)
 
 STEPS = (mark("① Training"), mark("② Test"), mark("③ Evaluation"))
 """The three steps, in order (the stages of :data:`~...classifier_parts.STAGES`)."""
@@ -85,6 +100,11 @@ TAB_TITLES = {
     "knn-by-metric": mark("k-NN by metric"),
     "cs-model": mark("CS-model"),
     "all-results": mark("All results"),
+    "design": mark("Design"),
+    "design-plan": mark("Design plan"),
+    "design-figure": mark("Figure"),
+    "design-rounds": mark("Every round"),
+    "all-designs": mark("All designs"),
 }
 """Names of the tabs the page knows (others are shown as the part names them)."""
 
@@ -195,12 +215,15 @@ class StageTab(QWidget):
         self.decimals.valueChanged.connect(self.panel.set_decimals)
         self.panel.objectClicked.connect(self.objectClicked)
         self.missing = hint("")
+        self.figure_panel = FigurePanel()
+        self.figure_panel.setVisible(False)
         self._chooser = QWidget()
         chooser = QHBoxLayout(self._chooser)
         chooser.setContentsMargins(0, 0, 0, 0)
         chooser.addWidget(self.variant_label)
         chooser.addWidget(self.variant)
-        row = QHBoxLayout()
+        self._row = QWidget()
+        row = QHBoxLayout(self._row)
         row.setContentsMargins(0, 0, 0, 0)
         row.addWidget(self._chooser)
         row.addStretch(1)
@@ -208,9 +231,10 @@ class StageTab(QWidget):
         row.addWidget(self.decimals)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
-        layout.addLayout(row)
+        layout.addWidget(self._row)
         layout.addWidget(self.missing)
         layout.addWidget(self.panel, 1)
+        layout.addWidget(self.figure_panel, 1)
 
     def set_stage_table(self, stage_table: StageTable) -> None:
         """Show a stage table; the split chosen before stays chosen if it is still there."""
@@ -230,9 +254,15 @@ class StageTab(QWidget):
         self.decimals.setValue(DEFAULT_DECIMALS if wanted is None else wanted)
         self.decimals.blockSignals(False)
         self._chooser.setVisible(len(stage_table.variants) > 1)
+        figure = stage_table.figure
         self.missing.setText(stage_table.missing)
-        self.missing.setVisible(bool(stage_table.missing) or not stage_table.variants)
+        self.missing.setVisible(
+            bool(stage_table.missing) or (not stage_table.variants and figure is None)
+        )
         self.panel.setVisible(bool(stage_table.variants))
+        self._row.setVisible(figure is None)
+        self.figure_panel.setVisible(figure is not None)
+        self.figure_panel.set_spec(figure)
         self._show_variant()
 
     def _show_variant(self) -> None:
@@ -519,6 +549,132 @@ class SampleTreeView(QTreeWidget):
             self.ticksChanged.emit()
 
 
+# ---------------------------------------------------------------- the designs
+
+DESIGN_TEXTS = {
+    "direct": (
+        mark("Training → Test (as given)"),
+        mark("Fit on the training sample, classify the test sample: the article's evaluation."),
+    ),
+    "reversed": (
+        mark("Test → Training (reversed)"),
+        mark("Fit on the test sample, classify the training sample: the two samples swapped."),
+    ),
+    "training-self": (
+        mark("Training → Training (self-check)"),
+        mark(
+            "The training sample on itself: each object left out of its own classification where "
+            "the method allows it (Definition 2)."
+        ),
+    ),
+    "test-self": (
+        mark("Test → Test (self-check)"),
+        mark(
+            "The test sample on itself, the same way: how well the test objects explain each other."
+        ),
+    ),
+    "random-control": (
+        mark("Random training samples (control)"),
+        mark(
+            "Random training samples of the same size and classes: is the given one better than "
+            "chance?"
+        ),
+    ),
+    "cross-validation": (
+        mark("Whole dataset, cross-validation"),
+        mark("Stratified 10-fold cross-validation on all objects; the split markers are ignored."),
+    ),
+    "nested-selection": (
+        mark("Selection inside folds"),
+        mark(
+            "R-IPS picks the training sample from each fold's training objects only: an honest "
+            "estimate of selection and fit together."
+        ),
+    ),
+    "size-curve": (
+        mark("Training-size curve"),
+        mark(
+            "Smaller stratified parts of the training sample: how the accuracy grows with its size."
+        ),
+    ),
+    "cross-split": (
+        mark("Split to split"),
+        mark(
+            "Fit on one split's training sample, classify another split's test objects of the same "
+            "dataset."
+        ),
+    ),
+}
+"""The designs' names and explanations the page translates (the services' English otherwise)."""
+GROUP_TITLES = {
+    "Swapping the subsets": mark("Swapping the subsets"),
+    "Comparison points": mark("Comparison points"),
+    "Honest estimate": mark("Honest estimate"),
+    "Optional extras": mark("Optional extras"),
+}
+DESIGN_ROLE = Qt.ItemDataRole.UserRole
+"""Where an entry of the chooser keeps its design's key."""
+
+
+def design_text(design: EvaluationDesign) -> tuple[str, str]:
+    """A design's (translated) name and explanation."""
+    known = DESIGN_TEXTS.get(design.key)
+    if known is None:
+        return design.title, design.explanation
+    name, what = known
+    return tr(name), tr(what)
+
+
+class DesignChooser(QComboBox):
+    """The evaluation designs, grouped under their headings (ADR-095)."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Every registered design, the design as given first."""
+        super().__init__(parent)
+        self.setObjectName("designs")
+        self.setToolTip(tr("How the split's objects are used for training and for classification"))
+        model = QStandardItemModel(self)
+        found = designs()
+        headings = [*GROUPS, *(d.group for d in found if d.group not in GROUPS)]
+        bold = QFont()
+        bold.setBold(True)
+        for heading in dict.fromkeys(headings):
+            members = [d for d in found if d.group == heading]
+            if not members:
+                continue
+            name = GROUP_TITLES.get(heading)
+            item = QStandardItem(tr(name) if name else heading)
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            item.setFont(bold)
+            model.appendRow(item)
+            for design in members:
+                name, explanation = design_text(design)
+                entry = QStandardItem(f"    {name}")
+                entry.setData(design.key, DESIGN_ROLE)
+                settings = f"\n{tr('Fixed settings')}: {design.settings}" if design.settings else ""
+                entry.setToolTip(f"{explanation}{settings}")
+                model.appendRow(entry)
+        self.setModel(model)
+        self.choose(DIRECT)
+
+    def key(self) -> str:
+        """The chosen design."""
+        value = self.currentData(DESIGN_ROLE)
+        return str(value) if value else DIRECT
+
+    def keys(self) -> list[str]:
+        """Every design of the chooser, in its order."""
+        found = (self.itemData(i, DESIGN_ROLE) for i in range(self.count()))
+        return [str(k) for k in found if k]
+
+    def choose(self, key: str) -> bool:
+        """Choose a design by key (``False`` if there is none)."""
+        index = self.findData(key, DESIGN_ROLE)
+        if index >= 0:
+            self.setCurrentIndex(index)
+        return index >= 0
+
+
 # ---------------------------------------------------------------- a part
 
 
@@ -544,6 +700,8 @@ class PartView(QWidget):
         self.test: TestStep | None = None
         self.evaluation: EvaluationStep | None = None
         self.check: CheckOutcome | None = None
+        self.design_results: dict[str, DesignResult] = {}
+        """The designs run on the ticked samples, by key (the *All designs* tab)."""
         self.base = [StepState.NOT_RUN] * len(STEPS)
         self._before = list(self.base)
         self.stale_reason = [""] * len(STEPS)
@@ -582,8 +740,32 @@ class PartView(QWidget):
         """The samples, and beside them what a part adds (the designs)."""
         self.choosers.setContentsMargins(0, 0, 0, 0)
         self.choosers.addLayout(samples_column, 3)
+        self.designable = isinstance(part, DesignablePart)
+        self.designs = DesignChooser(self)
+        self.designs.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.designs.setMinimumContentsLength(14)
+        self.design_note = hint("")
+        self.design_note.setParent(self)
+        self.design_note.setWordWrap(True)
+        if self.designable:
+            design_column = QVBoxLayout()
+            design_column.setContentsMargins(0, 0, 0, 0)
+            design_column.addWidget(QLabel(tr("Design")))
+            design_column.addWidget(self.designs)
+            design_column.addWidget(self.design_note)
+            design_column.addStretch(1)
+            self.choosers.addLayout(design_column, 2)
+            saved = self._saved_design()
+            if saved:
+                self.designs.choose(saved)
+        self.designs.currentIndexChanged.connect(self._design_changed)
+        self._show_design()
         self.top = QWidget()
         self.top.setLayout(self.choosers)
+        self.designs.setVisible(self.designable)
+        self.design_note.setVisible(self.designable)
 
         self.stepper = Stepper()
         self.stepper.stepChosen.connect(self.go_to_step)
@@ -600,6 +782,10 @@ class PartView(QWidget):
         steps_row.addWidget(self.stepper)
         steps_row.addStretch(1)
         steps_row.addWidget(self.run_all_button)
+        self.cancel_button = QPushButton(tr("Cancel"))
+        self.cancel_button.setToolTip(tr("Stop the running step after its current round"))
+        self.cancel_button.clicked.connect(self.cancel)
+        steps_row.addWidget(self.cancel_button)
         steps_row.addWidget(self.progress, 1)
 
         self.views = (
@@ -743,6 +929,8 @@ class PartView(QWidget):
         self.test_view.action.setEnabled(ready and self.stepper.can_open(1))
         self.evaluation_view.action.setEnabled(ready and self.stepper.can_open(2))
         self.run_all_button.setEnabled(ready)
+        self.cancel_button.setEnabled(running)
+        self.designs.setEnabled(not running)
         for widget in (
             self.samples,
             self.splits,
@@ -803,6 +991,7 @@ class PartView(QWidget):
             self.base[step] = StepState.RUNNING
         task.progressed.connect(self._progress)
         task.failed.connect(self._failed)
+        task.cancelled.connect(self._cancelled)
         task.finished.connect(self._done)
         self.problems.set_text("")
         self.progress.setRange(0, 1)
@@ -861,7 +1050,43 @@ class PartView(QWidget):
         chosen = [self.tree.choice(key) for key in self.samples.ticked()]
         return tuple(f"{c.key} {c.title} {c.available}" for c in chosen if c is not None)
 
+    # ------------------------------------------------------------------ the design
+
+    @property
+    def _design_key(self) -> str:
+        return f"classifiers/design/{self.part.key}"
+
+    def _saved_design(self) -> str:
+        if self.settings is None:
+            return ""
+        value = self.settings.store.value(self._design_key, "")
+        return str(value) if value else ""
+
+    def design(self) -> str:
+        """The chosen evaluation design (the design as given when the part has no designs)."""
+        return self.designs.key() if self.designable else DIRECT
+
+    def _show_design(self) -> None:
+        chosen = next((d for d in designs() if d.key == self.designs.key()), None)
+        self.design_note.setText("" if chosen is None else design_text(chosen)[1])
+        if chosen is not None and chosen.settings:
+            self.design_note.setToolTip(f"{tr('Fixed settings')}: {chosen.settings}")
+
+    def _design_changed(self) -> None:
+        self._stale(0, tr("The design changed."))
+        if self.settings is not None:
+            self.settings.store.setValue(self._design_key, self.designs.key())
+        self._show_design()
+        self.refresh()
+
+    def cancel(self) -> None:
+        """Stop the running work at its next round (a long design)."""
+        if self.task is not None and self.task.isRunning():
+            self.task.cancel()
+            self.status.setText(tr("Cancelling…"))
+
     def _ticks_changed(self) -> None:
+        self.design_results.clear()
         self._stale(0, tr("The samples changed."))
         if self.settings is not None and self._read:
             self.settings.store.setValue(self._saved_key, list(self.samples.ticked()))
@@ -915,7 +1140,9 @@ class PartView(QWidget):
         option = self.option()
         if self.is_running() or option is None or self._unavailable():
             return
-        task = Task.with_progress(part_train_job, self.part, option, self._splits(), parent=self)
+        task = Task.with_progress(
+            part_train_job, self.part, option, self._splits(), self.design(), parent=self
+        )
         task.succeeded.connect(self._trained)
         self._launch(task, tr("Fitting on the training sample…"), 0)
 
@@ -928,6 +1155,8 @@ class PartView(QWidget):
             self.part,
             self.training.trained,
             self.training.samples.test,
+            self.training.design,
+            self.training.self_check,
             parent=self,
         )
         task.succeeded.connect(self._classified)
@@ -947,6 +1176,8 @@ class PartView(QWidget):
             self.part,
             self.test.predictions,
             self.training.samples.answers,
+            self.training.design,
+            self._splits(),
             parent=self,
         )
         task.succeeded.connect(self._compared)
@@ -957,7 +1188,9 @@ class PartView(QWidget):
         option = self.option()
         if self.is_running() or option is None or self._unavailable():
             return
-        task = Task.with_progress(part_run_all_job, self.part, option, self._splits(), parent=self)
+        task = Task.with_progress(
+            part_run_all_job, self.part, option, self._splits(), self.design(), parent=self
+        )
         task.succeeded.connect(self._all_done)
         self._launch(task, tr("Running the three steps…"), 0)
 
@@ -991,6 +1224,8 @@ class PartView(QWidget):
 
     def _compared(self, step: EvaluationStep) -> None:
         self.evaluation = step
+        if step.design is not None:
+            self.design_results[step.design.design] = step.design
         self.base[2] = StepState.DONE
         self.stale_reason[2] = ""
         self.evaluation_view.show_tables(self._evaluation_tabs())
@@ -1009,6 +1244,14 @@ class PartView(QWidget):
 
     def _evaluation_tabs(self) -> list[StageTable]:
         tabs = [] if self.evaluation is None else list(self.evaluation.tabs)
+        if self.designable:
+            everything = all_designs_table(self.design_results)
+            cells = (CellMeaning.PLAIN,) * len(everything.columns)
+            tabs.append(
+                StageTable(
+                    "all-designs", "All designs", (ShownTable(everything, cells, decimals=2),)
+                )
+            )
         if self.checkable:
             if self.check is None:
                 tabs.append(
@@ -1081,6 +1324,10 @@ class PartView(QWidget):
         self.progress.setValue(done)
         if what != "done":
             self.status.setText(label + "…")
+
+    def _cancelled(self) -> None:
+        self.base = list(self._before)
+        self.status.setText(tr("Cancelled."))
 
     def _failed(self, message: str) -> None:
         self.base = list(self._before)

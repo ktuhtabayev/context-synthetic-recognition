@@ -130,6 +130,11 @@ class ClassifiersPage(Page):
         """Whether a part's worker runs."""
         return any(view.is_running() for view in self.views)
 
+    def cancel(self) -> None:
+        """Ask every part's running work to stop (closing the window)."""
+        for view in self.views:
+            view.cancel()
+
     def wait(self, milliseconds: int = 300_000) -> bool:
         """Block until every part's worker ends (the tests; closing the window)."""
         return all(view.wait(milliseconds) for view in self.views)
