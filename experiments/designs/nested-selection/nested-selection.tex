@@ -1,0 +1,59 @@
+\begin{longtable}{lllrrrrrrrrrrrrrl}
+  \caption{Selection inside folds: accuracy and balanced accuracy, \%. R-IPS picks the training sample from each fold's training objects only: an honest estimate of selection and fit together. Stratified 10-fold, seed 42; in each fold R-IPS (the article's defaults, the split's metric) on the fold's training objects; fitted on its training sample, the held-out fold classified. Training and Classified: the numbers of objects (the mean over the rounds). Majority rate: the share of the larger class among the classified objects. Balanced accuracy: the mean recall of the two classes. Refusals count as errors (Definition 3). Repeated: the mean over the rounds, the standard deviation (n $-$ 1), the minimum and the maximum.}\label{tab:nested-selection} \\
+  \toprule
+  Split & Case & Method & Rounds & Training & Classified & Majority rate, \% & Accuracy, \% & SD & Min & Max & Balanced accuracy, \% & Balanced SD & Balanced min & Balanced max & Refusals & Note \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Split & Case & Method & Rounds & Training & Classified & Majority rate, \% & Accuracy, \% & SD & Min & Max & Balanced accuracy, \% & Balanced SD & Balanced min & Balanced max & Refusals & Note \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & SVM & 10 & 462.10 & 100 & 70 & 73.40 & 2.95 & 68.00 & 77.00 & 62.43 & 4.82 & 54.29 & 71.19 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & Random Forest & 10 & 462.10 & 100 & 70 & 73.30 & 3.20 & 68.00 & 78.00 & 63.50 & 4.21 & 58.33 & 72.86 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & k-NN Euclidean, k = 3 & 10 & 462.10 & 100 & 70 & 63.90 & 4.68 & 56.00 & 71.00 & 52.12 & 4.88 & 42.86 & 60.24 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & k-NN Euclidean, k = 5 & 10 & 462.10 & 100 & 70 & 65.90 & 3.11 & 61.00 & 73.00 & 52.88 & 4.22 & 45.48 & 61.67 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & k-NN Chebyshev, k = 3 & 10 & 462.10 & 100 & 70 & 62.40 & 3.31 & 56.00 & 68.00 & 52.76 & 4.13 & 45.71 & 57.86 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & k-NN Chebyshev, k = 5 & 10 & 462.10 & 100 & 70 & 63.90 & 4.15 & 57.00 & 71.00 & 52.40 & 4.85 & 42.62 & 61.19 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & k-NN Canberra, k = 3 & 10 & 462.10 & 100 & 70 & 66.20 & 3.39 & 61.00 & 70.00 & 54.81 & 5.09 & 47.38 & 61.43 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & k-NN Canberra, k = 5 & 10 & 462.10 & 100 & 70 & 66.40 & 3.50 & 59.00 & 70.00 & 52.86 & 4.17 & 45.95 & 59.52 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & k-NN Zhuravlyov, k = 3 & 10 & 462.10 & 100 & 70 & 72.30 & 5.03 & 65.00 & 80.00 & 61.64 & 5.44 & 54.52 & 72.38 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & k-NN Zhuravlyov, k = 5 & 10 & 462.10 & 100 & 70 & 73.40 & 3.24 & 68.00 & 79.00 & 61.95 & 3.48 & 57.62 & 68.81 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & CS-model Euclidean, $\alpha$ = 0.1 & 10 & 462.10 & 100 & 70 & 24.00 & 12.65 & 0.00 & 30.00 & 40.00 & 21.08 & 0.00 & 50.00 & 20 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & CS-model Euclidean, $\alpha$ = 0.2 & 10 & 462.10 & 100 & 70 & 24.00 & 12.65 & 0.00 & 30.00 & 40.00 & 21.08 & 0.00 & 50.00 & 20 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & CS-model Chebyshev, $\alpha$ = 0.1 & 10 & 462.10 & 100 & 70 & 45.80 & 20.62 & 29.00 & 70.00 & 49.67 & 0.63 & 48.33 & 50.24 & 0.40 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & CS-model Chebyshev, $\alpha$ = 0.2 & 10 & 462.10 & 100 & 70 & 45.80 & 20.62 & 29.00 & 70.00 & 49.67 & 0.63 & 48.33 & 50.24 & 0.40 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & CS-model Canberra, $\alpha$ = 0.1 & 10 & 462.10 & 100 & 70 & 8.70 & 14.02 & 0.00 & 30.00 & 14.31 & 23.08 & 0.00 & 50.00 & 70.40 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & CS-model Canberra, $\alpha$ = 0.2 & 10 & 462.10 & 100 & 70 & 8.70 & 14.02 & 0.00 & 30.00 & 14.31 & 23.08 & 0.00 & 50.00 & 70.40 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & CS-model Zhuravlyov, $\alpha$ = 0.1 & 10 & 462.10 & 100 & 70 & 70.30 & 1.70 & 68.00 & 73.00 & 51.17 & 2.19 & 48.57 & 55.00 & 0 &  \\
+  German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & 10 folds & CS-model Zhuravlyov, $\alpha$ = 0.2 & 10 & 462.10 & 100 & 70 & 70.30 & 1.70 & 68.00 & 73.00 & 51.17 & 2.19 & 48.57 & 55.00 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & SVM & 10 & 452.20 & 100 & 70 & 70.00 & 1.89 & 66.00 & 72.00 & 51.62 & 2.79 & 47.14 & 57.14 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & Random Forest & 10 & 452.20 & 100 & 70 & 66.10 & 3.54 & 62.00 & 72.00 & 57.21 & 5.01 & 48.10 & 65.71 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & k-NN Euclidean, k = 3 & 10 & 452.20 & 100 & 70 & 62.40 & 3.78 & 57.00 & 68.00 & 54.95 & 6.47 & 46.43 & 63.81 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & k-NN Euclidean, k = 5 & 10 & 452.20 & 100 & 70 & 61.70 & 3.06 & 58.00 & 68.00 & 52.55 & 4.18 & 47.38 & 60.95 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & k-NN Chebyshev, k = 3 & 10 & 452.20 & 100 & 70 & 61.10 & 2.92 & 55.00 & 66.00 & 54.88 & 4.07 & 48.81 & 60.48 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & k-NN Chebyshev, k = 5 & 10 & 452.20 & 100 & 70 & 59.80 & 2.94 & 55.00 & 64.00 & 52.52 & 2.75 & 47.38 & 55.24 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & k-NN Canberra, k = 3 & 10 & 452.20 & 100 & 70 & 63.30 & 3.30 & 56.00 & 68.00 & 55.12 & 3.79 & 48.57 & 60.00 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & k-NN Canberra, k = 5 & 10 & 452.20 & 100 & 70 & 62.80 & 3.39 & 57.00 & 68.00 & 52.86 & 4.56 & 46.43 & 59.05 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & CS-model Euclidean, $\alpha$ = 0.1 & 10 & 452.20 & 100 & 70 & 57.40 & 19.87 & 27.00 & 71.00 & 49.67 & 2.75 & 45.00 & 53.57 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & CS-model Euclidean, $\alpha$ = 0.2 & 10 & 452.20 & 100 & 70 & 57.30 & 19.80 & 27.00 & 71.00 & 49.60 & 2.65 & 45.00 & 52.86 & 0 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & CS-model Chebyshev, $\alpha$ = 0.1 & 10 & 452.20 & 100 & 70 & 61.40 & 10.49 & 34.00 & 72.00 & 51.19 & 4.18 & 45.95 & 57.86 & 0.50 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & CS-model Chebyshev, $\alpha$ = 0.2 & 10 & 452.20 & 100 & 70 & 61.60 & 11.02 & 34.00 & 72.00 & 51.24 & 3.84 & 45.95 & 57.38 & 0.10 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & CS-model Canberra, $\alpha$ = 0.1 & 10 & 452.20 & 100 & 70 & 61.30 & 16.59 & 30.00 & 71.00 & 51.40 & 2.19 & 48.10 & 54.05 & 0.40 &  \\
+  German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & 10 folds & CS-model Canberra, $\alpha$ = 0.2 & 10 & 452.20 & 100 & 70 & 61.20 & 16.57 & 30.00 & 71.00 & 51.33 & 2.21 & 48.10 & 54.05 & 0.30 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & SVM & 10 & 472 & 100 & 70 & 70.30 & 2.54 & 66.00 & 75.00 & 53.45 & 4.59 & 48.57 & 64.05 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & Random Forest & 10 & 472 & 100 & 70 & 68.10 & 2.96 & 65.00 & 73.00 & 59.40 & 4.34 & 53.10 & 64.76 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & k-NN Euclidean, k = 3 & 10 & 472 & 100 & 70 & 61.10 & 4.04 & 52.00 & 66.00 & 52.69 & 4.90 & 41.90 & 60.48 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & k-NN Euclidean, k = 5 & 10 & 472 & 100 & 70 & 61.80 & 3.39 & 56.00 & 68.00 & 53.57 & 3.20 & 50.71 & 60.95 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & k-NN Chebyshev, k = 3 & 10 & 472 & 100 & 70 & 58.50 & 4.33 & 52.00 & 66.00 & 51.31 & 4.91 & 44.76 & 61.43 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & k-NN Chebyshev, k = 5 & 10 & 472 & 100 & 70 & 61.10 & 4.25 & 54.00 & 67.00 & 53.45 & 4.55 & 47.38 & 58.81 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & k-NN Canberra, k = 3 & 10 & 472 & 100 & 70 & 60.70 & 4.08 & 55.00 & 66.00 & 53.74 & 4.64 & 46.67 & 60.48 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & k-NN Canberra, k = 5 & 10 & 472 & 100 & 70 & 61.60 & 3.89 & 56.00 & 68.00 & 53.43 & 4.69 & 47.62 & 60.95 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & CS-model Euclidean, $\alpha$ = 0.1 & 10 & 472 & 100 & 70 & 58.10 & 17.26 & 31.00 & 78.00 & 51.31 & 6.40 & 43.10 & 66.19 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & CS-model Euclidean, $\alpha$ = 0.2 & 10 & 472 & 100 & 70 & 57.20 & 16.58 & 31.00 & 71.00 & 49.71 & 4.02 & 43.10 & 55.95 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & CS-model Chebyshev, $\alpha$ = 0.1 & 10 & 472 & 100 & 70 & 64.90 & 4.75 & 56.00 & 74.00 & 51.12 & 3.07 & 47.14 & 58.57 & 0.30 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & CS-model Chebyshev, $\alpha$ = 0.2 & 10 & 472 & 100 & 70 & 65.10 & 5.04 & 54.00 & 74.00 & 50.79 & 3.52 & 46.19 & 58.57 & 0 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & CS-model Canberra, $\alpha$ = 0.1 & 10 & 472 & 100 & 70 & 67.60 & 2.41 & 64.00 & 70.00 & 52.86 & 4.97 & 47.38 & 64.29 & 0.80 &  \\
+  German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) & 10 folds & CS-model Canberra, $\alpha$ = 0.2 & 10 & 472 & 100 & 70 & 67.90 & 3.31 & 62.00 & 74.00 & 53.55 & 5.35 & 47.86 & 64.29 & 0.10 &  \\
+\end{longtable}

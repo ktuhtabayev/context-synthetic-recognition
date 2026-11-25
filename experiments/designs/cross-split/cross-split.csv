@@ -1,0 +1,33 @@
+﻿Split,Case,Method,Training,Classified,"Majority rate, %","Accuracy, %","Balanced accuracy, %",Refusals,Note
+"German · Zhuravlyov split · training 336 (196, 140)","→ German · Euclidean split · training 341 (173, 168)",—,,,,,,,"the features differ (20 and 7 features, or other types): the same objects need the same features"
+"German · Zhuravlyov split · training 336 (196, 140)","→ German · Chebyshev split · training 367 (190, 177)",—,,,,,,,"the features differ (20 and 7 features, or other types): the same objects need the same features"
+"German · Euclidean split · training 341 (173, 168)","→ German · Zhuravlyov split · training 336 (196, 140)",—,,,,,,,"the features differ (7 and 20 features, or other types): the same objects need the same features"
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)",SVM,341,573,80.5,50.26,51.51,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)",Random Forest,341,573,80.5,56.72,52.15,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","k-NN Euclidean, k = 3",341,573,80.5,58.46,54.58,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","k-NN Euclidean, k = 5",341,573,80.5,54.8,48.93,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","k-NN Chebyshev, k = 3",341,573,80.5,57.94,52.57,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","k-NN Chebyshev, k = 5",341,573,80.5,58.99,52.54,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","k-NN Canberra, k = 3",341,573,80.5,54.1,51.2,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","k-NN Canberra, k = 5",341,573,80.5,56.89,54.96,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","CS-model Euclidean, α = 0.1",341,573,80.5,57.42,47.51,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","CS-model Euclidean, α = 0.2",341,573,80.5,56.02,51.04,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","CS-model Chebyshev, α = 0.1",341,573,80.5,39.62,50.98,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","CS-model Chebyshev, α = 0.2",341,573,80.5,35.43,52.1,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","CS-model Canberra, α = 0.1",341,573,80.5,77.84,51.08,0,
+"German · Euclidean split · training 341 (173, 168)","→ German · Chebyshev split · training 367 (190, 177)","CS-model Canberra, α = 0.2",341,573,80.5,77.84,51.08,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Zhuravlyov split · training 336 (196, 140)",—,,,,,,,"the features differ (7 and 20 features, or other types): the same objects need the same features"
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)",SVM,367,573,80.5,61.78,58.33,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)",Random Forest,367,573,80.5,60.21,56.01,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","k-NN Euclidean, k = 3",367,573,80.5,57.94,54.6,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","k-NN Euclidean, k = 5",367,573,80.5,60.38,56.79,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","k-NN Chebyshev, k = 3",367,573,80.5,59.51,51.52,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","k-NN Chebyshev, k = 5",367,573,80.5,60.03,52.52,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","k-NN Canberra, k = 3",367,573,80.5,59.51,54.22,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","k-NN Canberra, k = 5",367,573,80.5,60.38,56.45,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","CS-model Euclidean, α = 0.1",367,573,80.5,77.66,48.94,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","CS-model Euclidean, α = 0.2",367,573,80.5,77.66,48.94,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","CS-model Chebyshev, α = 0.1",367,573,80.5,78.88,54.77,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","CS-model Chebyshev, α = 0.2",367,573,80.5,29.67,52.24,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","CS-model Canberra, α = 0.1",367,573,80.5,21.29,49.06,0,
+"German · Chebyshev split · training 367 (190, 177)","→ German · Euclidean split · training 341 (173, 168)","CS-model Canberra, α = 0.2",367,573,80.5,21.29,49.06,0,
