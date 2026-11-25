@@ -1,10 +1,10 @@
 \begin{table}[htbp]
   \centering
-  \caption{k-NN by metric: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, \%. Each cell: k = 3 / k = 5. Majority-class rate of the test sample: 75.90 \% (336), 79.97 \% (341), 80.57 \% (367). Majority vote of the k nearest training objects on the quantitative features, min--max scaled on the training sample; distances rounded to 10 decimals, equal distances to the smaller training index. Training: the article's training samples; nothing is chosen on the test samples.}
+  \caption{k-NN by metric: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, \%. Each cell: k = 3 / k = 5. Majority-class rate of the test sample: 75.90 \% (German $\cdot$ Zhuravlyov split $\cdot$ training 336), 79.97 \% (German $\cdot$ Euclidean split $\cdot$ training 341), 80.57 \% (German $\cdot$ Chebyshev split $\cdot$ training 367). Majority vote of the k nearest training objects on the quantitative features, min--max scaled on the training sample; distances rounded to 10 decimals, equal distances to the smaller training index. Training: the article's training samples; nothing is chosen on the test samples.}
   \label{tab:knn-by-metric}
   \begin{tabular}{llll}
     \toprule
-    Metric & 336 (196, 140) --- Zhuravlyov split & 341 (173, 168) --- Euclidean split & 367 (190, 177) --- Chebyshev split \\
+    Metric & German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) \\
     \midrule
     Euclidean & 57.38 / 60.09 & 58.42 / 54.78 & 57.50 / 59.87 \\
     Chebyshev & 54.37 / 56.78 & 58.88 / 59.64 & 59.08 / 60.19 \\

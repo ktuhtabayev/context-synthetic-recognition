@@ -20,7 +20,7 @@ from typing import Any, Literal
 
 from PySide6.QtCore import QObject, QThread, Signal
 
-from context_synthetic_recognition.comparison import SPLITS
+from context_synthetic_recognition.comparison import COMPARISON_SPLITS
 from context_synthetic_recognition.config import ExperimentConfig
 from context_synthetic_recognition.data import AnswerKey, Dataset, UnlabelledSample
 from context_synthetic_recognition.errors import ConfigError, CSRError
@@ -143,7 +143,7 @@ def _split_progress(progress: Progress | None) -> Callable[[str], None] | None:
     done = [0]
 
     def report(line: str) -> None:
-        progress(line, done[0], len(SPLITS))
+        progress(line, done[0], len(COMPARISON_SPLITS))
         done[0] += 1
 
     return report
@@ -161,7 +161,7 @@ def comparison_job(
     del cancelled
     outcome = run_comparison(splits, progress=_split_progress(progress))
     if progress is not None:
-        progress("done", len(SPLITS), len(SPLITS))
+        progress("done", len(COMPARISON_SPLITS), len(COMPARISON_SPLITS))
     return outcome
 
 
@@ -176,7 +176,7 @@ def comparison_check_job(
     del cancelled
     check = check_comparison(folder, splits=splits, progress=_split_progress(progress))
     if progress is not None:
-        progress("done", len(SPLITS), len(SPLITS))
+        progress("done", len(COMPARISON_SPLITS), len(COMPARISON_SPLITS))
     return check
 
 

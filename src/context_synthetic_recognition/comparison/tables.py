@@ -23,12 +23,12 @@ from context_synthetic_recognition.comparison.settings import (
     KNN_KS,
     KNN_METRICS,
     METHOD_TITLES,
-    METRIC_TITLES,
     SEED,
     SKLEARN_OPTIONS,
     TABLE_CS_MODEL,
     TABLE_KNN,
     TABLE_STANDARD,
+    metric_title,
     percent,
 )
 from context_synthetic_recognition.evaluation.metrics import ClassificationMetrics
@@ -61,32 +61,34 @@ TRAINING_ACCURACY = (
 )
 SETTINGS_CS_MODEL = (
     "One base operator per metric, min–max scaled on the training sample: Euclidean, Chebyshev "
-    "and Canberra on the quantitative features, Zhuravlyov on all features (the 336 split only); "
+    "and Canberra on the quantitative features, Zhuravlyov on all features (German's Zhuravlyov "
+    "split only); "
     f"odd k = {K_START} … {K_STOP}; synthetic features 0, 1, 2 with the features that take 0 on a "
     "training object left out; final class means, one majorizing pass. Refusals count as errors "
     "(Definition 3)."
 )
 
 
-def _column(result: SplitResult) -> str:
-    return f"{result.column} — {result.spec.title}"
-
-
 def _majority(results: Sequence[SplitResult]) -> str:
-    rates = ", ".join(f"{percent(r.majority_rate):.{DECIMALS}f} % ({r.spec.key})" for r in results)
+    rates = ", ".join(f"{percent(r.majority_rate):.{DECIMALS}f} % ({r.spec.name})" for r in results)
     return f"Majority-class rate of the test sample: {rates}."
+
+
+def _accuracy(metrics: ClassificationMetrics | None) -> float | None:
+    """The accuracy as a percentage; ``None`` for a method the split cannot support."""
+    return None if metrics is None else percent(metrics.accuracy)
 
 
 def standard_classifiers_table(results: Sequence[SplitResult]) -> Table:
     """Standard classifiers: accuracy of SVM and Random Forest on the test samples, %."""
     rows: tuple[tuple[Cell, ...], ...] = tuple(
-        (METHOD_TITLES[key], *(percent(r.method(key).test.accuracy) for r in results))
+        (METHOD_TITLES[key], *(_accuracy(r.method(key).test) for r in results))
         for key in SKLEARN_OPTIONS
     )
     return Table(
         key=STANDARD_KEY,
         title=f"{TABLE_STANDARD}: accuracy of SVM and Random Forest on the test samples, %",
-        columns=("Method", *(_column(r) for r in results)),
+        columns=("Method", *(r.label for r in results)),
         rows=rows,
         group=GROUP,
         note=(
@@ -102,14 +104,14 @@ def knn_by_metric_table(results: Sequence[SplitResult]) -> Table:
     for metric in KNN_METRICS:
         cells = []
         for result in results:
-            values = (percent(result.method(knn_key(metric, k)).test.accuracy) for k in KNN_KS)
-            cells.append(" / ".join(f"{v:.{DECIMALS}f}" for v in values))
-        rows.append((METRIC_TITLES[metric], *cells))
+            values = (_accuracy(result.method(knn_key(metric, k)).test) for k in KNN_KS)
+            cells.append(" / ".join("—" if v is None else f"{v:.{DECIMALS}f}" for v in values))
+        rows.append((metric_title(metric), *cells))
     ks = " / ".join(f"k = {k}" for k in KNN_KS)
     return Table(
         key=KNN_KEY,
         title=f"{TABLE_KNN}: accuracy of the k-NN vote on the test samples, {ks}, %",
-        columns=("Metric", *(_column(r) for r in results)),
+        columns=("Metric", *(r.label for r in results)),
         rows=tuple(rows),
         group=GROUP,
         note=(
@@ -134,7 +136,7 @@ def cs_model_table(results: Sequence[SplitResult]) -> Table:
         metrics += [m for m in cs_model_metrics(result.spec) if m not in metrics]
     rows = tuple(
         (
-            METRIC_TITLES[metric],
+            metric_title(metric),
             *(_alpha_cell([c for c in r.cs_model if c.metric == metric]) for r in results),
         )
         for metric in metrics
@@ -142,7 +144,7 @@ def cs_model_table(results: Sequence[SplitResult]) -> Table:
     return Table(
         key=CS_MODEL_KEY,
         title=f"{TABLE_CS_MODEL} on the same samples: accuracy on the test samples, {alphas}, %",
-        columns=("Metric", *(_column(r) for r in results)),
+        columns=("Metric", *(r.label for r in results)),
         rows=rows,
         group=GROUP,
         note=(
@@ -178,38 +180,30 @@ RESULT_COLUMNS = (
 
 
 def _result_row(split: SplitResult, method: MethodResult) -> tuple[Cell, ...]:
-    return (
-        split.spec.key,
-        METRIC_TITLES[split.spec.split_metric],
+    return _row(
+        split,
         method.title,
         f"{method.features} ({method.n_features})",
         method.table,
-        *split.training_sizes,
-        *split.test_sizes,
-        percent(split.majority_rate),
-        percent(method.test.accuracy),
-        percent(method.test.macro_recall),
-        method.test.correct,
-        method.test.refusals,
-        _answered(method.test),
-        percent(method.training.accuracy),
-        method.training.correct,
+        method.test,
+        method.training,
     )
 
 
-def _answered(metrics: ClassificationMetrics) -> Cell:
-    answered = metrics.accuracy_answered
-    return None if answered is None else percent(answered)
-
-
-def _cs_model_row(split: SplitResult, model: CSModelResult) -> tuple[Cell, ...]:
-    test, training = model.test, model.training
+def _row(
+    split: SplitResult,
+    title: str,
+    features: str,
+    table: str | None,
+    test: ClassificationMetrics | None,
+    training: ClassificationMetrics | None,
+) -> tuple[Cell, ...]:
     return (
-        split.spec.key,
-        METRIC_TITLES[split.spec.split_metric],
-        model.title,
-        f"{model.features} ({model.n_features})",
-        TABLE_CS_MODEL,
+        split.label,
+        metric_title(split.spec.split_metric),
+        title,
+        features,
+        table,
         *split.training_sizes,
         *split.test_sizes,
         percent(split.majority_rate),
@@ -221,6 +215,16 @@ def _cs_model_row(split: SplitResult, model: CSModelResult) -> tuple[Cell, ...]:
         None if training is None else percent(training.accuracy),
         None if training is None else training.correct,
     )
+
+
+def _answered(metrics: ClassificationMetrics) -> Cell:
+    answered = metrics.accuracy_answered
+    return None if answered is None else percent(answered)
+
+
+def _cs_model_row(split: SplitResult, model: CSModelResult) -> tuple[Cell, ...]:
+    features = f"{model.features} ({model.n_features})"
+    return _row(split, model.title, features, TABLE_CS_MODEL, model.test, model.training)
 
 
 def results_table(results: Sequence[SplitResult]) -> Table:
@@ -287,6 +291,19 @@ def _cs_model_data(model: CSModelResult) -> dict[str, Any]:
     }
 
 
+def _method_data(method: MethodResult) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "key": method.key,
+        "title": method.title,
+        "table": method.table,
+        "features": method.features,
+        "n_features": method.n_features,
+    }
+    if method.test is None or method.training is None:
+        return {**data, "undefined": method.undefined}
+    return {**data, "test": _scores(method.test), "training": _scores(method.training)}
+
+
 def _sizes(sizes: tuple[int, int, int]) -> dict[str, int]:
     return {"n": sizes[0], "K1": sizes[1], "K2": sizes[2]}
 
@@ -335,6 +352,7 @@ def summary_data(
         "splits": [
             {
                 "key": r.spec.key,
+                "label": r.label,
                 "dataset": r.spec.dataset,
                 "file": r.spec.file,
                 "file_sha256": inputs[r.spec.file],
@@ -344,18 +362,7 @@ def summary_data(
                 "training": _sizes(r.training_sizes),
                 "test": _sizes(r.test_sizes),
                 "majority_rate": percent(r.majority_rate),
-                "methods": [
-                    {
-                        "key": m.key,
-                        "title": m.title,
-                        "table": m.table,
-                        "features": m.features,
-                        "n_features": m.n_features,
-                        "test": _scores(m.test),
-                        "training": _scores(m.training),
-                    }
-                    for m in r.methods
-                ],
+                "methods": [_method_data(m) for m in r.methods],
                 "cs_model": [_cs_model_data(c) for c in r.cs_model],
             }
             for r in results

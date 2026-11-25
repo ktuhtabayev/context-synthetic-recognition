@@ -873,13 +873,44 @@ def _progress(line: str) -> None:
     typer.echo(f"  {line}")
 
 
+SplitOption = Annotated[
+    str | None,
+    typer.Option(
+        "--split",
+        help="One split by key (German-341) or training size (341); default: German's three "
+        "splits, the comparison tables.",
+    ),
+]
+
+
+def _single_split_folder(out: Path | None) -> Path:
+    """The folder of a single split's evaluation: given, and never experiments/comparison."""
+    if out is None:
+        raise ConfigError(
+            "--split needs --out: experiments/comparison holds German's three splits only"
+        )
+    try:
+        reserved = default_output()
+    except CSRError:
+        return out
+    if out.resolve() == reserved.resolve():
+        raise ConfigError(f"{out}: experiments/comparison holds German's three splits only")
+    return out
+
+
 @compare_app.command("run")
-def compare_run(out: ComparisonFolder = None, splits: SplitsFolder = None) -> None:
+def compare_run(
+    out: ComparisonFolder = None, splits: SplitsFolder = None, split: SplitOption = None
+) -> None:
     """Run SVM, Random Forest, k-NN and the CS-model on the article's splits; write the tables."""
     typer.echo("splits:")
     try:
-        outcome = run_comparison(splits, progress=_progress)
-        folder = out or default_output()
+        if split is None:
+            outcome = run_comparison(splits, progress=_progress)
+            folder = out or default_output()
+        else:
+            folder = _single_split_folder(out)
+            outcome = run_comparison(splits, keys=(split,), progress=_progress)
         written = write_comparison(outcome, folder)
     except CSRError as error:
         raise _fail(error) from error
@@ -923,12 +954,16 @@ def compare_check(out: ComparisonFolder = None, splits: SplitsFolder = None) -> 
 @compare_app.command("predict")
 def compare_predict(
     split: Annotated[
-        str, typer.Option("--split", help="The split: 336 (default), 341, 367, 76, 601 or 722.")
-    ] = "336",
+        str,
+        typer.Option(
+            "--split",
+            help="The split, by key (German-341) or training size (341); default: German-336.",
+        ),
+    ] = "German-336",
     out: Annotated[
         Path | None,
         typer.Option(
-            "--out", "-o", help="The CSV file; default: predictions-<split>.csv in this folder."
+            "--out", "-o", help="The CSV file; default: predictions-<key>.csv in this folder."
         ),
     ] = None,
     splits: SplitsFolder = None,
@@ -941,18 +976,18 @@ def compare_predict(
 
     try:
         predictions = blind_predictions(split, splits, progress)
+        (sample,) = predictions.trained.samples
         path = write_csv(
-            out or Path(f"predictions-{split}.csv"), predictions_csv(predictions, split)
+            out or Path(f"predictions-{sample.key}.csv"), predictions_csv(predictions, sample.key)
         )
     except CSRError as error:
         raise _fail(error) from error
     (objects,) = predictions.objects
-    (sample,) = predictions.trained.samples
     sizes = ", ".join(map(str, sample.data.class_sizes))
     typer.echo(
         f"trained on {sample.data.m} training objects ({sizes}); "
         f"{objects.m} test objects classified without their class by "
-        f"{len(predictions.decisions[split])} methods"
+        f"{len(predictions.decisions[sample.key])} methods"
     )
     typer.echo(f"written to {path} (no class column)")
 

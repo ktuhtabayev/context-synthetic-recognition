@@ -32,7 +32,7 @@
         0.2
       ],
       "k": "odd k = 3 … 41",
-      "settings": "One base operator per metric, min–max scaled on the training sample: Euclidean, Chebyshev and Canberra on the quantitative features, Zhuravlyov on all features (the 336 split only); odd k = 3 … 41; synthetic features 0, 1, 2 with the features that take 0 on a training object left out; final class means, one majorizing pass. Refusals count as errors (Definition 3)."
+      "settings": "One base operator per metric, min–max scaled on the training sample: Euclidean, Chebyshev and Canberra on the quantitative features, Zhuravlyov on all features (German's Zhuravlyov split only); odd k = 3 … 41; synthetic features 0, 1, 2 with the features that take 0 on a training object left out; final class means, one majorizing pass. Refusals count as errors (Definition 3)."
     },
     "training_accuracy": "resubstitution (Definition 2): a k-NN training object is not its own neighbour, a CS-model training object is left out of its own context; SVM and Random Forest classify the training objects with the model fitted on them",
     "balanced_accuracy": "mean recall of the two classes"
@@ -43,7 +43,8 @@
   },
   "splits": [
     {
-      "key": "336",
+      "key": "German-336",
+      "label": "German · Zhuravlyov split · training 336 (196, 140)",
       "dataset": "German",
       "file": "German/German (1000, 20, 2) — training 336 (zhuravlyov).dat",
       "file_sha256": "de91b117361122bdf22430a56ea4b2f06582739e037845d2e799a8da46b56135",
@@ -529,7 +530,8 @@
       ]
     },
     {
-      "key": "341",
+      "key": "German-341",
+      "label": "German · Euclidean split · training 341 (173, 168)",
       "dataset": "German",
       "file": "German/German (1000, 7, 2) — training 341 (euclidean).dat",
       "file_sha256": "2a11746d5b41579140337ee6bc1b53879d06f80c65d3fe32eff00bd857db3052",
@@ -903,7 +905,8 @@
       ]
     },
     {
-      "key": "367",
+      "key": "German-367",
+      "label": "German · Chebyshev split · training 367 (190, 177)",
       "dataset": "German",
       "file": "German/German (1000, 7, 2) — training 367 (chebyshev).dat",
       "file_sha256": "1c818e6772cae85394d0134e3e29a0d6116d58acee0bb9964d1327f00948f772",

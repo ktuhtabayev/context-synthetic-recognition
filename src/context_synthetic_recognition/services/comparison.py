@@ -6,7 +6,9 @@ Shared by ``csr compare``, ``scripts/run_comparison.py`` and the desktop applica
 split files of ``datasets/splits/``, run :mod:`~context_synthetic_recognition.comparison`, render
 the tables and write them with their checksums; check written results against a new run.
 
-Files of the output folder (``experiments/comparison/`` of the project by default)::
+The splits are found by :mod:`.split_discovery` (ADR-090). The comparison set — German's three
+splits, :data:`~context_synthetic_recognition.comparison.COMPARISON_SPLITS` — gives these files
+(``experiments/comparison/`` of the project by default)::
 
     standard-classifiers.csv .md .tex   Standard classifiers (SVM, Random Forest)
     knn-by-metric.csv .md .tex          k-NN by metric (k = 3 / k = 5)
@@ -14,27 +16,31 @@ Files of the output folder (``experiments/comparison/`` of the project by defaul
     results.csv .md                     every split × method
     summary.json                        settings, library versions, every number
     checksums.sha256                    SHA-256 of the files above
+
+Any other set of splits gives ``results.csv``, ``results.md``, ``summary.json`` and
+``checksums.sha256``; it is never written to ``experiments/comparison``.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import metadata
 from importlib.resources import files
 from pathlib import Path
 
-from context_synthetic_recognition.comparison import SPLITS, SplitResult, compare_split
+from context_synthetic_recognition.comparison import COMPARISON_SPLITS, SplitResult, compare_split
 from context_synthetic_recognition.comparison.tables import (
     DECIMALS,
     GROUP,
+    RESULTS_KEY,
     comparison_tables,
+    results_table,
     summary_data,
 )
 from context_synthetic_recognition.data.catalog import find_datasets_root
-from context_synthetic_recognition.data.splits import load_split_file
 from context_synthetic_recognition.errors import DatasetError
 from context_synthetic_recognition.export.tables import Cell, Table
 from context_synthetic_recognition.export.text import (
@@ -44,6 +50,7 @@ from context_synthetic_recognition.export.text import (
     latex_table,
     markdown_text,
 )
+from context_synthetic_recognition.services.split_discovery import read_splits
 
 SPLITS_DIR = "splits"
 """Sub-folder of the dataset folder with the split files."""
@@ -65,8 +72,9 @@ class ComparisonOutcome:
     """A run of the comparison: the results, the tables and the files, not yet written."""
 
     results: tuple[SplitResult, ...]
-    tables: tuple[Table, Table, Table, Table]
-    """Standard classifiers, k-NN by metric, the CS-model's table and the full results table."""
+    tables: tuple[Table, ...]
+    """Standard classifiers, k-NN by metric, the CS-model's table and the full results table for
+    the comparison set; the full results table alone for any other set."""
     files: Mapping[str, bytes]
     """File name → content, in writing order; ``checksums.sha256`` last."""
     versions: Mapping[str, str]
@@ -149,32 +157,36 @@ def sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def is_comparison_set(results: Sequence[SplitResult]) -> bool:
+    """Whether the results are those of German's three splits, in column order (ADR-090)."""
+    return tuple(r.spec.key for r in results) == COMPARISON_SPLITS
+
+
+def result_tables(results: Sequence[SplitResult]) -> tuple[Table, ...]:
+    """The comparison tables for the comparison set; the full results table for any other set."""
+    return comparison_tables(results) if is_comparison_set(results) else (results_table(results),)
+
+
 def render_files(
     results: tuple[SplitResult, ...],
-    tables: tuple[Table, Table, Table, Table],
+    tables: Sequence[Table],
     *,
     versions: Mapping[str, str],
     inputs: Mapping[str, str],
 ) -> dict[str, bytes]:
     """The output files' contents (UTF-8, LF line ends), the checksums last.
 
-    The CSV files start with a byte-order mark, so that Excel reads them as UTF-8 (ADR-083).
+    Every table is written as CSV, Markdown and LaTeX, the full results table as CSV and
+    Markdown. The CSV files start with a byte-order mark, so that Excel reads them as UTF-8
+    (ADR-083).
     """
-    standard, knn, cs_model, results_table = tables
-    texts = {
-        "standard-classifiers.csv": csv_text(standard),
-        "standard-classifiers.md": markdown_text(standard, DECIMALS, level=2),
-        "standard-classifiers.tex": latex_table(standard, DECIMALS),
-        "knn-by-metric.csv": csv_text(knn),
-        "knn-by-metric.md": markdown_text(knn, DECIMALS, level=2),
-        "knn-by-metric.tex": latex_table(knn, DECIMALS),
-        "cs-model.csv": csv_text(cs_model),
-        "cs-model.md": markdown_text(cs_model, DECIMALS, level=2),
-        "cs-model.tex": latex_table(cs_model, DECIMALS),
-        "results.csv": csv_text(results_table),
-        "results.md": markdown_text(results_table, DECIMALS, level=2),
-        "summary.json": json_text(summary_data(results, versions=versions, inputs=inputs)),
-    }
+    texts: dict[str, str] = {}
+    for table in tables:
+        texts[f"{table.key}.csv"] = csv_text(table)
+        texts[f"{table.key}.md"] = markdown_text(table, DECIMALS, level=2)
+        if table.key != RESULTS_KEY:
+            texts[f"{table.key}.tex"] = latex_table(table, DECIMALS)
+    texts["summary.json"] = json_text(summary_data(results, versions=versions, inputs=inputs))
     files = {
         name: csv_bytes(text) if name.endswith(".csv") else text.encode("utf-8")
         for name, text in texts.items()
@@ -184,30 +196,35 @@ def render_files(
 
 
 def run_comparison(
-    splits: Path | None = None, *, progress: Progress | None = None
+    splits: Path | None = None,
+    *,
+    keys: Sequence[str] = COMPARISON_SPLITS,
+    progress: Progress | None = None,
 ) -> ComparisonOutcome:
     """Read the split files, run every method and render the output files (nothing is written).
 
     Args:
         splits: The folder of the split files; ``datasets/splits`` of the project by default.
+        keys: The splits, by key or training size (ADR-090); German's three by default.
         progress: Called with a line of text before each split.
 
     Raises:
-        DatasetError: A split file is missing or malformed.
+        DatasetError: A split is unknown, or its file is missing or malformed.
         ConfigError: scikit-learn is not installed.
     """
     folder = splits or splits_folder()
     results = []
     inputs = {}
-    for spec in SPLITS:
-        path = folder / spec.file
+    for file in read_splits(folder, keys):
         if progress is not None:
-            progress(f"{spec.key} — {spec.title}: {path.name}")
-        split = load_split_file(path)
-        inputs[spec.file] = sha256(path.read_bytes())
-        results.append(compare_split(spec, split))
+            progress(f"{file.short_label}: {Path(file.file).name}")
+        split = file.split
+        if split is None:  # read_splits gives available files only
+            raise DatasetError(f"{file.file}: the file was not read")
+        inputs[file.file] = file.sha256
+        results.append(compare_split(file.spec, split))
     done = tuple(results)
-    tables = comparison_tables(done)
+    tables = result_tables(done)
     versions = library_versions()
     files = render_files(done, tables, versions=versions, inputs=inputs)
     return ComparisonOutcome(done, tables, files, versions, folder)
@@ -224,13 +241,31 @@ def write_comparison(outcome: ComparisonOutcome, out: Path) -> list[Path]:
     return written
 
 
-def _recorded_versions(folder: Path) -> dict[str, str]:
+def _summary(folder: Path) -> dict[str, object]:
     try:
         summary = json.loads((folder / "summary.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    versions = summary.get("versions", {}) if isinstance(summary, dict) else {}
+    return summary if isinstance(summary, dict) else {}
+
+
+def _recorded_versions(folder: Path) -> dict[str, str]:
+    versions = _summary(folder).get("versions", {})
     return {str(k): str(v) for k, v in versions.items()} if isinstance(versions, dict) else {}
+
+
+def recorded_keys(folder: Path) -> tuple[str, ...]:
+    """The keys of the splits a results folder holds (``summary.json``); German's three if none.
+
+    The keys of the earlier versions (``336`` …) are kept: :func:`run_comparison` resolves them.
+    """
+    splits = _summary(folder).get("splits")
+    keys = (
+        tuple(str(s["key"]) for s in splits if isinstance(s, dict) and "key" in s)
+        if isinstance(splits, list)
+        else ()
+    )
+    return keys or COMPARISON_SPLITS
 
 
 def check_comparison(
@@ -242,6 +277,8 @@ def check_comparison(
         out: The folder the results were written to.
         splits: The folder of the split files; ``datasets/splits`` of the project by default.
         progress: Called with a line of text before each split of the new run.
+
+    The new run is of the splits that ``summary.json`` names (German's three if it names none).
     """
     problems: list[str] = []
     listing = out / CHECKSUMS
@@ -257,7 +294,7 @@ def check_comparison(
             problems.append(f"{name}: missing")
         elif sha256(path.read_bytes()) != digest:
             problems.append(f"{name}: does not match {CHECKSUMS}")
-    outcome = run_comparison(splits, progress=progress)
+    outcome = run_comparison(splits, keys=recorded_keys(out), progress=progress)
     expected = outcome.files
     for name in sorted(set(listed) ^ (set(expected) - {CHECKSUMS})):
         where = "a new run writes it" if name in expected else "a new run does not write it"

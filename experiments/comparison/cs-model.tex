@@ -1,10 +1,10 @@
 \begin{table}[htbp]
   \centering
-  \caption{CS-model on the same samples: accuracy on the test samples, $\alpha$ = 0.1 / $\alpha$ = 0.2, \%. Each cell: $\alpha$ = 0.1 / $\alpha$ = 0.2; --- = not run on that split. Majority-class rate of the test sample: 75.90 \% (336), 79.97 \% (341), 80.57 \% (367). One base operator per metric, min--max scaled on the training sample: Euclidean, Chebyshev and Canberra on the quantitative features, Zhuravlyov on all features (the 336 split only); odd k = 3 $\ldots$ 41; synthetic features 0, 1, 2 with the features that take 0 on a training object left out; final class means, one majorizing pass. Refusals count as errors (Definition 3). Fitted on the article's training samples; the test objects are classified without their class.}
+  \caption{CS-model on the same samples: accuracy on the test samples, $\alpha$ = 0.1 / $\alpha$ = 0.2, \%. Each cell: $\alpha$ = 0.1 / $\alpha$ = 0.2; --- = not run on that split. Majority-class rate of the test sample: 75.90 \% (German $\cdot$ Zhuravlyov split $\cdot$ training 336), 79.97 \% (German $\cdot$ Euclidean split $\cdot$ training 341), 80.57 \% (German $\cdot$ Chebyshev split $\cdot$ training 367). One base operator per metric, min--max scaled on the training sample: Euclidean, Chebyshev and Canberra on the quantitative features, Zhuravlyov on all features (German's Zhuravlyov split only); odd k = 3 $\ldots$ 41; synthetic features 0, 1, 2 with the features that take 0 on a training object left out; final class means, one majorizing pass. Refusals count as errors (Definition 3). Fitted on the article's training samples; the test objects are classified without their class.}
   \label{tab:cs-model}
   \begin{tabular}{llll}
     \toprule
-    Metric & 336 (196, 140) --- Zhuravlyov split & 341 (173, 168) --- Euclidean split & 367 (190, 177) --- Chebyshev split \\
+    Metric & German $\cdot$ Zhuravlyov split $\cdot$ training 336 (196, 140) & German $\cdot$ Euclidean split $\cdot$ training 341 (173, 168) & German $\cdot$ Chebyshev split $\cdot$ training 367 (190, 177) \\
     \midrule
     Euclidean & 62.95 / 69.13 & 56.90 / 56.15 & 77.41 / 77.41 \\
     Chebyshev & 30.87 / 30.87 & 39.15 / 35.51 & 78.36 / 29.07 \\

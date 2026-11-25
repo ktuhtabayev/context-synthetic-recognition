@@ -31,9 +31,9 @@ from context_synthetic_recognition.comparison.settings import (
     DISTANCE_DECIMALS,
     KNN_METRICS,
     METHOD_TITLES,
-    METRIC_TITLES,
     SEED,
     SplitSpec,
+    metric_title,
 )
 from context_synthetic_recognition.config import (
     ExperimentConfig,
@@ -65,24 +65,27 @@ class MethodResult:
     """Number of original features the method uses."""
     table: str | None
     """``Standard classifiers``, ``k-NN by metric`` or ``None`` (in neither table)."""
-    test_decisions: IntArray = field(repr=False)
-    """(test objects,) decisions: 1 = K1, 2 = K2, 0 = refusal."""
-    training_decisions: IntArray = field(repr=False)
+    test_decisions: IntArray | None = field(repr=False)
+    """(test objects,) decisions: 1 = K1, 2 = K2, 0 = refusal; ``None`` if unavailable."""
+    training_decisions: IntArray | None = field(repr=False)
     """(training objects,) resubstitution decisions."""
-    test: ClassificationMetrics = field(repr=False)
-    training: ClassificationMetrics = field(repr=False)
+    test: ClassificationMetrics | None = field(repr=False)
+    training: ClassificationMetrics | None = field(repr=False)
+    undefined: str = ""
+    """Why the split cannot support the method (empty if it can, ADR-090)."""
 
     def __post_init__(self) -> None:
         """Freeze the decisions."""
-        readonly(self.test_decisions)
-        readonly(self.training_decisions)
+        for decisions in (self.test_decisions, self.training_decisions):
+            if decisions is not None:
+                readonly(decisions)
 
     @property
     def title(self) -> str:
         """Display name: ``SVM``, ``Random Forest``, ``k-NN Euclidean, k = 3`` and so on."""
         if self.metric is None:
             return METHOD_TITLES[self.method]
-        return f"k-NN {METRIC_TITLES[self.metric]}, k = {self.k}"
+        return f"k-NN {metric_title(self.metric)}, k = {self.k}"
 
 
 @dataclass(frozen=True, eq=False)
@@ -106,10 +109,9 @@ class SplitResult:
         return max(self.test_sizes[1:]) / self.test_sizes[0]
 
     @property
-    def column(self) -> str:
-        """``336 (196, 140)`` — the training sample's size and class split."""
-        size, k1, k2 = self.training_sizes
-        return f"{size} ({k1}, {k2})"
+    def label(self) -> str:
+        """``German · Zhuravlyov split · training 336 (196, 140)`` — the split's name (ADR-090)."""
+        return self.spec.label(self.training_sizes)
 
     def method(self, key: str) -> MethodResult:
         """The result of a method by its key.
@@ -131,11 +133,11 @@ def knn_key(metric: str, k: int) -> str:
 def comparison_config(spec: SplitSpec) -> ExperimentConfig:
     """The configuration the baselines read: min–max, the k-NN operators, rounding, seed."""
     operators = [
-        OperatorConfig(label=METRIC_TITLES[m], metric=plugin(m), features="quantitative")
+        OperatorConfig(label=metric_title(m), metric=plugin(m), features="quantitative")
         for m in KNN_METRICS
     ]
     operators += [
-        OperatorConfig(label=METRIC_TITLES[m], metric=plugin(m), features="all")
+        OperatorConfig(label=metric_title(m), metric=plugin(m), features="all")
         for m in spec.extra_knn
     ]
     return ExperimentConfig(

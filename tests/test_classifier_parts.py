@@ -12,7 +12,7 @@ import pytest
 from typer.testing import CliRunner
 
 from context_synthetic_recognition.cli.app import EXIT_USAGE, app
-from context_synthetic_recognition.comparison import SPLITS
+from context_synthetic_recognition.comparison import COMPARISON_SPLITS
 from context_synthetic_recognition.data import load_split_file
 from context_synthetic_recognition.data.samples import (
     AnswerKey,
@@ -42,11 +42,14 @@ from context_synthetic_recognition.services.comparison_part import (
     ComparisonPart,
     blind_predictions,
 )
+from context_synthetic_recognition.services.split_discovery import discover_splits
 
 from .conftest import ROOT
 from .dummy_part import DummyPart
 
 SPLITS_FOLDER = ROOT / "datasets" / "splits"
+SPLITS = tuple(discover_splits(SPLITS_FOLDER, read=()).resolve(k).spec for k in COMPARISON_SPLITS)
+"""German's three splits, from the names of their files (ADR-090)."""
 OUT = ROOT / "experiments" / "comparison"
 runner = CliRunner()
 
@@ -143,14 +146,14 @@ def test_the_test_classes_change_no_prediction(
     predictions = parts.classify(part, trained, objects)
     reference = article.predictions
     kinds = set()
-    for split in ("336", "341", "367"):
+    for split in COMPARISON_SPLITS:
         assert list(predictions.decisions[split]) == list(reference.decisions[split])
         for method, decided in predictions.decisions[split].items():
             assert decided.same_as(reference.decisions[split][method]), (split, method)
             kinds.add(method.rsplit("-", 2)[0] if method.startswith("cs-") else method)
     # SVM, Random Forest, every k-NN row and the CS-model
     assert {"svm", "random-forest", "knn-zhuravlyov-5", "cs-model"} <= kinds
-    assert len(predictions.decisions["336"]) == 18
+    assert len(predictions.decisions["German-336"]) == 18
 
 
 def test_a_dataset_cannot_be_classified(article: StageRun) -> None:
@@ -232,20 +235,20 @@ def test_the_evaluation_tabs(article: StageRun) -> None:
     )
     assert len(tabs["all-results"].variants[0].table.rows) == 46
     per_object = {v.label: v for v in tabs["per-object"].variants}
-    assert list(per_object) == ["336", "341", "367"]
-    table = per_object["336"].table
+    assert list(per_object) == list(COMPARISON_SPLITS)
+    table = per_object["German-336"].table
     assert table.columns[:3] == ("Object", "True class", "Correct methods")
     assert len(table.columns) == 3 + 18
     marks = {str(v)[:1] for row in table.rows for v in row[3:]}
     assert marks <= {"✓", "✗", "0"}
-    svm = article.evaluation.metrics["336"]["svm"]
+    svm = article.evaluation.metrics["German-336"]["svm"]
     assert svm is not None
     assert sum(1 for row in table.rows if str(row[3]).startswith("✓")) == svm.correct == 497
-    assert per_object["336"].cells[1] is CellMeaning.CLASS
-    assert set(per_object["336"].cells[3:]) == {CellMeaning.OUTCOME}
+    assert per_object["German-336"].cells[1] is CellMeaning.CLASS
+    assert set(per_object["German-336"].cells[3:]) == {CellMeaning.OUTCOME}
     confusion = tabs["confusion"].variants[0].table
     first = confusion.rows[0]
-    assert first[:2] == ("336", "SVM")
+    assert first[:2] == ("German-336", "SVM")
     assert sum(first[2:8]) == 664  # type: ignore[arg-type]
     assert first[8] == 74.85
 
@@ -259,7 +262,7 @@ def test_a_single_split_has_no_comparison_tables(tmp_path: Path) -> None:
     (everything,) = tabs["all-results"].variants
     assert len(everything.table.rows) == 14  # 8 methods, 6 CS-models
     assert part.write_problem(run.evaluation) == WRITES_ARTICLE
-    with pytest.raises(DatasetError, match="Only the full article set"):
+    with pytest.raises(DatasetError, match=r"Only German.s three splits are written"):
         part.write(run.evaluation, tmp_path)
     assert not any(tmp_path.iterdir())
 
@@ -280,22 +283,27 @@ def test_the_training_and_test_tabs(article: StageRun) -> None:
         "Not printed",
         "CS-model",
     }
-    assert methods.rows[8][:4] == ("Not printed", "k-NN Zhuravlyov, k = 3", "all", "336")
-    sample = {v.label: v for v in training["training-sample"].variants}["341"]
+    assert methods.rows[8][:4] == (
+        "Not printed",
+        "k-NN Zhuravlyov, k = 3",
+        "all",
+        "German · Zhuravlyov split · training 336",
+    )
+    sample = {v.label: v for v in training["training-sample"].variants}["German-341"]
     assert sample.table.columns[-1] == "Class"
     assert len(sample.table.rows) == 341
     assert sample.cells[-1] is CellMeaning.CLASS
     results = training["training-results"].variants[0].table
-    svm = next(r for r in results.rows if r[:2] == ("336", "SVM"))
+    svm = next(r for r in results.rows if r[:2] == ("German-336", "SVM"))
     assert svm[2:] == (336, 83.63, 281, 0)
 
     test = {t.key: t for t in parts.prediction_view(article.predictions)}
     assert list(test) == ["test-objects", "predictions", "predicted-classes"]
-    objects = {v.label: v for v in test["test-objects"].variants}["367"]
+    objects = {v.label: v for v in test["test-objects"].variants}["German-367"]
     assert objects.table.columns == ("Object", *article.samples.test[2].feature_names)
     assert "Class" not in objects.table.columns
     assert len(objects.table.rows) == 633
-    predictions = {v.label: v for v in test["predictions"].variants}["336"]
+    predictions = {v.label: v for v in test["predictions"].variants}["German-336"]
     columns = predictions.table.columns
     assert columns[:3] == ("Object", "SVM", "SVM · score")
     assert columns[-2:] == ("Most common", "Agreement")
@@ -314,15 +322,27 @@ def test_the_training_and_test_tabs(article: StageRun) -> None:
 def test_the_sample_options() -> None:
     part = comparison_part()
     options = {o.key: o for o in part.sample_options(SPLITS_FOLDER)}
-    assert list(options) == ["article", "336", "341", "367", "76", "601", "722"]
-    assert options["article"].label == "All article splits (336, 341, 367) · test 664 / 659 / 633"
+    assert list(options) == [
+        "article",
+        "German-336",
+        "German-341",
+        "German-367",
+        "Heart-Disease-76",
+        "Spambase-601",
+        "Spambase-722",
+    ]
+    assert options["article"].label == "All article splits · test 664 / 659 / 633"
     assert options["article"].complete
-    assert options["336"].label == "336 · training 336 (196, 140) · test 664"
-    assert options["76"].label == "76 · training 76 (36, 40) · test 194"
-    assert options["601"].label == "601 · training 601 (361, 240) · test 1501"
-    assert options["722"].label == "722 · training 722 (467, 255) · test 1380"
+    assert options["German-336"].label == (
+        "German · Zhuravlyov split · training 336 · 20 features · training 336 (196, 140) · "
+        "test 664"
+    )
+    assert options["Spambase-722"].label == (
+        "Spambase · Euclidean split · training 722 · 57 features · training 722 (467, 255) · "
+        "test 1380"
+    )
     assert all(o.available for o in options.values())
-    assert not any(options[key].complete for key in ("76", "601", "722"))
+    assert not any(options[key].complete for key in ("Heart-Disease-76", "Spambase-601"))
 
 
 def test_a_spambase_split_runs_through_the_three_stages() -> None:
@@ -338,11 +358,13 @@ def test_a_spambase_split_runs_through_the_three_stages() -> None:
     (sample,) = run.trained.samples
     assert sample.data.class_sizes == (361, 240)
     assert run.predictions.objects[0].m == 1501
-    assert len(run.predictions.decisions["601"]) == 14  # 8 standard methods, 6 CS-models
+    assert len(run.predictions.decisions["Spambase-601"]) == 14  # 8 standard methods, 6 CS-models
     tabs = {t.key: t for t in run.evaluation.tables}
     assert tabs["standard-classifiers"].missing == NEEDS_ARTICLE
     (everything,) = tabs["all-results"].variants
-    assert {row[0] for row in everything.table.rows} == {"601"}
+    assert {row[0] for row in everything.table.rows} == {
+        "Spambase · Euclidean split · training 601 (361, 240)"
+    }
     assert len(everything.table.rows) == 14
     assert part.write_problem(run.evaluation) == WRITES_ARTICLE
 
@@ -354,9 +376,9 @@ def test_unavailable_sample_options(tmp_path: Path) -> None:
         (tmp_path / spec.file).write_bytes((SPLITS_FOLDER / spec.file).read_bytes())
     options = {o.key: o for o in part.sample_options(tmp_path)}
     assert not options["article"].available
-    assert "split file not found" in options["article"].reason
-    assert not options["336"].available
-    assert options["341"].available
+    assert "no split file German-336 in" in options["article"].reason
+    assert "German-336" not in options  # no such file: every option is a file of the folder
+    assert options["German-341"].available
     with pytest.raises(DatasetError, match="unknown split 'x'"):
         part.option("x")
     missing = part.sample_options(tmp_path / "none" / "nested")
@@ -423,7 +445,7 @@ def test_csr_compare_predict(tmp_path: Path, article: StageRun) -> None:
     assert len(header) == 1 + 14  # 8 standard methods, 6 CS-models
     assert not any("class" in name.lower() for name in header)
     assert len(rows) == 1 + 659
-    decided = article.predictions.decisions["341"]
+    decided = article.predictions.decisions["German-341"]
     for column, key in enumerate(decided, start=1):
         values = decided[key].decisions
         assert values is not None
@@ -448,14 +470,14 @@ def test_csr_compare_predict_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         ],
     )
     assert missing.exit_code == EXIT_USAGE
-    assert "split file not found" in missing.output
+    assert "no folder of split files" in missing.output
     assert not (tmp_path / "x.csv").exists()
     monkeypatch.chdir(tmp_path)
     default = runner.invoke(
         app, ["compare", "predict", "--split", "76", "--splits", str(SPLITS_FOLDER)]
     )
     assert default.exit_code == 0, default.output
-    assert (tmp_path / "predictions-76.csv").is_file()
+    assert (tmp_path / "predictions-Heart-Disease-76.csv").is_file()
 
 
 def test_blind_predictions_build_no_answer_key(monkeypatch: pytest.MonkeyPatch) -> None:

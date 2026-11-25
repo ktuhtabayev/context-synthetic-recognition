@@ -129,14 +129,14 @@ Test accuracy, %. These tables repeat `experiments/comparison/standard-classifie
 
 **Standard classifiers.** SVM and Random Forest.
 
-| Method | 336 (196, 140) — Zhuravlyov split | 341 (173, 168) — Euclidean split | 367 (190, 177) — Chebyshev split |
+| Method | German · Zhuravlyov split · training 336 (196, 140) | German · Euclidean split · training 341 (173, 168) | German · Chebyshev split · training 367 (190, 177) |
 | :--- | ---: | ---: | ---: |
 | SVM | 74.85 | 50.68 | 61.14 |
 | Random Forest | 74.25 | 56.45 | 59.87 |
 
 **k-NN by metric.** k-NN, k = 3 / k = 5.
 
-| Metric | 336 (196, 140) — Zhuravlyov split | 341 (173, 168) — Euclidean split | 367 (190, 177) — Chebyshev split |
+| Metric | German · Zhuravlyov split · training 336 (196, 140) | German · Euclidean split · training 341 (173, 168) | German · Chebyshev split · training 367 (190, 177) |
 | :--- | :--- | :--- | :--- |
 | Euclidean | 57.38 / 60.09 | 58.42 / 54.78 | 57.50 / 59.87 |
 | Chebyshev | 54.37 / 56.78 | 58.88 / 59.64 | 59.08 / 60.19 |
@@ -167,7 +167,7 @@ their class (the Theorem). Its settings were approved before the first run (ADR-
 Test accuracy, %, with refusals counted as errors (Definition 3); each cell is α = 0.1 / α = 0.2.
 This repeats `experiments/comparison/cs-model.md`.
 
-| Metric | 336 (196, 140) — Zhuravlyov split | 341 (173, 168) — Euclidean split | 367 (190, 177) — Chebyshev split |
+| Metric | German · Zhuravlyov split · training 336 (196, 140) | German · Euclidean split · training 341 (173, 168) | German · Chebyshev split · training 367 (190, 177) |
 | :--- | :--- | :--- | :--- |
 | Euclidean | 62.95 / 69.13 | 56.90 / 56.15 | 77.41 / 77.41 |
 | Chebyshev | 30.87 / 30.87 | 39.15 / 35.51 | 78.36 / 29.07 |

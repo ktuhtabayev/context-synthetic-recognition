@@ -20,25 +20,23 @@ from context_synthetic_recognition.comparison.methods import (
     knn_key,
 )
 from context_synthetic_recognition.comparison.settings import (
-    HEART_SPLIT,
+    COMPARISON_SPLITS,
     KNN_KS,
     KNN_METRICS,
     SKLEARN_OPTIONS,
-    SPAMBASE_SPLITS,
-    SPLITS,
     SplitSpec,
+    metric_title,
+    own_metrics,
     percent,
 )
 from context_synthetic_recognition.comparison.stages import compare_split
 
 __all__ = [
     "ALPHAS",
-    "HEART_SPLIT",
+    "COMPARISON_SPLITS",
     "KNN_KS",
     "KNN_METRICS",
     "SKLEARN_OPTIONS",
-    "SPAMBASE_SPLITS",
-    "SPLITS",
     "CSModelResult",
     "MethodResult",
     "SplitResult",
@@ -48,6 +46,8 @@ __all__ = [
     "cs_model_config",
     "cs_model_metrics",
     "knn_key",
+    "metric_title",
+    "own_metrics",
     "percent",
     "run_cs_model",
 ]

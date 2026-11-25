@@ -21,8 +21,8 @@ from dataclasses import dataclass, field
 
 from context_synthetic_recognition.comparison.settings import (
     KNN_METRICS,
-    METRIC_TITLES,
     SplitSpec,
+    metric_title,
 )
 from context_synthetic_recognition.config import ExperimentConfig, OperatorConfig, plugin
 from context_synthetic_recognition.core.arrays import IntArray, readonly
@@ -80,7 +80,7 @@ class CSModelResult:
     @property
     def title(self) -> str:
         """``CS-model Euclidean, α = 0.1``."""
-        return f"CS-model {METRIC_TITLES[self.metric]}, α = {self.alpha}"
+        return f"CS-model {metric_title(self.metric)}, α = {self.alpha}"
 
 
 def cs_model_metrics(spec: SplitSpec) -> tuple[str, ...]:

@@ -1,10 +1,14 @@
-"""The fixed settings and the article's splits of the comparison (ADR-079, ADR-080).
+"""The fixed settings of the comparison and the rule that gives a split its methods.
 
-Fixed before any run; nothing is tuned and nothing is chosen on the test objects.
+Fixed before any run; nothing is tuned and nothing is chosen on the test objects (ADR-079,
+ADR-080). The splits themselves are not listed here: every split file of the folder is a sample
+(ADR-090), and only the comparison set — German's three splits, the columns of the comparison
+tables — is named in code (:data:`COMPARISON_SPLITS`).
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 SEED = 42
@@ -33,70 +37,65 @@ TABLE_STANDARD = "Standard classifiers"
 """Name of the table of SVM and Random Forest."""
 TABLE_KNN = "k-NN by metric"
 """Name of the table of the k-NN vote, one row per metric."""
+TABLE_CS_MODEL = "CS-model"
+"""Name of the CS-model's table, beside the comparison tables."""
+COMPARISON_SPLITS = ("German-336", "German-341", "German-367")
+"""The comparison set, in column order: German's Zhuravlyov, Euclidean and Chebyshev splits — the
+columns of the comparison tables and the content of ``experiments/comparison``. The only list of
+splits kept in code (ADR-090)."""
+
+
+def metric_title(metric: str) -> str:
+    """``Euclidean`` for ``euclidean``; a metric without a title is capitalised."""
+    return METRIC_TITLES.get(metric, metric.replace("-", " ").capitalize())
+
+
+def own_metrics(key: str, metric: str) -> tuple[str, ...]:
+    """Further metrics of a split's k-NN vote and CS-model, on every feature (ADR-090).
+
+    The rule: a split of the comparison set whose own metric is none of the k-NN metrics also
+    runs with its own metric — German's Zhuravlyov split. Every other split runs with the k-NN
+    metrics only.
+    """
+    return (metric,) if key in COMPARISON_SPLITS and metric not in KNN_METRICS else ()
 
 
 @dataclass(frozen=True)
 class SplitSpec:
-    """One of the article's training/test splits."""
+    """A split as the comparison reads it: its key, dataset, file and the metric of the split."""
 
     key: str
-    """Short name, e.g. ``336``."""
+    """``German-336`` (ADR-090): internal, never shown in the desktop application."""
     dataset: str
     """Name of the dataset, e.g. ``German``."""
     file: str
-    """The split file, relative to ``datasets/splits``."""
+    """The split file, relative to the split folder."""
     split_metric: str
     """Proximity measure the split was made with (registry name)."""
+    training_size: int = 0
+    """Objects of the training sample, as the file's name gives it."""
     extra_knn: tuple[str, ...] = ()
-    """Further k-NN metrics on all features (rows in neither comparison table)."""
+    """Further metrics of the k-NN vote and the CS-model, on every feature (:func:`own_metrics`)."""
+
+    @classmethod
+    def of(cls, key: str, dataset: str, file: str, metric: str, training_size: int) -> SplitSpec:
+        """A split with the methods of the rule (:func:`own_metrics`)."""
+        return cls(key, dataset, file, metric, training_size, own_metrics(key, metric))
 
     @property
     def title(self) -> str:
         """``Zhuravlyov split`` and so on."""
-        return f"{METRIC_TITLES[self.split_metric]} split"
+        return f"{metric_title(self.split_metric)} split"
 
+    @property
+    def name(self) -> str:
+        """``German · Zhuravlyov split · training 336``."""
+        return f"{self.dataset} · {self.title} · training {self.training_size}"
 
-SPLITS = (
-    SplitSpec(
-        "336",
-        "German",
-        "German/German (1000, 20, 2) — training 336 (zhuravlyov).dat",
-        "zhuravlyov",
-        extra_knn=("zhuravlyov",),
-    ),
-    SplitSpec(
-        "341", "German", "German/German (1000, 7, 2) — training 341 (euclidean).dat", "euclidean"
-    ),
-    SplitSpec(
-        "367", "German", "German/German (1000, 7, 2) — training 367 (chebyshev).dat", "chebyshev"
-    ),
-)
-"""The splits of the comparison tables, in column order."""
-HEART_SPLIT = SplitSpec(
-    "76",
-    "Heart",
-    "Heart-Disease/Heart-Disease (270, 13, 2) — training 76 (zhuravlyov).dat",
-    "zhuravlyov",
-)
-"""Heart's split: readable, not part of the comparison tables."""
-SPAMBASE_SPLITS = (
-    SplitSpec(
-        "601",
-        "Spambase",
-        "Spambase/Spambase (2102, 57, 2) — training 601 (euclidean).dat",
-        "euclidean",
-    ),
-    SplitSpec(
-        "722",
-        "Spambase",
-        "Spambase/Spambase (2102, 57, 2) — training 722 (euclidean).dat",
-        "euclidean",
-    ),
-)
-"""Spambase's splits (ADR-088): readable, not part of the comparison tables. Both hold the same 2102
-objects; the 722 file's values are min–max scaled over them."""
-TABLE_CS_MODEL = "CS-model"
-"""Name of the CS-model's table, beside the comparison tables."""
+    def label(self, sizes: Sequence[int]) -> str:
+        """``German · Zhuravlyov split · training 336 (196, 140)`` from (|T|, |T ∩ K1|, …)."""
+        size, *classes = sizes
+        return f"{self.dataset} · {self.title} · training {size} ({', '.join(map(str, classes))})"
 
 
 def percent(value: float) -> float:

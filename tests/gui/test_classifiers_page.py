@@ -71,14 +71,15 @@ def test_the_page_lists_the_parts(window: MainWindow, qtbot: QtBot) -> None:
     ]
     assert not view.training_view.action.isEnabled()
     ready(view, qtbot)
-    assert [view.samples.itemText(i) for i in range(view.samples.count())] == [
-        "All article splits (336, 341, 367) · test 664 / 659 / 633",
-        "336 · training 336 (196, 140) · test 664",
-        "341 · training 341 (173, 168) · test 659",
-        "367 · training 367 (190, 177) · test 633",
-        "76 · training 76 (36, 40) · test 194",
-        "601 · training 601 (361, 240) · test 1501",
-        "722 · training 722 (467, 255) · test 1380",
+    texts = [view.samples.itemText(i) for i in range(view.samples.count())]
+    assert texts[0] == "All article splits · test 664 / 659 / 633"
+    assert [text.partition(" · test")[0] for text in texts[1:]] == [
+        "German · Zhuravlyov split · training 336 · 20 features · training 336 (196, 140)",
+        "German · Euclidean split · training 341 · 7 features · training 341 (173, 168)",
+        "German · Chebyshev split · training 367 · 7 features · training 367 (190, 177)",
+        "Heart-Disease · Zhuravlyov split · training 76 · 13 features · training 76 (36, 40)",
+        "Spambase · Euclidean split · training 601 · 57 features · training 601 (361, 240)",
+        "Spambase · Euclidean split · training 722 · 57 features · training 722 (467, 255)",
     ]
     assert states(view) == [StepState.NOT_RUN] * 3
     assert view.training_view.action.text() == "Fit on the training sample"
@@ -93,7 +94,7 @@ def test_the_page_lists_the_parts(window: MainWindow, qtbot: QtBot) -> None:
 
 def test_steps_enabling_and_out_of_date(window: MainWindow, qtbot: QtBot) -> None:
     view = ready(window.classifiers_page.view, qtbot)
-    choose(view, "341")
+    choose(view, "German-341")
     run(view, qtbot, view.training_view.action.click)
     assert states(view) == [StepState.DONE, StepState.NOT_RUN, StepState.NOT_RUN]
     assert view.stepper.buttons[1].isEnabled()
@@ -126,10 +127,10 @@ def test_steps_enabling_and_out_of_date(window: MainWindow, qtbot: QtBot) -> Non
     assert view.stack.currentIndex() == 2
     assert view.evaluation_view.banner.text().startswith("True classes revealed")
     assert not view.write_button.isEnabled()  # one split: the comparison tables need all three
-    assert "Only the full article set" in view.write_button.toolTip()
+    assert "Only German's three splits are written" in view.write_button.toolTip()
     standard = view.evaluation_view.tabs_by_key["standard-classifiers"]
     assert standard.panel.isHidden()
-    assert "need the three article splits" in standard.missing.text()
+    assert "need German's three splits" in standard.missing.text()
     # training again: the later steps are out of date, and the evaluation cannot be opened
     view.go_to_step(0)
     run(view, qtbot, view.training_view.action.click)
@@ -139,7 +140,7 @@ def test_steps_enabling_and_out_of_date(window: MainWindow, qtbot: QtBot) -> Non
     assert not view.stepper.buttons[2].isEnabled()
     assert not view.evaluation_view.action.isEnabled()
     # other samples: every step is out of date and only the training can be opened
-    choose(view, "367")
+    choose(view, "German-367")
     assert states(view)[0] is StepState.OUT_OF_DATE
     assert not view.stepper.buttons[1].isEnabled()
     assert not view.step(1)
@@ -155,8 +156,10 @@ def test_run_all_reproduces_todays_tables(window: MainWindow, qtbot: QtBot, tmp_
     view.progress.valueChanged.connect(lambda _: formats.append(view.progress.format()))
     run(view, qtbot, view.run_all_button.click)
     assert states(view) == [StepState.DONE] * 3
-    assert "① Training · 341" in formats  # the progress names the step and the split
-    assert "② Test · 367" in formats
+    assert (
+        "① Training · German · Euclidean split · training 341 (173, 168)" in formats
+    )  # the progress names the step and the split
+    assert "② Test · German · Chebyshev split · training 367 (190, 177)" in formats
     assert view.status.text() == "Training, test and evaluation done."
     tabs = view.evaluation_view
     assert [tabs.tabs.tabText(i) for i in range(tabs.tabs.count())] == [
@@ -220,7 +223,7 @@ def test_run_all_reproduces_todays_tables(window: MainWindow, qtbot: QtBot, tmp_
 
 def test_the_test_step_shows_no_class(window: MainWindow, qtbot: QtBot) -> None:
     view = ready(window.classifiers_page.view, qtbot)
-    choose(view, "76")
+    choose(view, "Heart-Disease-76")
     run(view, qtbot, view.fit)
     run(view, qtbot, view.classify)
     for key in ("test-objects", "predictions", "predicted-classes"):
@@ -267,7 +270,7 @@ def test_a_split_file_that_breaks_the_convention(
     assert BROKEN[2:] in view.stepper.buttons[0].toolTip()
     assert not view.training_view.action.isEnabled()
     assert not view.run_all_button.isEnabled()
-    choose(view, "341")
+    choose(view, "German-341")
     assert view.training_view.action.isEnabled()
     assert view.problems.text() == ""
     assert not (tmp_path / "experiments").exists()
