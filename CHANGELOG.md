@@ -5,6 +5,14 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-11-25 — Every split file a sample, and nine evaluation designs
+
+Every split file of `datasets/splits` is found and checked by its name, the *Classifiers* page
+shows the samples as a tree of datasets, the comparison tables are named by their content and
+every method shows its own settings; nine evaluation designs use the same split files in other
+ways — swapped, on themselves, against random samples, by cross-validation, with R-IPS inside the
+folds, by training size and across splits.
+
 ### Added
 
 - Seven datasets from open archives, with the author's read-me files and pinned checksums
