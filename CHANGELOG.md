@@ -31,15 +31,16 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 
 ### Changed
 
-- The comparison tables are named by their content (ADR-092): "Table 7" is now *Standard
-  classifiers* (`standard-classifiers.*`), "Table 8" *k-NN by metric* (`knn-by-metric.*`), and the
-  part "Tables 7 and 8" *Comparison with standard classifiers* (`classifier-comparison`). The old
-  names are gone from the project, the earlier entries of this changelog included; there are no
-  aliases. No number changed.
+- The comparison tables are named by their content, not by the article's numbers (ADR-092): the
+  table of SVM and Random Forest is *Standard classifiers* (`standard-classifiers.*`), the k-NN
+  table *k-NN by metric* (`knn-by-metric.*`), and the part *Comparison with standard classifiers*
+  (`classifier-comparison`). The numbered names are gone from the project, the earlier entries of
+  this changelog included; there are no aliases. No number changed.
 - "Random Forest" is written with capital letters wherever a user reads it (ADR-093).
 - Every split is named by its dataset in every table, note, file, progress line and status:
-  "German · Euclidean split · training 341 (173, 168)" instead of "341". "All article splits" is
-  gone: the comparison tables appear when German's three splits are ticked.
+  "German · Euclidean split · training 341 (173, 168)" instead of "341". The option of the three
+  article splits together is gone: the comparison tables appear when German's three splits are
+  ticked.
 - Every method shows its own settings — on the *Methods* tab, in the tables' notes and in
   `summary.json` — and the facts a group shares are said once (ADR-094); Random Forest's row no
   longer shows SVM's settings. A long text shows in full in its tooltip.

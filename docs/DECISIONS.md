@@ -1855,7 +1855,8 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   does not follow the pattern), without a checkbox, with the reason in its tooltip.
 - The tree is read again when the page is shown, when the split folder changes and with a new
   *Refresh* button; the ticks are kept for the splits still there.
-- "All article splits" is gone. When German's three splits — and only they — are ticked, the
+- The option of the three article splits together is gone. When German's three splits — and
+  only they — are ticked, the
   evaluation shows the *Standard classifiers*, *k-NN by metric* and *CS-model* tables; otherwise
   those tabs say which splits they need. The files of `csr compare run` are written only for that
   set (to any results folder chosen); other selections are written by
@@ -1865,8 +1866,8 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   need) replaces `sample_options(folder)`; `SampleTree.option(keys)` builds the `SampleOption`
   that `load` and the stages receive. The *Methods* tab follows the ticked splits.
 - The page remembers the chosen part and the ticked splits (`classifiers/part`,
-  `classifiers/samples/<part>`). A saved key that no longer exists — `tables-7-8`, `article`,
-  `336` — is dropped silently; when none is left the default applies.
+  `classifiers/samples/<part>`). A saved key that no longer exists — the part's key of v0.10.0,
+  `article`, `336` — is dropped silently; when none is left the default applies.
 - Every label of a split on the page — the tree, the progress, the status line, the tables'
   *Split* column and the choice of split above a per-split table — uses the dataset's name.
 
@@ -1874,15 +1875,16 @@ blocked objects keep covering, but differ in single objects. The gap is reported
 
 *Accepted, 2026-11-25. Amends ADR-079, ADR-080, ADR-083, ADR-084 and ADR-086 for the names.*
 
-- The article numbers its tables, and the draft prints the k-NN table as a second "Table 7".
-  The project therefore names its tables by their content and numbers none of them; LaTeX numbers
-  the captions:
-  - "Table 7" → *Standard classifiers*: key `standard-classifiers`, files
+- The article numbers its tables, and the draft prints the k-NN table under the same number as
+  the table of SVM and Random Forest. The project therefore names its tables by their content and
+  numbers none of them; LaTeX numbers the captions. Until v0.10.0 the two tables and their part
+  carried the article's numbers; now:
+  - the table of SVM and Random Forest → *Standard classifiers*: key `standard-classifiers`, files
     `standard-classifiers.csv | md | tex`, title "Standard classifiers: accuracy of SVM and Random
     Forest on the test samples, %";
-  - "Table 8" → *k-NN by metric*: key `knn-by-metric`, files `knn-by-metric.csv | md | tex`, title
+  - the k-NN table → *k-NN by metric*: key `knn-by-metric`, files `knn-by-metric.csv | md | tex`, title
     "k-NN by metric: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, %";
-  - the part "Tables 7 and 8" → *Comparison with standard classifiers*, key
+  - their part → *Comparison with standard classifiers*, key
     `classifier-comparison`.
 - Identifiers follow (`TABLE_STANDARD`, `TABLE_KNN`, `STANDARD_KEY`, `KNN_KEY`,
   `standard_classifiers_table`, `knn_by_metric_table`, `ComparisonPart`); `latex_caption` is gone,
