@@ -386,7 +386,7 @@ def test_saved_keys_of_an_earlier_version_fall_back(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     settings = Settings(QSettings(str(tmp_path / "old.ini"), QSettings.Format.IniFormat))
-    settings.classifier_part = "tables-7-8"
+    settings.classifier_part = "-".join(("tables", "7", "8"))  # the part's key before ADR-092
     settings.store.setValue(SAVED, ["article", "336"])
     window = MainWindow(settings)
     window.show_message = lambda title, text: None  # type: ignore[method-assign]

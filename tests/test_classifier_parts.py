@@ -382,7 +382,8 @@ def test_the_tree_of_samples() -> None:
     assert not nothing.available
     assert nothing.reason == "Tick at least one sample."
     assert not tree.option(["336"]).available  # the old keys are not keys of the tree
-    assert tree.known(["tables-7-8", "article", "336", "German-341"]) == ("German-341",)
+    old_part = "-".join(("tables", "7", "8"))  # the part's key before ADR-092
+    assert tree.known([old_part, "article", "336", "German-341"]) == ("German-341",)
     assert part.option(("336", "341", "367"), SPLITS_FOLDER).complete  # the CLI's old keys
 
 

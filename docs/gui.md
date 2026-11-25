@@ -188,16 +188,36 @@ size. The CSV files open correctly in Excel.
 
 Classifier parts in three steps, apart from the workflow: the page needs no dataset and no run
 (ADR-084). The list of parts on the left starts collapsed while there is one part; **▶** opens
-it. The first part is the comparison with standard classifiers: SVM, Random Forest and k-NN fitted on the
-article's training samples, with the CS-model on the same samples
+it. The first part is the comparison with standard classifiers: SVM, Random Forest and k-NN
+fitted on the article's training samples, with the CS-model on the same samples
 ([Standard classifiers](comparison.md)). Every setting is fixed (ADR-079, ADR-080): the page
 shows them and offers none to change.
 
-- **Samples** — *All article splits (336, 341, 367)*, each split alone, Heart's split 76, or
-  Spambase's splits 601 and 722; every entry shows its sizes. The samples are read from *Split files* (`datasets\splits` of the
-  project). The split files follow the author's convention
-  ([File layout](comparison.md#file-layout)); a file that breaks it makes the samples
-  unavailable, and the warning box names the file and the row.
+- **Samples** — a tree of the datasets and their splits, built from every split file of
+  *Split files* (`datasets\splits` of the project; [Adding a split file](comparison.md#adding-a-split-file)).
+  The datasets are in alphabetical order with their object count; under each, its splits by
+  training size, each with its metric, its number of features (the splits of one dataset can
+  differ), its training sample and its test size (ADR-091):
+
+  ```text
+  ▾ ☑ German (1000 objects)
+      ☑ Zhuravlyov split · 20 features · training 336 (196, 140) · test 664
+      ☑ Euclidean split · 7 features · training 341 (173, 168) · test 659
+      ☑ Chebyshev split · 7 features · training 367 (190, 177) · test 633
+  ▸ ☐ Heart-Disease (270 objects)
+  ▸ ☐ Spambase (2102 objects)
+  ```
+
+  Ticking a dataset ticks all its splits, and a dataset with some of them ticked shows the
+  partial mark; you can tick one split, a whole dataset, or splits of several datasets. The
+  arrow keys move and **Space** ticks. German's three splits are ticked by default. A file that
+  cannot be used — its name does not follow the pattern, its content breaks the split-file
+  convention ([File layout](comparison.md#file-layout)), or its header contradicts its name — is
+  greyed under its dataset, without a checkbox; its tooltip gives the reason, the file and the
+  row. The tree is read again when the page is shown, when the split folder changes and with
+  **Refresh**; the ticks are kept for the splits still there.
+
+  ![Classifiers page: the samples](images/gui/classifiers-samples.png)
 - **The steps** — ① *Training*, ② *Test* and ③ *Evaluation*, each with its state as a symbol
   and a word: ○ not run, ◔ running, ✓ done, ⟳ out of date (an earlier step was run again, or the
   samples changed), ⊘ unavailable (the tooltip says why). A step opens when the step before it is
@@ -206,19 +226,24 @@ shows them and offers none to change.
 
 | Step | Button | Tabs |
 |---|---|---|
-| ① Training | *Fit on the training sample* | *Methods* (the methods as in the article, with their fixed settings), *Training sample* (the objects, their features and class: K1 blue, K2 orange), *Training results* (training accuracy as in Definition 2, correct, refusals) |
+| ① Training | *Fit on the training sample* | *Methods* (the methods as in the article, each with its own fixed settings; a long text shows in full in its tooltip), *Training sample* (the objects, their features and class: K1 blue, K2 orange), *Training results* (training accuracy as in Definition 2, correct, refusals) |
 | ② Test | *Classify the test sample* | *Test objects* (feature values only — there is no class column), *Predictions* (1 / 2 / 0 per object and method, coloured by the predicted class, with the scores, the most common decision and how many methods give it), *Predicted classes* (K1, K2 and refusals per method, counts and shares) |
 | ③ Evaluation | *Compare with the true classes* | *Standard classifiers*, *k-NN by metric*, *CS-model*, *All results* (as `csr compare run` writes them), *Per object* (✓ correct, ✗ wrong, 0 refusal), *Confusion* (true class × decision and refusals per method), *Check* |
 
 The banner of ② says that the classes are hidden: the test objects are classified from their
 feature values alone, and nothing in that step needs or shows a true class. The banner of ③ says
-that the true classes are revealed. The Standard classifiers, k-NN by metric and CS-model tables need the three
-article splits; with other samples these tabs say so.
+that the true classes are revealed. The *Standard classifiers*, *k-NN by metric* and *CS-model*
+tables need exactly German's three splits; with any other ticks these tabs say which splits they
+need, and *All results* shows every ticked split. Every split is named by its dataset —
+"German · Euclidean split · training 341 (173, 168)" — in the progress, the status line, the
+tables' *Split* column and the *Split* selector above a per-split table; Spambase's two
+Euclidean splits differ in their training sizes.
 
 ![Classifiers page: ② Test](images/gui/classifiers-test.png)
 
 In ③, *Write the files* writes the comparison with its checksums to the results folder
-(`experiments\comparison`) — for the three article splits only, the files of `csr compare run`.
+(`experiments\comparison`) — for German's three splits only, the files of `csr compare run`;
+`csr compare run --split KEY --out DIR` writes another split.
 *Check the written files* compares a results folder with its checksums and a new run, byte for
 byte, as `csr compare check` does; *Open the folder* shows it. The CSV files open correctly in
 Excel. Per-split tables have a *Split* selector; every table can be sorted, filtered, copied and
@@ -244,8 +269,10 @@ without a change to the page ([Adding a part to the Classifiers page](extending.
 - **View → Light theme / Dark theme** (**Ctrl+T**); tables and figures follow.
 - **View → Zoom in / Zoom out / Actual size** (**Ctrl++**, **Ctrl+−**, **Ctrl+0**) scales the
   whole interface.
-- The window size, the theme, the zoom, the language, the runs folder and the recent datasets,
-  configurations and runs (**File → Recent …**) are remembered between sessions.
+- The window size, the theme, the zoom, the language, the runs folder, the recent datasets,
+  configurations and runs (**File → Recent …**), and the part and the ticked samples of the
+  *Classifiers* page are remembered between sessions. A remembered sample that no longer exists
+  is dropped silently, and when none is left the default ticks apply.
 - The colours of the classes and of the figures are colour-blind safe. Correct / wrong use the
   Excel mirror's green and red and are never the only cue: the predicted and the true class are both
   written, a refusal is the value 0, and statuses carry ✓ / ✗ / ⚠.

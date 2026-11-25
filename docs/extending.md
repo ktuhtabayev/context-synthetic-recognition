@@ -183,9 +183,9 @@ A part is an object with `key`, `title`, `description` and these methods (types 
 | Method | Returns | What it gets |
 |---|---|---|
 | `default_folder()` | the folder its samples are read from by default, or `None` | — |
-| `sample_options(folder)` | `SampleOption`s: what it runs on, with sizes, or why one is unavailable | the folder |
-| `load(option, folder)` | a `SampleSet`: training samples with their classes, the test objects as `UnlabelledSample`s and, apart, their `AnswerKey`s | the option |
-| `method_groups(option)` | `MethodGroup`s: the methods with their fixed settings (the *Methods* tab) | the option |
+| `samples(folder)` | a `SampleTree`: its datasets (`SampleGroup`s) and their samples (`SampleChoice`s) with their sizes, or why one is unavailable; the default ticks and the set its own tables need (ADR-091) | the folder |
+| `load(option, folder)` | for the ticked samples (`SampleTree.option(keys)`), a `SampleSet`: training samples with their classes, the test objects as `UnlabelledSample`s and, apart, their `AnswerKey`s | the option |
+| `method_groups(option)` | `MethodGroup`s: the methods, each `MethodInfo` with its own fixed settings, and a note of what a group shares (the *Methods* tab, ADR-094) | the option |
 | `train(option, training)` | a `TrainedPart`: per split the methods' training decisions, and the fitted state in `fitted` | the training samples only |
 | `classify(trained, unlabelled)` | `Predictions`: per split and method a `Decisions` (1, 2 or 0 per object, the scores if any) | the trained part and objects **without a class** |
 | `evaluate(predictions, answers)` | an `Evaluation`: per split and method the `ClassificationMetrics` | the decisions and the answer keys |
@@ -214,8 +214,10 @@ from context_synthetic_recognition.services.classifier_parts import (
     MethodInfo,
     MethodTraining,
     Predictions,
-    SampleOption,
+    SampleChoice,
+    SampleGroup,
     SampleSet,
+    SampleTree,
     TrainedPart,
     TrainingSample,
     metrics_against,
@@ -240,8 +242,9 @@ class NearestPart:
     def default_folder(self) -> Path | None:
         return None
 
-    def sample_options(self, folder):
-        return (SampleOption("toy", "Toy", ("toy",), "training 4 (2, 2) · test 3"),)
+    def samples(self, folder):
+        toy = SampleChoice("toy", "Toy split · training 4 (2, 2) · test 3", "Toy · training 4")
+        return SampleTree((SampleGroup("Toy (7 objects)", (toy,)),), default=("toy",))
 
     def load(self, option, folder):
         training = Dataset(
@@ -253,7 +256,9 @@ class NearestPart:
         return SampleSet(option, (TrainingSample("toy", "Toy", training),), (test,), (answers,))
 
     def method_groups(self, option):
-        method = MethodInfo("nearest", "Nearest object", "all (1)", ("toy",))
+        method = MethodInfo(
+            "nearest", "Nearest object", "all (1)", ("toy",), "the nearest training object on x₁"
+        )
         return (MethodGroup("Trivial", "The class of the nearest training object.", (method,)),)
 
     def train(self, option, training, progress=None):
@@ -284,6 +289,8 @@ Rules a part keeps:
   `data.samples.require_unlabelled` rejects anything else at run time, and mypy rejects a
   `Dataset` (ADR-085). The classes of the test objects reach `evaluate` only, as `AnswerKey`s.
 - **Training on the training sample only**: scaling, encodings and neighbours are fitted there.
+- **Names, not keys**: a sample's key is internal; its `label` names it everywhere the page
+  shows it, as the `title` of its `TrainingSample`.
 - **No computation in the interface**: the page calls the part in a worker thread; whatever a tab
   shows is a `StageTable` the part or the services build.
 - **Registration**: a module of the package adds itself to `BUILTIN_PARTS`; a part of another

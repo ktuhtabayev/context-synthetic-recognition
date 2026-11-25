@@ -15,8 +15,37 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   as `datasets/splits/Spambase/Spambase (2102, 57, 2) — training 601 (euclidean).dat` and
   `… — training 722 (euclidean).dat`: samples of the *Classifiers* page and of
   `csr compare predict --split 601 | 722`, not part of the comparison tables.
+- Every split file of `datasets/splits` is a sample, now and for files added later (ADR-090):
+  `services.split_discovery` finds them by their name,
+  `<Dataset> (<m>, <n>, <c>) — training <t> (<metric>).dat`, and checks the header against the
+  name, the training size against the split markers and the metric against the registry. A file
+  that fails a check is listed as unavailable with its file, row and reason. Split keys are
+  `<Dataset>-<t>` (`German-341`); the CLI still accepts the training size alone (`--split 601`).
+  How to add one: [Adding a split file](docs/comparison.md#adding-a-split-file).
+- `csr compare run --split KEY --out DIR` writes one split's evaluation (results, summary,
+  checksums), never into `experiments/comparison`; `csr compare check` checks such a folder too.
+- The *Classifiers* page shows the samples as a tree of datasets with checkboxes (ADR-091): one
+  split, a whole dataset or splits of several datasets can be ticked, with the keyboard as well;
+  German's three splits are ticked by default; unavailable files are greyed with their reason;
+  *Refresh* reads the folder again. The page remembers the part and the ticks.
 
 ### Changed
+
+- The comparison tables are named by their content (ADR-092): "Table 7" is now *Standard
+  classifiers* (`standard-classifiers.*`), "Table 8" *k-NN by metric* (`knn-by-metric.*`), and the
+  part "Tables 7 and 8" *Comparison with standard classifiers* (`classifier-comparison`). The old
+  names are gone from the project, the earlier entries of this changelog included; there are no
+  aliases. No number changed.
+- "Random Forest" is written with capital letters wherever a user reads it (ADR-093).
+- Every split is named by its dataset in every table, note, file, progress line and status:
+  "German · Euclidean split · training 341 (173, 168)" instead of "341". "All article splits" is
+  gone: the comparison tables appear when German's three splits are ticked.
+- Every method shows its own settings — on the *Methods* tab, in the tables' notes and in
+  `summary.json` — and the facts a group shares are said once (ADR-094); Random Forest's row no
+  longer shows SVM's settings. A long text shows in full in its tooltip.
+- The methods of a split follow one rule instead of a list per split; every split keeps exactly
+  its earlier methods, and a method a split cannot support is shown as unavailable with the reason
+  (ADR-090).
 
 - The original datasets are grouped by the kind of their features: `datasets/raw/Heterogeneous/`,
   `Nominal/` and `Quantitative/` (ADR-087). German and Heart-Disease keep their bytes and ids.
@@ -28,13 +57,16 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 - The desktop application could crash with an access violation when Python's garbage collector ran
   in a worker thread and freed Qt objects there; workers now pause the collector, and it collects
   in the interface's thread (ADR-089).
+- Spambase was missing from the *Classifiers* page of the Windows build: the build of 0.10.0
+  predates Spambase's split files, so neither its code nor its copy of `datasets/splits` had them.
+  The splits are now found from the folder the build carries, so a rebuild includes every file of
+  `datasets/splits`.
 
 ## [0.10.0] — 2026-11-24 — Standard classifiers and a staged Classifiers page
 
 Standard classifiers on the article's training and test samples (the Standard classifiers and
-k-NN by metric tables), with the
-CS-model beside them, the split files read by the author's convention, CSV files that open in
-Excel, and the *Classifiers* page as a workbench in three steps whose test step classifies the
+k-NN by metric tables), with the CS-model beside them, the split files read by the author's
+convention, CSV files that open in Excel, and the *Classifiers* page as a workbench in three steps whose test step classifies the
 objects without their class.
 
 ### Added

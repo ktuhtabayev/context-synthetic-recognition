@@ -63,8 +63,10 @@ datasets/
 The files are the author's, byte for byte (Git stores them unchanged, the hooks leave them alone),
 so their SHA-256 checksums are the same on every machine, and a test pins them; German was added in
 the same way (ADR-073), and so were the split files in `splits/`, which only the *Classifiers*
-part reads ([Standard classifiers](comparison.md), ADR-079, ADR-088). The catalogue finds a dataset
-at any depth under `raw/`, so its ids do not depend on the kind folder.
+part reads ([Standard classifiers](comparison.md), ADR-079, ADR-088). Every file of `splits/` is a
+sample, found by its name; [Adding a split file](comparison.md#adding-a-split-file) gives the
+name pattern and the checks (ADR-090). The catalogue finds a dataset at any depth under `raw/`, so
+its ids do not depend on the kind folder.
 
 Four datasets stay on the author's disk and out of the repository (`.gitignore`): TCGA_LUAD
 (589, 57772, 2), whose two files are larger than GitHub accepts (100 MB), and Cancer

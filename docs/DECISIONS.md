@@ -1781,6 +1781,150 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   workers are safe); the last worker to end switches it back on, unless it was off before.
   Reference counting still frees everything without a cycle while a worker runs.
 
+## ADR-090 — Every split file of the folder is a sample
+
+*Accepted, 2026-11-25. Amends ADR-079, ADR-084 and ADR-088 for the list of splits.*
+
+- The split files are no longer listed in code. `services.split_discovery.discover_splits` scans
+  `datasets/splits` (or the folder given) recursively for `*.dat` and reads every file by its name
+  and its content, so a file added later is found without a change to the code:
+  - the name follows `<Dataset> (<m>, <n>, <c>) — training <t> (<metric>).dat`
+    (`data.splits.parse_split_name`);
+  - the file follows the split-file convention (ADR-082), its header holds the m, n and c of the
+    name, and its split markers give t training objects;
+  - the metric is registered in `METRICS` (an alias is read as its canonical name).
+- A file that fails a check is listed as unavailable, with its file, its row (where the problem
+  has one: the loader's row, or row 1 for a header that contradicts the name) and the reason. It is
+  never used and never stops the other files.
+- The key of a split is `<Dataset>-<t>`: `German-336`, `German-341`, `German-367`,
+  `Heart-Disease-76`, `Spambase-601`, `Spambase-722`. Keys are internal: the desktop application
+  never shows them. Two files with one key are both unavailable, and the reason names the other
+  file. The keys of the earlier versions — the training size alone, `336` … `722` — stay accepted
+  by the CLI, as the training size of exactly one split; a size that two splits share is reported
+  as ambiguous with their keys.
+- The only list of splits kept in code is the comparison set, `comparison.settings.COMPARISON_SPLITS`
+  = German's three splits (Zhuravlyov 336, Euclidean 341, Chebyshev 367): the columns of the
+  *Standard classifiers*, *k-NN by metric* and *CS-model* tables and the content of
+  `experiments/comparison`.
+- The methods of a split follow one fixed rule, `comparison.stages.method_specs`, not a list per
+  file; their settings stay those of ADR-079 and ADR-080:
+  - every split: SVM and Random Forest on every feature; the k-NN vote (k = 3, 5) and the CS-model
+    (α = 0.1, 0.2) with the Euclidean, Chebyshev and Canberra metrics on the quantitative
+    features;
+  - a split of the comparison set whose own metric is none of these three also gets the k-NN vote
+    and the CS-model with its own metric on every feature — German's Zhuravlyov split 336, as
+    before;
+  - a method a split cannot support is listed as unavailable with the reason, never an error: no
+    quantitative features (the Euclidean, Chebyshev and Canberra k-NN and CS-model), or fewer than
+    k + 1 training objects (the k-NN vote leaves an object out of its own neighbourhood).
+  - The rule gives every split of today exactly its earlier methods: 336 keeps its two Zhuravlyov
+    k-NN rows and its two Zhuravlyov CS-models; 341, 367, Heart-Disease 76 and Spambase's two have
+    none. Extending the own-metric rows to every split would have added four methods to
+    Heart-Disease 76, whose method list was to stay unchanged; widening the rule later is one line.
+- `csr compare run` without options writes the comparison set to `experiments/comparison`.
+  `csr compare run --split KEY --out DIR` writes one split's evaluation (`results.csv`,
+  `results.md`, `summary.json`, `checksums.sha256`) to DIR, never to `experiments/comparison`.
+  `csr compare check` reads the keys of the splits from the folder's `summary.json` and checks
+  either kind of folder. `csr compare predict --split KEY` takes any key or old key
+  (`German-336` by default); its default file is `predictions-<key>.csv`.
+- Every label of a split that a user sees uses the dataset's name:
+  `German · Euclidean split · training 341 (173, 168)`, in the column headers, the notes, the
+  results table, `summary.json` (beside the key) and the CLI's output. Spambase's two Euclidean
+  splits differ in their training sizes. No number changed: the values of `results.csv` and
+  `summary.json` were compared before and after.
+- Why Spambase was missing from the *Classifiers* page of the Windows build: `dist\` held the
+  v0.10.0 build of 2026-11-24, made before Spambase's split files were added (ADR-088). Its code
+  listed four split files and its copy of `datasets/splits` (`data/split_files`) held German's and
+  Heart-Disease's only. Run from source, the page listed Spambase already. With the discovery the
+  build lists whatever its copy of the folder holds, and `scripts/build_exe.py` copies the whole
+  folder, so a rebuild carries every split file.
+
+## ADR-091 — The samples of the *Classifiers* page as a tree of datasets
+
+*Accepted, 2026-11-25. Amends ADR-084 for the samples.*
+
+- The drop-down of sample options is replaced by a tree with checkboxes built from the discovery
+  (ADR-090): one node per dataset, alphabetical, with its object count ("German (1000 objects)");
+  under it one node per split, by training size, with its metric, its number of features (the
+  splits of one dataset can differ: German has 20, 7 and 7), its training sample and its test
+  size — "Euclidean split · 7 features · training 341 (173, 168) · test 659".
+- Ticking a dataset ticks all its splits; a dataset with some of its splits ticked shows the
+  partial mark. Any set can be ticked: one split, a dataset, or splits of several datasets. The
+  keyboard moves with the arrows and ticks with Space. German's three splits are ticked by
+  default. An unavailable file is shown greyed under its dataset (by the sub-folder when its name
+  does not follow the pattern), without a checkbox, with the reason in its tooltip.
+- The tree is read again when the page is shown, when the split folder changes and with a new
+  *Refresh* button; the ticks are kept for the splits still there.
+- "All article splits" is gone. When German's three splits — and only they — are ticked, the
+  evaluation shows the *Standard classifiers*, *k-NN by metric* and *CS-model* tables; otherwise
+  those tabs say which splits they need. The files of `csr compare run` are written only for that
+  set (to any results folder chosen); other selections are written by
+  `csr compare run --split KEY --out DIR` (ADR-090).
+- The protocol of a part changes accordingly: `samples(folder) → SampleTree` (groups of
+  `SampleChoice`s with their availability, the default ticks and the set the part's own tables
+  need) replaces `sample_options(folder)`; `SampleTree.option(keys)` builds the `SampleOption`
+  that `load` and the stages receive. The *Methods* tab follows the ticked splits.
+- The page remembers the chosen part and the ticked splits (`classifiers/part`,
+  `classifiers/samples/<part>`). A saved key that no longer exists — `tables-7-8`, `article`,
+  `336` — is dropped silently; when none is left the default applies.
+- Every label of a split on the page — the tree, the progress, the status line, the tables'
+  *Split* column and the choice of split above a per-split table — uses the dataset's name.
+
+## ADR-092 — The comparison tables are named by their content
+
+*Accepted, 2026-11-25. Amends ADR-079, ADR-080, ADR-083, ADR-084 and ADR-086 for the names.*
+
+- The article numbers its tables, and the draft prints the k-NN table as a second "Table 7".
+  The project therefore names its tables by their content and numbers none of them; LaTeX numbers
+  the captions:
+  - "Table 7" → *Standard classifiers*: key `standard-classifiers`, files
+    `standard-classifiers.csv | md | tex`, title "Standard classifiers: accuracy of SVM and Random
+    Forest on the test samples, %";
+  - "Table 8" → *k-NN by metric*: key `knn-by-metric`, files `knn-by-metric.csv | md | tex`, title
+    "k-NN by metric: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, %";
+  - the part "Tables 7 and 8" → *Comparison with standard classifiers*, key
+    `classifier-comparison`.
+- Identifiers follow (`TABLE_STANDARD`, `TABLE_KNN`, `STANDARD_KEY`, `KNN_KEY`,
+  `standard_classifiers_table`, `knn_by_metric_table`, `ComparisonPart`); `latex_caption` is gone,
+  since no title carries a number to drop. There are no aliases for the old table or part keys.
+- The old names were replaced in every tracked file: code, tests, the desktop application and its
+  Russian and Uzbek translations (obsolete entries removed by `scripts/update_translations.py`),
+  CLI help, the documentation, README, the earlier ADRs and the earlier CHANGELOG entries. The
+  generated files were regenerated (`experiments/comparison`, the screenshots, the Windows build).
+  Git history, the tags and the published v0.10.0 release keep the old names. The article's own
+  table numbers that the project cites (Tables 1–6, the study of ADR-070) are citations and stay.
+- No number changed: the values of `results.csv` and `summary.json` are equal before and after;
+  only file names, titles, captions, labels and text changed, with `checksums.sha256`.
+
+## ADR-093 — "Random Forest" with capital letters
+
+*Accepted, 2026-11-25.*
+
+- The method is written "Random Forest" wherever a user reads it: the desktop application
+  (labels, tabs, tooltips, status lines, banners), CLI help and output, the titles, notes, column
+  headers and captions of every output (CSV, Markdown, LaTeX, the text of `summary.json`, the HTML
+  and PDF report), the documentation, README, the ADRs, the CHANGELOG and the screenshots; also in
+  docstrings and comments.
+- Unchanged: identifiers and keys (`random-forest`, `random_forest`, `RandomForestClassifier`) and
+  quotations of library names. The Russian and Uzbek interfaces keep their own term; a Latin
+  "Random Forest" in them is written with capitals.
+
+## ADR-094 — Every method shows its own settings
+
+*Accepted, 2026-11-25. Amends ADR-079, ADR-080 and ADR-084 for the settings text.*
+
+- A method's row — on the *Methods* tab, in the tables' notes, in `summary.json` and in the
+  documentation — shows its own settings, never another method's or a text shared by a group:
+  - SVM: "SVC, RBF kernel, C = 1.0, gamma = scale";
+  - Random Forest: "200 trees, random_state = 42";
+  - k-NN: its metric, k, the features it uses and the tie rule;
+  - CS-model: its metric, α, the k range and the values of the synthetic features.
+- What the methods of a table share — the scaling and the encoding fitted on the training sample
+  — is said once, in the table's note.
+- `MethodInfo.settings` carries the text (`MethodGroup.note` the shared facts), and each method of
+  `summary.json` has a `settings` field. A long settings text wraps, and every text cell shows in
+  full in its tooltip; nothing is cut off without a way to read it.
+
 ## Open questions for the author
 
 *Open, 2026-11-22.* Each is flagged where it is used; none is decided silently.
