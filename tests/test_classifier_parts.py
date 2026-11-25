@@ -39,7 +39,7 @@ from context_synthetic_recognition.services.comparison_part import (
     ARTICLE,
     NEEDS_ARTICLE,
     WRITES_ARTICLE,
-    TablesPart,
+    ComparisonPart,
     blind_predictions,
 )
 
@@ -51,16 +51,16 @@ OUT = ROOT / "experiments" / "comparison"
 runner = CliRunner()
 
 
-def tables_part() -> TablesPart:
-    part = CLASSIFIER_PARTS.get("tables-7-8")
-    assert isinstance(part, TablesPart)
+def comparison_part() -> ComparisonPart:
+    part = CLASSIFIER_PARTS.get("classifier-comparison")
+    assert isinstance(part, ComparisonPart)
     return part
 
 
 @pytest.fixture(scope="module")
 def article() -> StageRun:
     """Training, test and evaluation on the three article splits (one "Run all")."""
-    part = tables_part()
+    part = comparison_part()
     return run_stages(part, part.option(ARTICLE), SPLITS_FOLDER)
 
 
@@ -121,7 +121,7 @@ def _with_test_classes(folder: Path, change: str) -> Path:
 def test_the_test_classes_change_no_prediction(
     article: StageRun, tmp_path: Path, change: str
 ) -> None:
-    part = tables_part()
+    part = comparison_part()
     option = part.option(ARTICLE)
     if change == "deleted":
         # objects that never had a class: their feature values alone
@@ -148,13 +148,13 @@ def test_the_test_classes_change_no_prediction(
         for method, decided in predictions.decisions[split].items():
             assert decided.same_as(reference.decisions[split][method]), (split, method)
             kinds.add(method.rsplit("-", 2)[0] if method.startswith("cs-") else method)
-    # SVM, random forest, every k-NN row and the CS-model
+    # SVM, Random Forest, every k-NN row and the CS-model
     assert {"svm", "random-forest", "knn-zhuravlyov-5", "cs-model"} <= kinds
     assert len(predictions.decisions["336"]) == 18
 
 
 def test_a_dataset_cannot_be_classified(article: StageRun) -> None:
-    part = tables_part()
+    part = comparison_part()
     split = load_split_file(SPLITS_FOLDER / SPLITS[0].file)
     with pytest.raises(TypeError, match="not a Dataset"):
         parts.classify(part, article.trained, (split.test_part,))  # type: ignore[arg-type]
@@ -202,7 +202,7 @@ def test_mypy_rejects_a_dataset(tmp_path: Path) -> None:
 
 
 def test_run_all_gives_todays_results_byte_for_byte(article: StageRun) -> None:
-    part = tables_part()
+    part = comparison_part()
     assert part.write_problem(article.evaluation) == ""
     staged = part.outcome(article.evaluation)
     direct = run_comparison(SPLITS_FOLDER)
@@ -218,15 +218,15 @@ def test_run_all_gives_todays_results_byte_for_byte(article: StageRun) -> None:
 def test_the_evaluation_tabs(article: StageRun) -> None:
     tabs = {t.key: t for t in parts.evaluation_view(article.evaluation)}
     assert list(tabs) == [
-        "table-7",
-        "table-8",
+        "standard-classifiers",
+        "knn-by-metric",
         "cs-model",
         "all-results",
         "per-object",
         "confusion",
     ]
-    (seven,) = tabs["table-7"].variants
-    assert seven.table.rows == (
+    (standard,) = tabs["standard-classifiers"].variants
+    assert standard.table.rows == (
         ("SVM", 74.85, 50.68, 61.14),
         ("Random Forest", 74.25, 56.45, 59.87),
     )
@@ -250,12 +250,12 @@ def test_the_evaluation_tabs(article: StageRun) -> None:
     assert first[8] == 74.85
 
 
-def test_a_single_split_has_no_tables_7_and_8(tmp_path: Path) -> None:
-    part = tables_part()
+def test_a_single_split_has_no_comparison_tables(tmp_path: Path) -> None:
+    part = comparison_part()
     run = run_stages(part, part.option("341"), SPLITS_FOLDER)
     tabs = {t.key: t for t in run.evaluation.tables}
-    assert tabs["table-7"].missing == NEEDS_ARTICLE
-    assert not tabs["table-7"].variants
+    assert tabs["standard-classifiers"].missing == NEEDS_ARTICLE
+    assert not tabs["standard-classifiers"].variants
     (everything,) = tabs["all-results"].variants
     assert len(everything.table.rows) == 14  # 8 methods, 6 CS-models
     assert part.write_problem(run.evaluation) == WRITES_ARTICLE
@@ -268,13 +268,18 @@ def test_a_single_split_has_no_tables_7_and_8(tmp_path: Path) -> None:
 
 
 def test_the_training_and_test_tabs(article: StageRun) -> None:
-    part = tables_part()
+    part = comparison_part()
     training = {
         t.key: t for t in parts.training_view(part, article.trained.option, article.trained)
     }
     assert list(training) == ["methods", "training-sample", "training-results"]
     methods = training["methods"].variants[0].table
-    assert {row[0] for row in methods.rows} == {"Table 7", "Table 8", "Not printed", "CS-model"}
+    assert {row[0] for row in methods.rows} == {
+        "Standard classifiers",
+        "k-NN by metric",
+        "Not printed",
+        "CS-model",
+    }
     assert methods.rows[8][:4] == ("Not printed", "k-NN Zhuravlyov, k = 3", "all", "336")
     sample = {v.label: v for v in training["training-sample"].variants}["341"]
     assert sample.table.columns[-1] == "Class"
@@ -307,7 +312,7 @@ def test_the_training_and_test_tabs(article: StageRun) -> None:
 
 
 def test_the_sample_options() -> None:
-    part = tables_part()
+    part = comparison_part()
     options = {o.key: o for o in part.sample_options(SPLITS_FOLDER)}
     assert list(options) == ["article", "336", "341", "367", "76", "601", "722"]
     assert options["article"].label == "All article splits (336, 341, 367) · test 664 / 659 / 633"
@@ -321,17 +326,21 @@ def test_the_sample_options() -> None:
 
 
 def test_a_spambase_split_runs_through_the_three_stages() -> None:
-    # ADR-088: Spambase's splits are samples of the part, not columns of Tables 7 and 8
-    part = tables_part()
+    # ADR-088: Spambase's splits are samples of the part, not columns of the comparison tables
+    part = comparison_part()
     groups = part.method_groups(part.option("601"))
-    assert [g.title for g in groups] == ["Table 7", "Table 8", "CS-model"]  # no Zhuravlyov row
+    assert [g.title for g in groups] == [
+        "Standard classifiers",
+        "k-NN by metric",
+        "CS-model",
+    ]  # no Zhuravlyov row
     run = run_stages(part, part.option("601"), SPLITS_FOLDER)
     (sample,) = run.trained.samples
     assert sample.data.class_sizes == (361, 240)
     assert run.predictions.objects[0].m == 1501
     assert len(run.predictions.decisions["601"]) == 14  # 8 standard methods, 6 CS-models
     tabs = {t.key: t for t in run.evaluation.tables}
-    assert tabs["table-7"].missing == NEEDS_ARTICLE
+    assert tabs["standard-classifiers"].missing == NEEDS_ARTICLE
     (everything,) = tabs["all-results"].variants
     assert {row[0] for row in everything.table.rows} == {"601"}
     assert len(everything.table.rows) == 14
@@ -339,7 +348,7 @@ def test_a_spambase_split_runs_through_the_three_stages() -> None:
 
 
 def test_unavailable_sample_options(tmp_path: Path) -> None:
-    part = tables_part()
+    part = comparison_part()
     (tmp_path / "German").mkdir()
     for spec in SPLITS[1:]:
         (tmp_path / spec.file).write_bytes((SPLITS_FOLDER / spec.file).read_bytes())
@@ -355,8 +364,8 @@ def test_unavailable_sample_options(tmp_path: Path) -> None:
 
 
 def test_the_registry_and_the_capabilities() -> None:
-    assert "tables-7-8" in [p.key for p in parts.parts()]
-    part = tables_part()
+    assert "classifier-comparison" in [p.key for p in parts.parts()]
+    part = comparison_part()
     assert isinstance(part, WritablePart)
     assert isinstance(part, CheckablePart)
     dummy = DummyPart()
@@ -462,7 +471,7 @@ def test_blind_predictions_build_no_answer_key(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_the_check_of_the_part(tmp_path: Path) -> None:
-    part = tables_part()
+    part = comparison_part()
     check = part.check(tmp_path, SPLITS_FOLDER)
     assert not check.passed
     assert check.table.rows == ((CHECKSUMS, "✗", f"missing in {tmp_path}"),)

@@ -1,4 +1,4 @@
-"""Tables 7 and 8 — standard classifiers on the article's training and test samples (ADR-079).
+"""The comparison with standard classifiers on the article's training and test samples (ADR-079).
 
 The CS-model's table beside them shows the model on the same samples (ADR-080).
 
@@ -8,12 +8,12 @@ the tables and write them with their checksums; check written results against a 
 
 Files of the output folder (``experiments/comparison/`` of the project by default)::
 
-    table-7.csv  table-7.md  table-7.tex     Table 7 (SVM, random forest)
-    table-8.csv  table-8.md  table-8.tex     Table 8 (k-NN, k = 3 / k = 5)
-    cs-model.csv cs-model.md cs-model.tex    the CS-model, α = 0.1 / α = 0.2
-    results.csv  results.md                  every split × method
-    summary.json                             settings, library versions, every number
-    checksums.sha256                         SHA-256 of the files above
+    standard-classifiers.csv .md .tex   Standard classifiers (SVM, Random Forest)
+    knn-by-metric.csv .md .tex          k-NN by metric (k = 3 / k = 5)
+    cs-model.csv .md .tex               the CS-model, α = 0.1 / α = 0.2
+    results.csv .md                     every split × method
+    summary.json                        settings, library versions, every number
+    checksums.sha256                    SHA-256 of the files above
 """
 
 from __future__ import annotations
@@ -31,7 +31,6 @@ from context_synthetic_recognition.comparison.tables import (
     DECIMALS,
     GROUP,
     comparison_tables,
-    latex_caption,
     summary_data,
 )
 from context_synthetic_recognition.data.catalog import find_datasets_root
@@ -67,7 +66,7 @@ class ComparisonOutcome:
 
     results: tuple[SplitResult, ...]
     tables: tuple[Table, Table, Table, Table]
-    """Table 7, Table 8, the CS-model's table and the full results table."""
+    """Standard classifiers, k-NN by metric, the CS-model's table and the full results table."""
     files: Mapping[str, bytes]
     """File name → content, in writing order; ``checksums.sha256`` last."""
     versions: Mapping[str, str]
@@ -161,14 +160,14 @@ def render_files(
 
     The CSV files start with a byte-order mark, so that Excel reads them as UTF-8 (ADR-083).
     """
-    table7, table8, cs_model, results_table = tables
+    standard, knn, cs_model, results_table = tables
     texts = {
-        "table-7.csv": csv_text(table7),
-        "table-7.md": markdown_text(table7, DECIMALS, level=2),
-        "table-7.tex": latex_table(latex_caption(table7), DECIMALS),
-        "table-8.csv": csv_text(table8),
-        "table-8.md": markdown_text(table8, DECIMALS, level=2),
-        "table-8.tex": latex_table(latex_caption(table8), DECIMALS),
+        "standard-classifiers.csv": csv_text(standard),
+        "standard-classifiers.md": markdown_text(standard, DECIMALS, level=2),
+        "standard-classifiers.tex": latex_table(standard, DECIMALS),
+        "knn-by-metric.csv": csv_text(knn),
+        "knn-by-metric.md": markdown_text(knn, DECIMALS, level=2),
+        "knn-by-metric.tex": latex_table(knn, DECIMALS),
         "cs-model.csv": csv_text(cs_model),
         "cs-model.md": markdown_text(cs_model, DECIMALS, level=2),
         "cs-model.tex": latex_table(cs_model, DECIMALS),

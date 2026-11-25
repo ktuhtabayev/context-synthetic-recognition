@@ -548,8 +548,8 @@ def test_the_self_test(
     assert "ok    experiment: TUPLAM = {a₁, a₃, a₂}" in lines  # the default preset
     assert "ok    results: a table and a figure" in lines
     assert any(line.startswith("ok    export: excel, csv, json") for line in lines)
-    assert "ok    classifier parts: tables-7-8" in lines
-    # from source and away from the project there are no split files to compute Tables 7, 8
+    assert "ok    classifier parts: classifier-comparison" in lines
+    # from source and away from the project there are no split files for the comparison tables
     assert "ok    comparison: not checked here — no datasets folder found" in lines[-2]
     assert lines[-1] == "passed"
     assert sorted(path.name for path in tmp_path.iterdir()) == ["self-test.txt"]  # nothing else
@@ -563,7 +563,7 @@ def test_the_self_test(
     assert again.read_text(encoding="utf-8").splitlines()[-1] == "passed"
 
 
-def test_the_self_test_computes_tables_7_and_8(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_self_test_computes_comparison_tables(monkeypatch: pytest.MonkeyPatch) -> None:
     lines: list[tuple[str, bool]] = []
 
     def check(what: str, ok: bool) -> None:

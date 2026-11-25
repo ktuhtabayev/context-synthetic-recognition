@@ -1,7 +1,7 @@
 """Standard classifiers against the CS-model on the article's training and test samples.
 
 Kept apart from the model's pipeline: it reads the split files through the data layer, classifies
-with the project's baselines and metrics, and builds Tables 7 and 8 with the table model; it
+with the project's baselines and metrics, and builds the comparison tables with the table model; it
 changes none of them. Pure computation — the service (:mod:`~context_synthetic_recognition.
 services.comparison`) reads the files and writes the results.
 """

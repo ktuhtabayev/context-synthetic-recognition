@@ -152,7 +152,9 @@ def _split_progress(progress: Progress | None) -> Callable[[str], None] | None:
 def comparison_job(
     splits: Path | None, *, progress: Progress | None = None, cancelled: Cancelled | None = None
 ) -> ComparisonOutcome:
-    """Tables 7 and 8 on the split files of ``splits`` (the project's by default); not written.
+    """The comparison tables on the split files of ``splits`` (the project's by default).
+
+    Nothing is written.
 
     A run takes a few seconds and is not interrupted (``cancelled`` is not polled).
     """

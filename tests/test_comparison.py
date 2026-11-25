@@ -1,4 +1,4 @@
-"""Tables 7 and 8: standard classifiers on the article's training and test samples (ADR-079),
+"""The comparison with standard classifiers on the article's training and test samples (ADR-079),
 and the CS-model on the same samples (ADR-080).
 
 The pinned numbers are those of the project's own run (scikit-learn 1.9.1, numpy 2.5.3); they
@@ -33,11 +33,10 @@ from context_synthetic_recognition.comparison import (
 )
 from context_synthetic_recognition.comparison.tables import (
     cs_model_table,
-    latex_caption,
+    knn_by_metric_table,
     results_table,
+    standard_classifiers_table,
     summary_data,
-    table_7,
-    table_8,
 )
 from context_synthetic_recognition.config import DatasetConfig
 from context_synthetic_recognition.config.presets import active_deviations
@@ -102,7 +101,7 @@ COUNTS = {
 QUANTITATIVE = {"336": 7, "341": 7, "367": 7, "76": 7, "601": 57, "722": 57}
 """Quantitative features of every split."""
 ALL_SPLITS = (*SPLITS, HEART_SPLIT, *SPAMBASE_SPLITS)
-"""Every split file: the three of Tables 7 and 8, Heart's and Spambase's two."""
+"""Every split file: the three of the comparison tables, Heart's and Spambase's two."""
 
 MAJORITY = {"336": 75.90, "341": 79.97, "367": 80.57}
 """Majority-class rate of the test sample, %."""
@@ -306,10 +305,10 @@ def test_the_methods_and_their_tables(outcome: ComparisonOutcome) -> None:
         "k-NN Euclidean, k = 5",
     ]
     assert {m.key: m.table for m in german_336.methods} == {
-        "svm": "Table 7",
-        "random-forest": "Table 7",
+        "svm": "Standard classifiers",
+        "random-forest": "Standard classifiers",
         **{
-            f"knn-{m}-{k}": "Table 8"
+            f"knn-{m}-{k}": "k-NN by metric"
             for m in ("euclidean", "chebyshev", "canberra")
             for k in (3, 5)
         },
@@ -335,20 +334,20 @@ def test_the_methods_and_their_tables(outcome: ComparisonOutcome) -> None:
     assert len(comparison_config(SPLITS[1]).local_context.operators) == 3
 
 
-def test_tables_7_and_8(outcome: ComparisonOutcome) -> None:
-    seven, eight, _, results = outcome.tables
+def test_comparison_tables(outcome: ComparisonOutcome) -> None:
+    standard, knn, _, results = outcome.tables
     columns = (
         "336 (196, 140) — Zhuravlyov split",
         "341 (173, 168) — Euclidean split",
         "367 (190, 177) — Chebyshev split",
     )
-    assert seven.columns == ("Method", *columns)
-    assert seven.rows == (
+    assert standard.columns == ("Method", *columns)
+    assert standard.rows == (
         ("SVM", 74.85, 50.68, 61.14),
         ("Random Forest", 74.25, 56.45, 59.87),
     )
-    assert eight.columns == ("Metric", *columns)
-    assert eight.rows == (
+    assert knn.columns == ("Metric", *columns)
+    assert knn.rows == (
         ("Euclidean", "57.38 / 60.09", "58.42 / 54.78", "57.50 / 59.87"),
         ("Chebyshev", "54.37 / 56.78", "58.88 / 59.64", "59.08 / 60.19"),
         ("Canberra", "57.08 / 60.09", "54.63 / 56.75", "58.61 / 60.03"),
@@ -356,18 +355,23 @@ def test_tables_7_and_8(outcome: ComparisonOutcome) -> None:
     majority = (
         "Majority-class rate of the test sample: 75.90 % (336), 79.97 % (341), 80.57 % (367)."
     )
-    assert majority in seven.note
-    assert majority in eight.note
-    assert "random_state = 42" in seven.note
-    assert "10 decimals" in eight.note
+    assert majority in standard.note
+    assert majority in knn.note
+    assert "random_state = 42" in standard.note
+    assert "10 decimals" in knn.note
     assert len(results.rows) == 46  # 26 methods, 20 CS-models
-    assert results.rows[0][:5] == ("336", "Zhuravlyov", "SVM", "all (20)", "Table 7")
+    assert results.rows[0][:5] == ("336", "Zhuravlyov", "SVM", "all (20)", "Standard classifiers")
     assert results.rows[8][2:5] == ("k-NN Zhuravlyov, k = 3", "all (20)", None)
-    assert table_7([]).rows == (("SVM",), ("Random Forest",))
-    assert table_8(outcome.results).rows == eight.rows
+    assert standard_classifiers_table([]).rows == (("SVM",), ("Random Forest",))
+    assert knn_by_metric_table(outcome.results).rows == knn.rows
     assert results_table(outcome.results[:1]).rows == results.rows[:18]
-    assert latex_caption(seven).title == "Accuracy of SVM and random forest on the test samples, %"
-    assert latex_caption(results) is results
+    assert standard.title == (
+        "Standard classifiers: accuracy of SVM and Random Forest on the test samples, %"
+    )
+    assert (
+        knn.title
+        == "k-NN by metric: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, %"
+    )
 
 
 def test_the_summary(outcome: ComparisonOutcome) -> None:
@@ -414,12 +418,12 @@ def test_two_classes_are_needed(outcome: ComparisonOutcome) -> None:
 def test_the_checksums_of_the_committed_results() -> None:
     lines = (OUT / CHECKSUMS).read_text(encoding="utf-8").splitlines()
     assert [line.split("  ")[1] for line in lines] == [
-        "table-7.csv",
-        "table-7.md",
-        "table-7.tex",
-        "table-8.csv",
-        "table-8.md",
-        "table-8.tex",
+        "standard-classifiers.csv",
+        "standard-classifiers.md",
+        "standard-classifiers.tex",
+        "knn-by-metric.csv",
+        "knn-by-metric.md",
+        "knn-by-metric.tex",
         "cs-model.csv",
         "cs-model.md",
         "cs-model.tex",
@@ -434,19 +438,19 @@ def test_the_checksums_of_the_committed_results() -> None:
 
 
 def test_the_committed_tables_hold_the_pinned_numbers() -> None:
-    seven = (OUT / "table-7.csv").read_text(encoding="utf-8-sig").splitlines()
-    assert seven[1:] == ["SVM,74.85,50.68,61.14", "Random Forest,74.25,56.45,59.87"]
+    standard = (OUT / "standard-classifiers.csv").read_text(encoding="utf-8-sig").splitlines()
+    assert standard[1:] == ["SVM,74.85,50.68,61.14", "Random Forest,74.25,56.45,59.87"]
     # the CSV files carry a byte-order mark, so that Excel reads them as UTF-8 (ADR-083)
-    for name in ("table-7.csv", "table-8.csv", "cs-model.csv", "results.csv"):
+    for name in ("standard-classifiers.csv", "knn-by-metric.csv", "cs-model.csv", "results.csv"):
         data = (OUT / name).read_bytes()
         assert data.startswith(b"\xef\xbb\xbf"), name
         assert data.count(b"\xef\xbb\xbf") == 1, name
-    for name in ("table-7.md", "table-7.tex", "summary.json", CHECKSUMS):
+    for name in ("standard-classifiers.md", "standard-classifiers.tex", "summary.json", CHECKSUMS):
         assert not (OUT / name).read_bytes().startswith(b"\xef\xbb\xbf"), name
-    eight = (OUT / "table-8.md").read_text(encoding="utf-8")
-    assert "| Chebyshev | 54.37 / 56.78 | 58.88 / 59.64 | 59.08 / 60.19 |" in eight
-    tex = (OUT / "table-7.tex").read_text(encoding="utf-8")
-    assert r"\label{tab:table-7}" in tex
+    knn = (OUT / "knn-by-metric.md").read_text(encoding="utf-8")
+    assert "| Chebyshev | 54.37 / 56.78 | 58.88 / 59.64 | 59.08 / 60.19 |" in knn
+    tex = (OUT / "standard-classifiers.tex").read_text(encoding="utf-8")
+    assert r"\label{tab:standard-classifiers}" in tex
     assert "SVM & 74.85 & 50.68 & 61.14" in tex
 
 
@@ -535,7 +539,7 @@ def test_csr_compare_run_and_check(tmp_path: Path) -> None:
         app, ["compare", "check", "-o", str(out), "--splits", str(SPLITS_FOLDER)]
     )
     assert checked.exit_code == 0, checked.output
-    assert "✓ table-7.csv" in checked.output
+    assert "✓ standard-classifiers.csv" in checked.output
     assert "comparison check passed" in checked.output
 
     summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
@@ -573,7 +577,7 @@ def test_csr_compare_reports_missing_split_files(tmp_path: Path) -> None:
 
 def test_the_documentation_shows_the_committed_tables() -> None:
     page = (ROOT / "docs" / "comparison.md").read_text(encoding="utf-8")
-    for name in ("table-7.md", "table-8.md", "cs-model.md"):
+    for name in ("standard-classifiers.md", "knn-by-metric.md", "cs-model.md"):
         lines = (OUT / name).read_text(encoding="utf-8").splitlines()
         rows = [line for line in lines if line.startswith("|")]
         assert len(rows) >= 4
@@ -638,7 +642,6 @@ def test_the_cs_model_table(outcome: ComparisonOutcome) -> None:
         ("Zhuravlyov", "71.54 / 68.07", None, None),
     )
     assert "Refusals count as errors (Definition 3)" in table.note
-    assert latex_caption(table) is table
 
 
 def test_no_cs_model_reaches_the_majority_class_rate(outcome: ComparisonOutcome) -> None:

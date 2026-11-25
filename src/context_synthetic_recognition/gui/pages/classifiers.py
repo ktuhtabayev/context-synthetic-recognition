@@ -4,7 +4,8 @@ Apart from the CS-model's workflow: the page needs no dataset and no run. On the
 the registered parts (:data:`~context_synthetic_recognition.services.classifier_parts.
 CLASSIFIER_PARTS`), collapsible like the stage tree of the *Results* page; on the right, the
 :class:`~context_synthetic_recognition.gui.workbench.PartView` of the chosen part. The first part
-is Tables 7 and 8 (ADR-079, ADR-080): ``csr compare run`` and ``csr compare check`` in three steps.
+is the comparison with standard classifiers (ADR-079, ADR-080): ``csr compare run`` and
+``csr compare check`` in three steps.
 """
 
 from __future__ import annotations

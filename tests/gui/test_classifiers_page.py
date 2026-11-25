@@ -56,7 +56,7 @@ def test_the_page_lists_the_parts(window: MainWindow, qtbot: QtBot) -> None:
     page = window.classifiers_page
     assert window.go_to(page)
     assert page.list.count() == 1
-    assert page.list.item(0).text() == "Tables 7 and 8 — standard classifiers and the CS-model"
+    assert page.list.item(0).text() == "Comparison with standard classifiers"
     # one part: the list starts collapsed to a strip that opens it
     assert page.list.isHidden()
     assert page.toggle.text() == "▶"
@@ -85,7 +85,7 @@ def test_the_page_lists_the_parts(window: MainWindow, qtbot: QtBot) -> None:
     assert view.training_view.current_key() == "methods"
     methods = view.training_view.tabs_by_key["methods"].panel.table()
     assert methods is not None
-    assert methods.rows[0][:2] == ("Table 7", "SVM")
+    assert methods.rows[0][:2] == ("Standard classifiers", "SVM")
     assert not view.stepper.buttons[1].isEnabled()
     assert not view.go_to_step(2)
     assert view.stack.currentIndex() == 0
@@ -125,11 +125,11 @@ def test_steps_enabling_and_out_of_date(window: MainWindow, qtbot: QtBot) -> Non
     assert states(view) == [StepState.DONE] * 3
     assert view.stack.currentIndex() == 2
     assert view.evaluation_view.banner.text().startswith("True classes revealed")
-    assert not view.write_button.isEnabled()  # one split: Tables 7 and 8 need all three
+    assert not view.write_button.isEnabled()  # one split: the comparison tables need all three
     assert "Only the full article set" in view.write_button.toolTip()
-    seven = view.evaluation_view.tabs_by_key["table-7"]
-    assert seven.panel.isHidden()
-    assert "need the three article splits" in seven.missing.text()
+    standard = view.evaluation_view.tabs_by_key["standard-classifiers"]
+    assert standard.panel.isHidden()
+    assert "need the three article splits" in standard.missing.text()
     # training again: the later steps are out of date, and the evaluation cannot be opened
     view.go_to_step(0)
     run(view, qtbot, view.training_view.action.click)
@@ -160,21 +160,29 @@ def test_run_all_reproduces_todays_tables(window: MainWindow, qtbot: QtBot, tmp_
     assert view.status.text() == "Training, test and evaluation done."
     tabs = view.evaluation_view
     assert [tabs.tabs.tabText(i) for i in range(tabs.tabs.count())] == [
-        "Table 7",
-        "Table 8",
+        "Standard classifiers",
+        "k-NN by metric",
         "CS-model",
         "All results",
         "Per object",
         "Confusion",
         "Check",
     ]
-    assert tabs.current_key() == "table-7"
-    table_7 = tabs.tabs_by_key["table-7"].panel.table()
-    assert table_7 is not None
-    assert table_7.rows == (("SVM", 74.85, 50.68, 61.14), ("Random Forest", 74.25, 56.45, 59.87))
-    table_8 = tabs.tabs_by_key["table-8"].panel.table()
-    assert table_8 is not None
-    assert table_8.rows[0] == ("Euclidean", "57.38 / 60.09", "58.42 / 54.78", "57.50 / 59.87")
+    assert tabs.current_key() == "standard-classifiers"
+    standard_classifiers_table = tabs.tabs_by_key["standard-classifiers"].panel.table()
+    assert standard_classifiers_table is not None
+    assert standard_classifiers_table.rows == (
+        ("SVM", 74.85, 50.68, 61.14),
+        ("Random Forest", 74.25, 56.45, 59.87),
+    )
+    knn_by_metric_table = tabs.tabs_by_key["knn-by-metric"].panel.table()
+    assert knn_by_metric_table is not None
+    assert knn_by_metric_table.rows[0] == (
+        "Euclidean",
+        "57.38 / 60.09",
+        "58.42 / 54.78",
+        "57.50 / 59.87",
+    )
     cs_model = tabs.tabs_by_key["cs-model"].panel.table()
     assert cs_model is not None
     assert cs_model.rows[-1] == ("Zhuravlyov", "71.54 / 68.07", None, None)
@@ -204,7 +212,7 @@ def test_run_all_reproduces_todays_tables(window: MainWindow, qtbot: QtBot, tmp_
     check = tabs.tabs_by_key["check"].panel.table()
     assert check is not None
     assert {row[1] for row in check.rows} == {"✓"}
-    (out / "table-7.md").write_bytes(b"changed\n")
+    (out / "standard-classifiers.md").write_bytes(b"changed\n")
     (out / CHECKSUMS).write_bytes((out / CHECKSUMS).read_bytes() + b"0  extra.csv\n")
     run(view, qtbot, view.start_check)
     assert view.status.text() == f"Check failed: 5 problem(s) in {out}"
@@ -282,7 +290,7 @@ def test_a_part_added_to_the_registry(
     qtbot.addWidget(window)
     page = window.classifiers_page
     assert [page.list.item(i).text() for i in range(page.list.count())] == [
-        "Tables 7 and 8 — standard classifiers and the CS-model",
+        "Comparison with standard classifiers",
         "Dummy part",
     ]
     assert not page.list.isHidden()  # two parts: the list is open

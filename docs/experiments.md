@@ -3,7 +3,7 @@
 The computational experiment of the article — R-IPS splits of Heart (270, 13, 2) and German
 (1000, 20, 2), the number of binary synthetic features (Table 1), the training and test accuracy
 of the CS-model (Tables 2–6) and the comparison with k-NN — is rebuilt from real runs of the
-package by one script (ADR-070). Tables 7 and 8 — SVM, random forest and k-NN on the
+package by one script (ADR-070). The comparison with standard classifiers — SVM, Random Forest and k-NN on the
 article's own training and test samples — are in [Standard classifiers](comparison.md).
 
 **No setting was tuned.** The settings are fixed in the script before any run; where the article

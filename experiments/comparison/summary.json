@@ -1,5 +1,5 @@
 {
-  "description": "Standard classifiers on the article's training and test samples: Tables 7 and 8 (ADR-079), and the CS-model on the same samples (ADR-080). Percentages with two decimals.",
+  "description": "Standard classifiers on the article's training and test samples: the Standard classifiers and k-NN by metric tables (ADR-079), and the CS-model on the same samples (ADR-080). Percentages with two decimals.",
   "settings": {
     "svm": {
       "kernel": "rbf",
@@ -10,7 +10,7 @@
       "n_estimators": 200,
       "random_state": 42
     },
-    "svm_and_random_forest_features": "SVM: SVC with the RBF kernel, C = 1.0, gamma = scale; random forest: 200 trees, random_state = 42. Every feature of the file: the quantitative ones min–max scaled on the training sample, the nominal ones one-hot encoded with the categories of the training sample (an unseen category encodes as all zeros).",
+    "svm_and_random_forest_features": "SVM: SVC with the RBF kernel, C = 1.0, gamma = scale; Random Forest: 200 trees, random_state = 42. Every feature of the file: the quantitative ones min–max scaled on the training sample, the nominal ones one-hot encoded with the categories of the training sample (an unseen category encodes as all zeros).",
     "knn": {
       "ks": [
         3,
@@ -34,7 +34,7 @@
       "k": "odd k = 3 … 41",
       "settings": "One base operator per metric, min–max scaled on the training sample: Euclidean, Chebyshev and Canberra on the quantitative features, Zhuravlyov on all features (the 336 split only); odd k = 3 … 41; synthetic features 0, 1, 2 with the features that take 0 on a training object left out; final class means, one majorizing pass. Refusals count as errors (Definition 3)."
     },
-    "training_accuracy": "resubstitution (Definition 2): a k-NN training object is not its own neighbour, a CS-model training object is left out of its own context; SVM and random forest classify the training objects with the model fitted on them",
+    "training_accuracy": "resubstitution (Definition 2): a k-NN training object is not its own neighbour, a CS-model training object is left out of its own context; SVM and Random Forest classify the training objects with the model fitted on them",
     "balanced_accuracy": "mean recall of the two classes"
   },
   "versions": {
@@ -65,7 +65,7 @@
         {
           "key": "svm",
           "title": "SVM",
-          "table": "Table 7",
+          "table": "Standard classifiers",
           "features": "all",
           "n_features": 20,
           "test": {
@@ -86,7 +86,7 @@
         {
           "key": "random-forest",
           "title": "Random Forest",
-          "table": "Table 7",
+          "table": "Standard classifiers",
           "features": "all",
           "n_features": 20,
           "test": {
@@ -107,7 +107,7 @@
         {
           "key": "knn-euclidean-3",
           "title": "k-NN Euclidean, k = 3",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -128,7 +128,7 @@
         {
           "key": "knn-euclidean-5",
           "title": "k-NN Euclidean, k = 5",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -149,7 +149,7 @@
         {
           "key": "knn-chebyshev-3",
           "title": "k-NN Chebyshev, k = 3",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -170,7 +170,7 @@
         {
           "key": "knn-chebyshev-5",
           "title": "k-NN Chebyshev, k = 5",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -191,7 +191,7 @@
         {
           "key": "knn-canberra-3",
           "title": "k-NN Canberra, k = 3",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -212,7 +212,7 @@
         {
           "key": "knn-canberra-5",
           "title": "k-NN Canberra, k = 5",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -551,7 +551,7 @@
         {
           "key": "svm",
           "title": "SVM",
-          "table": "Table 7",
+          "table": "Standard classifiers",
           "features": "all",
           "n_features": 7,
           "test": {
@@ -572,7 +572,7 @@
         {
           "key": "random-forest",
           "title": "Random Forest",
-          "table": "Table 7",
+          "table": "Standard classifiers",
           "features": "all",
           "n_features": 7,
           "test": {
@@ -593,7 +593,7 @@
         {
           "key": "knn-euclidean-3",
           "title": "k-NN Euclidean, k = 3",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -614,7 +614,7 @@
         {
           "key": "knn-euclidean-5",
           "title": "k-NN Euclidean, k = 5",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -635,7 +635,7 @@
         {
           "key": "knn-chebyshev-3",
           "title": "k-NN Chebyshev, k = 3",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -656,7 +656,7 @@
         {
           "key": "knn-chebyshev-5",
           "title": "k-NN Chebyshev, k = 5",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -677,7 +677,7 @@
         {
           "key": "knn-canberra-3",
           "title": "k-NN Canberra, k = 3",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -698,7 +698,7 @@
         {
           "key": "knn-canberra-5",
           "title": "k-NN Canberra, k = 5",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -925,7 +925,7 @@
         {
           "key": "svm",
           "title": "SVM",
-          "table": "Table 7",
+          "table": "Standard classifiers",
           "features": "all",
           "n_features": 7,
           "test": {
@@ -946,7 +946,7 @@
         {
           "key": "random-forest",
           "title": "Random Forest",
-          "table": "Table 7",
+          "table": "Standard classifiers",
           "features": "all",
           "n_features": 7,
           "test": {
@@ -967,7 +967,7 @@
         {
           "key": "knn-euclidean-3",
           "title": "k-NN Euclidean, k = 3",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -988,7 +988,7 @@
         {
           "key": "knn-euclidean-5",
           "title": "k-NN Euclidean, k = 5",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -1009,7 +1009,7 @@
         {
           "key": "knn-chebyshev-3",
           "title": "k-NN Chebyshev, k = 3",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -1030,7 +1030,7 @@
         {
           "key": "knn-chebyshev-5",
           "title": "k-NN Chebyshev, k = 5",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -1051,7 +1051,7 @@
         {
           "key": "knn-canberra-3",
           "title": "k-NN Canberra, k = 3",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {
@@ -1072,7 +1072,7 @@
         {
           "key": "knn-canberra-5",
           "title": "k-NN Canberra, k = 5",
-          "table": "Table 8",
+          "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
           "test": {

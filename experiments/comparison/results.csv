@@ -1,12 +1,12 @@
 ﻿Split,Split metric,Method,Features,Table,Training,Training K1,Training K2,Test,Test K1,Test K2,"Majority rate, %","Test accuracy, %","Balanced accuracy, %",Test correct,Test refusals,"Answered accuracy, %","Training accuracy, %",Training correct
-336,Zhuravlyov,SVM,all (20),Table 7,336,196,140,664,504,160,75.9,74.85,70.63,497,0,74.85,83.63,281
-336,Zhuravlyov,Random Forest,all (20),Table 7,336,196,140,664,504,160,75.9,74.25,69.81,493,0,74.25,100.0,336
-336,Zhuravlyov,"k-NN Euclidean, k = 3",quantitative (7),Table 8,336,196,140,664,504,160,75.9,57.38,50.6,381,0,57.38,58.93,198
-336,Zhuravlyov,"k-NN Euclidean, k = 5",quantitative (7),Table 8,336,196,140,664,504,160,75.9,60.09,51.74,399,0,60.09,55.95,188
-336,Zhuravlyov,"k-NN Chebyshev, k = 3",quantitative (7),Table 8,336,196,140,664,504,160,75.9,54.37,46.48,361,0,54.37,54.17,182
-336,Zhuravlyov,"k-NN Chebyshev, k = 5",quantitative (7),Table 8,336,196,140,664,504,160,75.9,56.78,48.71,377,0,56.78,55.36,186
-336,Zhuravlyov,"k-NN Canberra, k = 3",quantitative (7),Table 8,336,196,140,664,504,160,75.9,57.08,51.68,379,0,57.08,61.01,205
-336,Zhuravlyov,"k-NN Canberra, k = 5",quantitative (7),Table 8,336,196,140,664,504,160,75.9,60.09,53.02,399,0,60.09,58.93,198
+336,Zhuravlyov,SVM,all (20),Standard classifiers,336,196,140,664,504,160,75.9,74.85,70.63,497,0,74.85,83.63,281
+336,Zhuravlyov,Random Forest,all (20),Standard classifiers,336,196,140,664,504,160,75.9,74.25,69.81,493,0,74.25,100.0,336
+336,Zhuravlyov,"k-NN Euclidean, k = 3",quantitative (7),k-NN by metric,336,196,140,664,504,160,75.9,57.38,50.6,381,0,57.38,58.93,198
+336,Zhuravlyov,"k-NN Euclidean, k = 5",quantitative (7),k-NN by metric,336,196,140,664,504,160,75.9,60.09,51.74,399,0,60.09,55.95,188
+336,Zhuravlyov,"k-NN Chebyshev, k = 3",quantitative (7),k-NN by metric,336,196,140,664,504,160,75.9,54.37,46.48,361,0,54.37,54.17,182
+336,Zhuravlyov,"k-NN Chebyshev, k = 5",quantitative (7),k-NN by metric,336,196,140,664,504,160,75.9,56.78,48.71,377,0,56.78,55.36,186
+336,Zhuravlyov,"k-NN Canberra, k = 3",quantitative (7),k-NN by metric,336,196,140,664,504,160,75.9,57.08,51.68,379,0,57.08,61.01,205
+336,Zhuravlyov,"k-NN Canberra, k = 5",quantitative (7),k-NN by metric,336,196,140,664,504,160,75.9,60.09,53.02,399,0,60.09,58.93,198
 336,Zhuravlyov,"k-NN Zhuravlyov, k = 3",all (20),,336,196,140,664,504,160,75.9,68.83,61.55,457,0,68.83,50.3,169
 336,Zhuravlyov,"k-NN Zhuravlyov, k = 5",all (20),,336,196,140,664,504,160,75.9,73.49,64.2,488,0,73.49,54.17,182
 336,Zhuravlyov,"CS-model Euclidean, α = 0.1",quantitative (7),CS-model,336,196,140,664,504,160,75.9,62.95,51.92,418,2,63.14,58.93,198
@@ -17,28 +17,28 @@
 336,Zhuravlyov,"CS-model Canberra, α = 0.2",quantitative (7),CS-model,336,196,140,664,504,160,75.9,69.88,53.5,464,20,72.05,61.31,206
 336,Zhuravlyov,"CS-model Zhuravlyov, α = 0.1",all (20),CS-model,336,196,140,664,504,160,75.9,71.54,53.31,475,21,73.87,62.2,209
 336,Zhuravlyov,"CS-model Zhuravlyov, α = 0.2",all (20),CS-model,336,196,140,664,504,160,75.9,68.07,56.36,452,0,68.07,63.69,214
-341,Euclidean,SVM,all (7),Table 7,341,173,168,659,527,132,79.97,50.68,52.41,334,0,50.68,59.53,203
-341,Euclidean,Random Forest,all (7),Table 7,341,173,168,659,527,132,79.97,56.45,52.61,372,0,56.45,100.0,341
-341,Euclidean,"k-NN Euclidean, k = 3",quantitative (7),Table 8,341,173,168,659,527,132,79.97,58.42,54.98,385,0,58.42,48.97,167
-341,Euclidean,"k-NN Euclidean, k = 5",quantitative (7),Table 8,341,173,168,659,527,132,79.97,54.78,49.58,361,0,54.78,53.08,181
-341,Euclidean,"k-NN Chebyshev, k = 3",quantitative (7),Table 8,341,173,168,659,527,132,79.97,58.88,54.13,388,0,58.88,48.09,164
-341,Euclidean,"k-NN Chebyshev, k = 5",quantitative (7),Table 8,341,173,168,659,527,132,79.97,59.64,53.75,393,0,59.64,54.25,185
-341,Euclidean,"k-NN Canberra, k = 3",quantitative (7),Table 8,341,173,168,659,527,132,79.97,54.63,52.89,360,0,54.63,46.04,157
-341,Euclidean,"k-NN Canberra, k = 5",quantitative (7),Table 8,341,173,168,659,527,132,79.97,56.75,55.07,374,0,56.75,49.56,169
+341,Euclidean,SVM,all (7),Standard classifiers,341,173,168,659,527,132,79.97,50.68,52.41,334,0,50.68,59.53,203
+341,Euclidean,Random Forest,all (7),Standard classifiers,341,173,168,659,527,132,79.97,56.45,52.61,372,0,56.45,100.0,341
+341,Euclidean,"k-NN Euclidean, k = 3",quantitative (7),k-NN by metric,341,173,168,659,527,132,79.97,58.42,54.98,385,0,58.42,48.97,167
+341,Euclidean,"k-NN Euclidean, k = 5",quantitative (7),k-NN by metric,341,173,168,659,527,132,79.97,54.78,49.58,361,0,54.78,53.08,181
+341,Euclidean,"k-NN Chebyshev, k = 3",quantitative (7),k-NN by metric,341,173,168,659,527,132,79.97,58.88,54.13,388,0,58.88,48.09,164
+341,Euclidean,"k-NN Chebyshev, k = 5",quantitative (7),k-NN by metric,341,173,168,659,527,132,79.97,59.64,53.75,393,0,59.64,54.25,185
+341,Euclidean,"k-NN Canberra, k = 3",quantitative (7),k-NN by metric,341,173,168,659,527,132,79.97,54.63,52.89,360,0,54.63,46.04,157
+341,Euclidean,"k-NN Canberra, k = 5",quantitative (7),k-NN by metric,341,173,168,659,527,132,79.97,56.75,55.07,374,0,56.75,49.56,169
 341,Euclidean,"CS-model Euclidean, α = 0.1",quantitative (7),CS-model,341,173,168,659,527,132,79.97,56.9,48.07,375,0,56.9,53.08,181
 341,Euclidean,"CS-model Euclidean, α = 0.2",quantitative (7),CS-model,341,173,168,659,527,132,79.97,56.15,52.42,370,0,56.15,52.2,178
 341,Euclidean,"CS-model Chebyshev, α = 0.1",quantitative (7),CS-model,341,173,168,659,527,132,79.97,39.15,49.18,258,0,39.15,53.37,182
 341,Euclidean,"CS-model Chebyshev, α = 0.2",quantitative (7),CS-model,341,173,168,659,527,132,79.97,35.51,50.59,234,0,35.51,52.2,178
 341,Euclidean,"CS-model Canberra, α = 0.1",quantitative (7),CS-model,341,173,168,659,527,132,79.97,77.39,51.23,510,0,77.39,51.32,175
 341,Euclidean,"CS-model Canberra, α = 0.2",quantitative (7),CS-model,341,173,168,659,527,132,79.97,77.39,51.23,510,0,77.39,51.32,175
-367,Chebyshev,SVM,all (7),Table 7,367,190,177,633,510,123,80.57,61.14,57.99,387,0,61.14,62.67,230
-367,Chebyshev,Random Forest,all (7),Table 7,367,190,177,633,510,123,80.57,59.87,55.97,379,0,59.87,100.0,367
-367,Chebyshev,"k-NN Euclidean, k = 3",quantitative (7),Table 8,367,190,177,633,510,123,80.57,57.5,54.81,364,0,57.5,50.68,186
-367,Chebyshev,"k-NN Euclidean, k = 5",quantitative (7),Table 8,367,190,177,633,510,123,80.57,59.87,56.59,379,0,59.87,50.68,186
-367,Chebyshev,"k-NN Chebyshev, k = 3",quantitative (7),Table 8,367,190,177,633,510,123,80.57,59.08,51.47,374,0,59.08,50.68,186
-367,Chebyshev,"k-NN Chebyshev, k = 5",quantitative (7),Table 8,367,190,177,633,510,123,80.57,60.19,53.39,381,0,60.19,50.14,184
-367,Chebyshev,"k-NN Canberra, k = 3",quantitative (7),Table 8,367,190,177,633,510,123,80.57,58.61,53.96,371,0,58.61,47.96,176
-367,Chebyshev,"k-NN Canberra, k = 5",quantitative (7),Table 8,367,190,177,633,510,123,80.57,60.03,56.69,380,0,60.03,48.5,178
+367,Chebyshev,SVM,all (7),Standard classifiers,367,190,177,633,510,123,80.57,61.14,57.99,387,0,61.14,62.67,230
+367,Chebyshev,Random Forest,all (7),Standard classifiers,367,190,177,633,510,123,80.57,59.87,55.97,379,0,59.87,100.0,367
+367,Chebyshev,"k-NN Euclidean, k = 3",quantitative (7),k-NN by metric,367,190,177,633,510,123,80.57,57.5,54.81,364,0,57.5,50.68,186
+367,Chebyshev,"k-NN Euclidean, k = 5",quantitative (7),k-NN by metric,367,190,177,633,510,123,80.57,59.87,56.59,379,0,59.87,50.68,186
+367,Chebyshev,"k-NN Chebyshev, k = 3",quantitative (7),k-NN by metric,367,190,177,633,510,123,80.57,59.08,51.47,374,0,59.08,50.68,186
+367,Chebyshev,"k-NN Chebyshev, k = 5",quantitative (7),k-NN by metric,367,190,177,633,510,123,80.57,60.19,53.39,381,0,60.19,50.14,184
+367,Chebyshev,"k-NN Canberra, k = 3",quantitative (7),k-NN by metric,367,190,177,633,510,123,80.57,58.61,53.96,371,0,58.61,47.96,176
+367,Chebyshev,"k-NN Canberra, k = 5",quantitative (7),k-NN by metric,367,190,177,633,510,123,80.57,60.03,56.69,380,0,60.03,48.5,178
 367,Chebyshev,"CS-model Euclidean, α = 0.1",quantitative (7),CS-model,367,190,177,633,510,123,80.57,77.41,48.66,490,0,77.41,53.95,198
 367,Chebyshev,"CS-model Euclidean, α = 0.2",quantitative (7),CS-model,367,190,177,633,510,123,80.57,77.41,48.66,490,0,77.41,53.95,198
 367,Chebyshev,"CS-model Chebyshev, α = 0.1",quantitative (7),CS-model,367,190,177,633,510,123,80.57,78.36,54.18,496,0,78.36,54.77,201

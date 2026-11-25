@@ -1,4 +1,4 @@
-"""The CS-model on the article's training and test samples, beside Tables 7 and 8 (ADR-080).
+"""The CS-model on the article's training and test samples, beside the comparison tables (ADR-080).
 
 Settings approved by the author before any run; nothing is chosen on the test objects:
 

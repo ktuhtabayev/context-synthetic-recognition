@@ -1312,12 +1312,12 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
         <translation>Tekshirish</translation>
     </message>
     <message>
-        <source>Table 7</source>
-        <translation>7-jadval</translation>
+        <source>Standard classifiers</source>
+        <translation>Standart klassifikatorlar</translation>
     </message>
     <message>
-        <source>Table 8</source>
-        <translation>8-jadval</translation>
+        <source>k-NN by metric</source>
+        <translation>Metrikalar boʻyicha k-NN</translation>
     </message>
     <message>
         <source>CS-model</source>

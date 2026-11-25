@@ -1,17 +1,17 @@
-"""Standard classifiers on the article's training and test samples (Tables 7 and 8).
+"""Standard classifiers on the article's training and test samples (ADR-079).
 
 Every setting is fixed here, before any run, and nothing is chosen on the test objects (ADR-079):
 
-- SVM and random forest: the project's ``svm`` and ``random-forest`` baselines with explicit
+- SVM and Random Forest: the project's ``svm`` and ``random-forest`` baselines with explicit
   options — ``SVC(kernel="rbf", C=1.0, gamma="scale")`` and
   ``RandomForestClassifier(n_estimators=200, random_state=42)`` — on every feature of the file:
   quantitative features min–max scaled on the training sample, nominal features one-hot encoded
   with the categories of the training sample (an unseen category encodes as all zeros);
 - k-NN: the project's ``knn-vote`` baseline, majority vote with k = 3 and k = 5, on the
   quantitative features min–max scaled on the training sample, with the Euclidean, Chebyshev and
-  Canberra metrics (Table 8) and, where a split lists it, the Zhuravlyov metric on all features
-  (an extra row, not printed). Distances are rounded to 10 decimals and equal distances go to the
-  smaller training index (ADR-008).
+  Canberra metrics (the k-NN by metric table) and, where a split lists it, the Zhuravlyov metric
+  on all features (an extra row, in neither table). Distances are rounded to 10 decimals and equal
+  distances go to the smaller training index (ADR-008).
 
 Each method is fitted on the training sample only and classifies the test objects without their
 class: :mod:`.stages` runs the comparison in three stages (training, test, evaluation), and
@@ -56,7 +56,7 @@ class MethodResult:
     method: str
     """Registry name of the baseline: ``svm``, ``random-forest`` or ``knn``."""
     metric: str | None
-    """The k-NN metric (``None`` for SVM and random forest)."""
+    """The k-NN metric (``None`` for SVM and Random Forest)."""
     k: int | None
     """The k of the k-NN vote."""
     features: str
@@ -64,7 +64,7 @@ class MethodResult:
     n_features: int
     """Number of original features the method uses."""
     table: str | None
-    """``Table 7``, ``Table 8`` or ``None`` (not printed)."""
+    """``Standard classifiers``, ``k-NN by metric`` or ``None`` (in neither table)."""
     test_decisions: IntArray = field(repr=False)
     """(test objects,) decisions: 1 = K1, 2 = K2, 0 = refusal."""
     training_decisions: IntArray = field(repr=False)

@@ -9,7 +9,7 @@
   :class:`~context_synthetic_recognition.data.samples.AnswerKey`, which only this stage reads.
 
 The k-NN vote keeps the training sample as its model and the CS-model keeps its fitted
-:class:`~context_synthetic_recognition.core.model.CSModel`. SVM and random forest live in the
+:class:`~context_synthetic_recognition.core.model.CSModel`. SVM and Random Forest live in the
 project's baselines, which fit and predict in one call: their fitted state is the training sample
 with the fixed options, and the *Test* stage fits them again — deterministically, so the decisions
 are those of a single fit (ADR-085). :func:`compare_split` is the three stages in a row.
@@ -43,9 +43,9 @@ from context_synthetic_recognition.comparison.settings import (
     METHOD_TITLES,
     METRIC_TITLES,
     SKLEARN_OPTIONS,
-    TABLE_7,
-    TABLE_8,
     TABLE_CS_MODEL,
+    TABLE_KNN,
+    TABLE_STANDARD,
     SplitSpec,
 )
 from context_synthetic_recognition.config import ExperimentConfig
@@ -73,7 +73,7 @@ from context_synthetic_recognition.evaluation.metrics import (
 )
 
 NOT_PRINTED = "Not printed"
-"""Group of the k-NN rows that Tables 7 and 8 do not print (the Zhuravlyov metric)."""
+"""Group of the k-NN rows in neither comparison table (the Zhuravlyov metric)."""
 
 
 @dataclass(frozen=True)
@@ -87,7 +87,7 @@ class MethodSpec:
     method: str
     """``svm``, ``random-forest``, ``knn`` or ``cs-model``."""
     group: str
-    """``Table 7``, ``Table 8``, ``Not printed`` or ``CS-model``."""
+    """``Standard classifiers``, ``k-NN by metric``, ``Not printed`` or ``CS-model``."""
     features: str
     """``all`` or ``quantitative``."""
     n_features: int = 0
@@ -98,19 +98,22 @@ class MethodSpec:
 
     @property
     def table(self) -> str | None:
-        """``Table 7`` or ``Table 8`` for the rows the tables print, otherwise ``None``."""
-        return self.group if self.group in (TABLE_7, TABLE_8) else None
+        """The table a row is in (``Standard classifiers``, ``k-NN by metric``), else ``None``."""
+        return self.group if self.group in (TABLE_STANDARD, TABLE_KNN) else None
 
 
 def method_specs(spec: SplitSpec, n: int = 0, n_quantitative: int = 0) -> tuple[MethodSpec, ...]:
-    """The methods of a split, in the order of the results: SVM, random forest, k-NN, CS-model.
+    """The methods of a split, in the order of the results: SVM, Random Forest, k-NN, CS-model.
 
     Args:
         spec: The split.
         n: Its number of features (0 if not known).
         n_quantitative: Its number of quantitative features.
     """
-    found = [MethodSpec(key, METHOD_TITLES[key], key, TABLE_7, "all", n) for key in SKLEARN_OPTIONS]
+    found = [
+        MethodSpec(key, METHOD_TITLES[key], key, TABLE_STANDARD, "all", n)
+        for key in SKLEARN_OPTIONS
+    ]
     for metric in (*KNN_METRICS, *spec.extra_knn):
         printed = metric in KNN_METRICS
         found += [
@@ -118,7 +121,7 @@ def method_specs(spec: SplitSpec, n: int = 0, n_quantitative: int = 0) -> tuple[
                 knn_key(metric, k),
                 f"k-NN {METRIC_TITLES[metric]}, k = {k}",
                 "knn",
-                TABLE_8 if printed else NOT_PRINTED,
+                TABLE_KNN if printed else NOT_PRINTED,
                 "quantitative" if printed else "all",
                 n_quantitative if printed else n,
                 metric=metric,
@@ -202,7 +205,7 @@ class FittedBaseline(FittedMethod):
         if self.spec.method == "knn":
             params = KnnVoteParams(ks=KNN_KS, operators=(METRIC_TITLES[str(self.spec.metric)],))
             output = knn_vote(data, params)[KNN_KS.index(int(self.spec.k or 0))]
-        else:  # SVM, random forest: fitted again on the training sample (deterministic)
+        else:  # SVM, Random Forest: fitted again on the training sample (deterministic)
             baseline = BASELINES.get(self.spec.method)
             (output,) = baseline(data, SklearnParams(options=dict(self.options)))
         return Decisions(output.decisions, output.scores)

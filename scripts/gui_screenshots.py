@@ -85,7 +85,7 @@ def classifiers(
     view.test_view.open("predictions")
     shot("classifiers-test")
     view.go_to_step(2)
-    view.evaluation_view.open("table-7")
+    view.evaluation_view.open("standard-classifiers")
     shot("classifiers-evaluation")
     window.set_theme("dark")
     view.evaluation_view.open("per-object")
@@ -159,7 +159,7 @@ def main() -> None:
         shot("compare")
         window.go_to(window.export_page)
         shot("export")
-        # Tables 7 and 8, apart from the workflow
+        # the comparison with standard classifiers, apart from the workflow
         classifiers(app, window, work, shot)
         window.set_theme("dark")
         window.go_to(results)

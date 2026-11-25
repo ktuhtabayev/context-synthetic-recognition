@@ -1,9 +1,9 @@
 """The ``csr`` command.
 
 Commands: ``config`` (show, init, check), ``data`` (list, check, info), ``compare`` (run,
-check, predict: Tables 7 and 8, standard classifiers on the article's training and test samples,
-and their blind predictions), ``fit``
-(the CS-model: Ψ(r), the agglomerative algorithm and the meta-dataset), ``classify`` (an object
+check, predict: the comparison with standard classifiers on the article's training and test
+samples, and their blind predictions), ``fit`` (the CS-model: Ψ(r), the agglomerative algorithm
+and the meta-dataset), ``classify`` (an object
 through the meta-algorithm, step by step), ``run`` (fit and evaluate under every configured
 protocol, write a run folder, optionally export it), ``export`` (a run folder as Excel mirror,
 tables, figures and report), ``validate`` (the package against the Excel experiment and the check
@@ -99,7 +99,7 @@ data_app = typer.Typer(
     help="Inspect datasets: sizes, feature types, classes, admissible k.", no_args_is_help=True
 )
 compare_app = typer.Typer(
-    help="Tables 7 and 8: standard classifiers on the article's training and test samples.",
+    help="Comparison with standard classifiers on the article's training and test samples.",
     no_args_is_help=True,
 )
 app.add_typer(config_app, name="config")
@@ -875,7 +875,7 @@ def _progress(line: str) -> None:
 
 @compare_app.command("run")
 def compare_run(out: ComparisonFolder = None, splits: SplitsFolder = None) -> None:
-    """Run SVM, random forest, k-NN and the CS-model on the article's splits; write the tables."""
+    """Run SVM, Random Forest, k-NN and the CS-model on the article's splits; write the tables."""
     typer.echo("splits:")
     try:
         outcome = run_comparison(splits, progress=_progress)

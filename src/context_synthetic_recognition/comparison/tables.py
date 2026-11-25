@@ -1,4 +1,4 @@
-"""Tables 7 and 8, the CS-model's table, the full results table and the summary — no I/O.
+"""The comparison tables, the CS-model's table, the full results table and the summary — no I/O.
 
 The tables are :class:`~context_synthetic_recognition.export.tables.Table` objects, so the
 project's renderers write them as CSV, Markdown and LaTeX. Their cells are percentages with two
@@ -8,7 +8,6 @@ decimals; the notes below them give the majority-class rates of the test samples
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import replace
 from typing import Any
 
 from context_synthetic_recognition.comparison.cs_model import (
@@ -27,9 +26,9 @@ from context_synthetic_recognition.comparison.settings import (
     METRIC_TITLES,
     SEED,
     SKLEARN_OPTIONS,
-    TABLE_7,
-    TABLE_8,
     TABLE_CS_MODEL,
+    TABLE_KNN,
+    TABLE_STANDARD,
     percent,
 )
 from context_synthetic_recognition.evaluation.metrics import ClassificationMetrics
@@ -37,15 +36,15 @@ from context_synthetic_recognition.export.tables import Cell, Table
 
 GROUP = "Comparison"
 """Group of the comparison's tables."""
-TABLE_7_KEY = "table-7"
-TABLE_8_KEY = "table-8"
+STANDARD_KEY = "standard-classifiers"
+KNN_KEY = "knn-by-metric"
 CS_MODEL_KEY = "cs-model"
 RESULTS_KEY = "results"
 DECIMALS = 2
 """Decimals of the percentages in Markdown and LaTeX."""
 
 SETTINGS_SKLEARN = (
-    "SVM: SVC with the RBF kernel, C = 1.0, gamma = scale; random forest: 200 trees, "
+    "SVM: SVC with the RBF kernel, C = 1.0, gamma = scale; Random Forest: 200 trees, "
     f"random_state = {SEED}. Every feature of the file: the quantitative ones min–max scaled on "
     "the training sample, the nominal ones one-hot encoded with the categories of the training "
     "sample (an unseen category encodes as all zeros)."
@@ -57,7 +56,7 @@ SETTINGS_KNN = (
 )
 TRAINING_ACCURACY = (
     "resubstitution (Definition 2): a k-NN training object is not its own neighbour, a CS-model "
-    "training object is left out of its own context; SVM and random forest classify the training "
+    "training object is left out of its own context; SVM and Random Forest classify the training "
     "objects with the model fitted on them"
 )
 SETTINGS_CS_MODEL = (
@@ -78,15 +77,15 @@ def _majority(results: Sequence[SplitResult]) -> str:
     return f"Majority-class rate of the test sample: {rates}."
 
 
-def table_7(results: Sequence[SplitResult]) -> Table:
-    """Table 7: accuracy of SVM and random forest on the test samples, %."""
+def standard_classifiers_table(results: Sequence[SplitResult]) -> Table:
+    """Standard classifiers: accuracy of SVM and Random Forest on the test samples, %."""
     rows: tuple[tuple[Cell, ...], ...] = tuple(
         (METHOD_TITLES[key], *(percent(r.method(key).test.accuracy) for r in results))
         for key in SKLEARN_OPTIONS
     )
     return Table(
-        key=TABLE_7_KEY,
-        title=f"{TABLE_7}. Accuracy of SVM and random forest on the test samples, %",
+        key=STANDARD_KEY,
+        title=f"{TABLE_STANDARD}: accuracy of SVM and Random Forest on the test samples, %",
         columns=("Method", *(_column(r) for r in results)),
         rows=rows,
         group=GROUP,
@@ -97,8 +96,8 @@ def table_7(results: Sequence[SplitResult]) -> Table:
     )
 
 
-def table_8(results: Sequence[SplitResult]) -> Table:
-    """Table 8: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, %."""
+def knn_by_metric_table(results: Sequence[SplitResult]) -> Table:
+    """k-NN by metric: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, %."""
     rows: list[tuple[Cell, ...]] = []
     for metric in KNN_METRICS:
         cells = []
@@ -108,8 +107,8 @@ def table_8(results: Sequence[SplitResult]) -> Table:
         rows.append((METRIC_TITLES[metric], *cells))
     ks = " / ".join(f"k = {k}" for k in KNN_KS)
     return Table(
-        key=TABLE_8_KEY,
-        title=f"{TABLE_8}. Accuracy of k-NN on the test samples, {ks}, %",
+        key=KNN_KEY,
+        title=f"{TABLE_KNN}: accuracy of the k-NN vote on the test samples, {ks}, %",
         columns=("Metric", *(_column(r) for r in results)),
         rows=tuple(rows),
         group=GROUP,
@@ -243,21 +242,21 @@ def results_table(results: Sequence[SplitResult]) -> Table:
             "Balanced accuracy: the mean recall of the two classes. Majority rate: the share of "
             "the larger class in the test sample. Test accuracy: refusals count as errors; "
             "answered accuracy: on the objects that received a class. Training accuracy: "
-            f"{TRAINING_ACCURACY}. Table — = not printed in Tables 7 and 8."
+            f"{TRAINING_ACCURACY}. Table — = in neither the {TABLE_STANDARD} nor the {TABLE_KNN} "
+            "table."
         ),
         labels=5,
     )
 
 
 def comparison_tables(results: Sequence[SplitResult]) -> tuple[Table, Table, Table, Table]:
-    """Table 7, Table 8, the CS-model's table and the full results table."""
-    return table_7(results), table_8(results), cs_model_table(results), results_table(results)
-
-
-def latex_caption(table: Table) -> Table:
-    """The table with ``Table 7.`` dropped from its title (LaTeX numbers its captions)."""
-    prefix = next((t for t in (TABLE_7, TABLE_8) if table.title.startswith(f"{t}. ")), None)
-    return replace(table, title=table.title.removeprefix(f"{prefix}. ")) if prefix else table
+    """Standard classifiers, k-NN by metric, the CS-model's table and the full results table."""
+    return (
+        standard_classifiers_table(results),
+        knn_by_metric_table(results),
+        cs_model_table(results),
+        results_table(results),
+    )
 
 
 def _scores(metrics: ClassificationMetrics) -> dict[str, Any]:
@@ -307,7 +306,8 @@ def summary_data(
     """
     return {
         "description": (
-            "Standard classifiers on the article's training and test samples: Tables 7 and 8 "
+            "Standard classifiers on the article's training and test samples: the "
+            f"{TABLE_STANDARD} and {TABLE_KNN} tables "
             "(ADR-079), and the CS-model on the same samples (ADR-080). Percentages with two "
             "decimals."
         ),

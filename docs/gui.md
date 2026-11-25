@@ -3,7 +3,7 @@
 The desktop application takes an experiment through the whole workflow — **Dataset → Configure →
 Run → Results → New object → Compare → Export** — and shows every table and figure of the
 method for any dataset. An eighth page, **Classifiers**, apart from the workflow, gives the
-article's Tables 7 and 8 in three steps: training, the test objects classified without their
+comparison with standard classifiers in three steps: training, the test objects classified without their
 class, and the evaluation. The application computes nothing itself: a run is the same
 `run_experiment` the command line uses, and the pages show the same tables and figures the
 exporters write, so the screen, the Excel mirror and the article's tables cannot disagree.
@@ -24,7 +24,7 @@ the article's split files, so the *Classifiers* page works there (ADR-081). Only
 need an extra the build leaves out, and the application says so when one is opened.
 `csr-gui.exe --self-test report.txt` checks an installation without showing a window: it loads
 every language, runs the default experiment, draws a table and a figure, exports the run,
-computes Tables 7 and 8 and writes what it found to the report (exit code 0 = everything
+computes the comparison tables and writes what it found to the report (exit code 0 = everything
 works).
 
 !!! warning "Four switches deviate from the article"
@@ -188,7 +188,7 @@ size. The CSV files open correctly in Excel.
 
 Classifier parts in three steps, apart from the workflow: the page needs no dataset and no run
 (ADR-084). The list of parts on the left starts collapsed while there is one part; **▶** opens
-it. The first part is Tables 7 and 8 of the article: SVM, random forest and k-NN fitted on the
+it. The first part is the comparison with standard classifiers: SVM, Random Forest and k-NN fitted on the
 article's training samples, with the CS-model on the same samples
 ([Standard classifiers](comparison.md)). Every setting is fixed (ADR-079, ADR-080): the page
 shows them and offers none to change.
@@ -208,11 +208,11 @@ shows them and offers none to change.
 |---|---|---|
 | ① Training | *Fit on the training sample* | *Methods* (the methods as in the article, with their fixed settings), *Training sample* (the objects, their features and class: K1 blue, K2 orange), *Training results* (training accuracy as in Definition 2, correct, refusals) |
 | ② Test | *Classify the test sample* | *Test objects* (feature values only — there is no class column), *Predictions* (1 / 2 / 0 per object and method, coloured by the predicted class, with the scores, the most common decision and how many methods give it), *Predicted classes* (K1, K2 and refusals per method, counts and shares) |
-| ③ Evaluation | *Compare with the true classes* | *Table 7*, *Table 8*, *CS-model*, *All results* (as `csr compare run` writes them), *Per object* (✓ correct, ✗ wrong, 0 refusal), *Confusion* (true class × decision and refusals per method), *Check* |
+| ③ Evaluation | *Compare with the true classes* | *Standard classifiers*, *k-NN by metric*, *CS-model*, *All results* (as `csr compare run` writes them), *Per object* (✓ correct, ✗ wrong, 0 refusal), *Confusion* (true class × decision and refusals per method), *Check* |
 
 The banner of ② says that the classes are hidden: the test objects are classified from their
 feature values alone, and nothing in that step needs or shows a true class. The banner of ③ says
-that the true classes are revealed. Tables 7 and 8 and the CS-model's table need the three
+that the true classes are revealed. The Standard classifiers, k-NN by metric and CS-model tables need the three
 article splits; with other samples these tabs say so.
 
 ![Classifiers page: ② Test](images/gui/classifiers-test.png)

@@ -1312,12 +1312,12 @@ The default preset follows the article. Settings that deviate from it are switch
         <translation>Проверка</translation>
     </message>
     <message>
-        <source>Table 7</source>
-        <translation>Таблица 7</translation>
+        <source>Standard classifiers</source>
+        <translation>Стандартные классификаторы</translation>
     </message>
     <message>
-        <source>Table 8</source>
-        <translation>Таблица 8</translation>
+        <source>k-NN by metric</source>
+        <translation>k-NN по метрикам</translation>
     </message>
     <message>
         <source>CS-model</source>

@@ -1,7 +1,8 @@
-# Standard classifiers (Tables 7 and 8)
+# Standard classifiers
 
-Tables 7 and 8 of the article compare standard classifiers on the article's training and test
-samples: SVM and random forest (Table 7) and k-NN with three metrics (Table 8). This part is kept
+The comparison with standard classifiers puts them on the article's training and test samples:
+SVM and Random Forest (the *Standard classifiers* table) and k-NN with three metrics (the *k-NN by
+metric* table). The tables are named by their content; the article numbers its tables. This part is kept
 apart from the CS-model's pipeline (ADR-079). It reads the split files through the data layer and
 classifies with the project's baselines and metrics. It writes the tables with the project's table
 model and changes none of them. A third table shows the CS-model on the same samples (ADR-080).
@@ -37,7 +38,7 @@ files hold the same 2102 objects — half of each class of Spambase (4204, 57, 2
 a value rounded otherwise, mostly in the third decimal — and the 722 file's values are those of the
 601 file min–max scaled over the 2102 objects (ADR-088). Heart's split and Spambase's two can be
 read, run on the *Classifiers* page and predicted with `csr compare predict`, but are not part of
-Tables 7 and 8.
+the comparison tables.
 
 ### File layout
 
@@ -75,7 +76,7 @@ one value too many.
 | Method | Setting |
 | :--- | :--- |
 | SVM | `SVC(kernel="rbf", C=1.0, gamma="scale")`: the project's `svm` baseline |
-| Random forest | `RandomForestClassifier(n_estimators=200, random_state=42)`: the `random-forest` baseline |
+| Random Forest | `RandomForestClassifier(n_estimators=200, random_state=42)`: the `random-forest` baseline |
 | Their features | every feature of the file: quantitative ones min–max scaled on the training sample, nominal ones one-hot encoded with the training sample's categories (an unseen category encodes as all zeros) |
 | k-NN | majority vote with k = 3 and k = 5: the `knn-vote` baseline |
 | Its features and metrics | the 7 quantitative features, min–max scaled on the training sample; Euclidean, Chebyshev and Canberra (Σ \|a − b\| / (\|a\| + \|b\|), a term is 0 when both values are 0) |
@@ -88,7 +89,7 @@ Reported for every split and method:
 - **balanced accuracy**: the mean recall of the two classes;
 - **majority-class rate**: the share of the larger class in the test sample;
 - **accuracy on the training sample**: resubstitution as in Definition 2. A k-NN training object is
-  not its own neighbour; SVM and random forest classify the training objects with the model fitted
+  not its own neighbour; SVM and Random Forest classify the training objects with the model fitted
   on them.
 - **sample sizes**.
 
@@ -110,11 +111,11 @@ The comparison runs in three stages (`comparison.stages`, ADR-084):
 through them. The blindness is tested, not only designed (ADR-085):
 
 - shuffling, flipping or deleting the classes of the test objects changes no decision and no score
-  of SVM, random forest, any k-NN row or any CS-model;
+  of SVM, Random Forest, any k-NN row or any CS-model;
 - a `Dataset` (which carries the classes) is rejected by `classify` at run time and by mypy, which
   the test suite runs on such a call.
 
-SVM and random forest come from the project's baselines, which fit and predict in one call. Their
+SVM and Random Forest come from the project's baselines, which fit and predict in one call. Their
 fitted state is the training sample with the fixed options, and the test stage fits them again on
 it. The fit is deterministic (`random_state = 42`), so the decisions are those of a single fit. The
 k-NN vote keeps the training sample as its model; the CS-model keeps the fitted model and
@@ -123,18 +124,17 @@ classifies with it (the Theorem). The three stages on the three article splits g
 
 ## Results
 
-Test accuracy, %. These tables repeat `experiments/comparison/table-7.md` and `table-8.md`; a test
-keeps them equal.
+Test accuracy, %. These tables repeat `experiments/comparison/standard-classifiers.md` and
+`knn-by-metric.md`; a test keeps them equal.
 
-**Table 7.** SVM and random forest.
+**Standard classifiers.** SVM and Random Forest.
 
 | Method | 336 (196, 140) — Zhuravlyov split | 341 (173, 168) — Euclidean split | 367 (190, 177) — Chebyshev split |
 | :--- | ---: | ---: | ---: |
 | SVM | 74.85 | 50.68 | 61.14 |
 | Random Forest | 74.25 | 56.45 | 59.87 |
 
-**Table 8.** k-NN, k = 3 / k = 5. The draft prints this table as a second "Table 7"; here it is
-numbered 8.
+**k-NN by metric.** k-NN, k = 3 / k = 5.
 
 | Metric | 336 (196, 140) — Zhuravlyov split | 341 (173, 168) — Euclidean split | 367 (190, 177) — Chebyshev split |
 | :--- | :--- | :--- | :--- |
@@ -184,7 +184,7 @@ This repeats `experiments/comparison/cs-model.md`.
   - high values (77–78 %) come from assigning almost every object to K1;
   - low values (21–31 %) come from assigning almost every object to K2.
 - **Balanced accuracy is 48–57 %**, near chance. The standard classifiers reach 70.63 % (SVM) and
-  69.81 % (random forest) on the 336 split, and 52–58 % on the two others.
+  69.81 % (Random Forest) on the 336 split, and 52–58 % on the two others.
 - Refusals occur only on the 336 split (2 to 21 test objects). The accuracy on the answered objects,
   the training accuracy (Definition 2), TUPLAM and the refusals of every model are in `results.csv`
   and `summary.json`.
@@ -218,8 +218,8 @@ The folder `experiments/comparison/` holds:
 
 | File | Content |
 | :--- | :--- |
-| `table-7.csv`, `.md`, `.tex` | Table 7, with the majority-class rates and the settings in its note (the LaTeX caption) |
-| `table-8.csv`, `.md`, `.tex` | Table 8, the same way |
+| `standard-classifiers.csv`, `.md`, `.tex` | the *Standard classifiers* table, with the majority-class rates and the settings in its note (the LaTeX caption) |
+| `knn-by-metric.csv`, `.md`, `.tex` | the *k-NN by metric* table, the same way |
 | `cs-model.csv`, `.md`, `.tex` | the CS-model on the same samples, α = 0.1 / α = 0.2, with its settings in the note |
 | `results.csv`, `results.md` | every split × method and CS-model: sizes, majority rate, test accuracy, balanced accuracy, refusals, accuracy on the answered objects, training accuracy |
 | `summary.json` | the settings, the versions of numpy and scikit-learn, the SHA-256 of every split file, every number with its counts |

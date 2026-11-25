@@ -140,7 +140,7 @@ datasets/           the author's datasets: default (10, 13, 2), raw/<Heterogeneo
                     splits/ = training and test samples (the article's, Spambase's)
 docs/               documentation (mkdocs): glossary, algorithm reference, DECISIONS.md, …
 experiments/        the article's computational experiment: results/*.csv, summary.json, checksums;
-                    comparison/ = Tables 7 and 8 (standard classifiers)
+                    comparison/ = the comparison with standard classifiers
 scripts/            run_experiments.py, run_comparison.py, build_exe.py, gui_screenshots.py,
                     update_translations.py
 src/context_synthetic_recognition/
@@ -153,7 +153,7 @@ src/context_synthetic_recognition/
     meta_algorithm/       the meta-algorithm
     model.py, trace.py    the CS-model end to end; trace objects
   evaluation/       protocols, baselines, metrics, ROC, margins
-  comparison/       Tables 7 and 8: standard classifiers on the article's samples
+  comparison/       the comparison with standard classifiers on the article's samples
   config/           typed configuration (schema 2), presets, the switches
   data/             dataset schema, loaders, built-in datasets, split files
   services/         runner, run folders, validation against the workbooks, switch sensitivity,

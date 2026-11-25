@@ -1,4 +1,4 @@
-## Table 8. Accuracy of k-NN on the test samples, k = 3 / k = 5, %
+## k-NN by metric: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, %
 
 | Metric | 336 (196, 140) — Zhuravlyov split | 341 (173, 168) — Euclidean split | 367 (190, 177) — Chebyshev split |
 | :--- | :--- | :--- | :--- |

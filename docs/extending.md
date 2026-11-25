@@ -17,7 +17,7 @@ a function with the signature of its kind; it may declare a parameter type, whic
 | baseline | `evaluation.baselines.BASELINES` | `(BaselineInput, params) → [BaselineOutput]` | `knn-vote` |
 | dataset format | `data.loaders.LOADERS` | `(path, LoadOptions) → Dataset` | detected |
 | export format | `export.run.EXPORTERS` | `(ExportContext) → [Path]` | `all` ([Exporting](exporting.md)) |
-| classifier part | `services.classifier_parts.CLASSIFIER_PARTS` | the protocol `ClassifierPart`: train, classify without the class, evaluate ([below](#adding-a-part-to-the-classifiers-page)) | `tables-7-8` |
+| classifier part | `services.classifier_parts.CLASSIFIER_PARTS` | the protocol `ClassifierPart`: train, classify without the class, evaluate ([below](#adding-a-part-to-the-classifiers-page)) | `classifier-comparison` |
 
 ## Built-in metrics and normalizers
 

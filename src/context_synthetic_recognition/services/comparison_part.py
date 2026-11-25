@@ -1,13 +1,13 @@
-"""The first classifier part: Tables 7 and 8 — standard classifiers and the CS-model (ADR-084).
+"""The first classifier part: the comparison with standard classifiers (ADR-084).
 
 The comparison of ADR-079 and ADR-080 in three stages (:mod:`~context_synthetic_recognition.
-comparison.stages`): SVM, random forest, the k-NN vote and the CS-model are fitted on the
+comparison.stages`): SVM, Random Forest, the k-NN vote and the CS-model are fitted on the
 article's training samples, classify the test objects without their class, and are compared
 with the true classes. Every setting is fixed; the page shows them and never lets anyone tune
 them. On the three article splits the stages give exactly what ``csr compare run`` writes, and
 the part writes and checks the same files.
 
-Registered as ``tables-7-8`` in :data:`~.classifier_parts.CLASSIFIER_PARTS` on import.
+Registered as ``classifier-comparison`` in :data:`~.classifier_parts.CLASSIFIER_PARTS` on import.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from context_synthetic_recognition.comparison import (
     SplitResult,
     SplitSpec,
 )
+from context_synthetic_recognition.comparison.settings import TABLE_KNN, TABLE_STANDARD
 from context_synthetic_recognition.comparison.stages import (
     FittedSplit,
     SplitDecisions,
@@ -33,9 +34,11 @@ from context_synthetic_recognition.comparison.stages import (
 )
 from context_synthetic_recognition.comparison.tables import (
     DECIMALS,
+    KNN_KEY,
     SETTINGS_CS_MODEL,
     SETTINGS_KNN,
     SETTINGS_SKLEARN,
+    STANDARD_KEY,
     comparison_tables,
     results_table,
 )
@@ -81,13 +84,14 @@ from context_synthetic_recognition.services.comparison import (
     write_comparison,
 )
 
-KEY = "tables-7-8"
+KEY = "classifier-comparison"
 ARTICLE = "article"
-"""Key of the option with the three splits of Tables 7 and 8."""
+"""Key of the option with the three splits of the comparison tables."""
 SPECS: dict[str, SplitSpec] = {spec.key: spec for spec in (*SPLITS, HEART_SPLIT, *SPAMBASE_SPLITS)}
 """Every split the part can read, by key."""
 NEEDS_ARTICLE = (
-    "Tables 7 and 8 and the CS-model's table need the three article splits (336, 341, 367): "
+    "The Standard classifiers, k-NN by metric and CS-model tables need the three article splits "
+    "(336, 341, 367): "
     "choose “All article splits” and run the steps again."
 )
 WRITES_ARTICLE = (
@@ -115,13 +119,13 @@ def _folder(folder: Path | None) -> Path:
     return folder if folder is not None else splits_folder()
 
 
-class TablesPart:
-    """Tables 7 and 8: standard classifiers and the CS-model on the article's samples."""
+class ComparisonPart:
+    """The comparison with standard classifiers and the CS-model on the article's samples."""
 
     key = KEY
-    title = "Tables 7 and 8 — standard classifiers and the CS-model"
+    title = "Comparison with standard classifiers"
     description = (
-        "SVM, random forest and k-NN fitted on the article's training samples, with the "
+        "SVM, Random Forest and k-NN fitted on the article's training samples, with the "
         "CS-model on the same samples; every setting is fixed (ADR-079, ADR-080)."
     )
 
@@ -233,13 +237,13 @@ class TablesPart:
     # ------------------------------------------------------------------ methods
 
     def method_groups(self, option: SampleOption) -> tuple[MethodGroup, ...]:
-        """Table 7, Table 8, the k-NN rows not printed, the CS-model — with their settings."""
+        """Standard classifiers, k-NN by metric, the k-NN rows not printed, the CS-model."""
         settings = {
-            "Table 7": SETTINGS_SKLEARN,
-            "Table 8": SETTINGS_KNN,
+            TABLE_STANDARD: SETTINGS_SKLEARN,
+            TABLE_KNN: SETTINGS_KNN,
             "Not printed": (
                 "The k-NN vote with the Zhuravlyov metric on all features (the 336 split only); "
-                "the other settings as in Table 8. Not printed in Tables 7 and 8."
+                f"the other settings as in {TABLE_KNN}. In neither comparison table."
             ),
             "CS-model": SETTINGS_CS_MODEL,
         }
@@ -313,7 +317,7 @@ class TablesPart:
         answers: tuple[AnswerKey, ...],
         progress: Progress | None = None,
     ) -> Evaluation:
-        """Compare with the true classes; Tables 7 and 8 and the CS-model's table for the set."""
+        """Compare with the true classes; the comparison tables and the CS-model's for the set."""
         trained = predictions.trained
         fitted: tuple[FittedSplit, ...] = trained.fitted
         results: list[SplitResult] = []
@@ -395,16 +399,16 @@ def _evaluation_tables(
 ) -> tuple[StageTable, ...]:
     keys = tuple(r.spec.key for r in results)
     if option.complete and keys == tuple(s.key for s in SPLITS):
-        seven, eight, cs_model, everything = comparison_tables(results)
+        standard, knn, cs_model, everything = comparison_tables(results)
         return (
-            _shown("table-7", "Table 7", seven),
-            _shown("table-8", "Table 8", eight),
+            _shown(STANDARD_KEY, TABLE_STANDARD, standard),
+            _shown(KNN_KEY, TABLE_KNN, knn),
             _shown("cs-model", "CS-model", cs_model),
             _shown("all-results", "All results", everything),
         )
     return (
-        StageTable("table-7", "Table 7", missing=NEEDS_ARTICLE),
-        StageTable("table-8", "Table 8", missing=NEEDS_ARTICLE),
+        StageTable(STANDARD_KEY, TABLE_STANDARD, missing=NEEDS_ARTICLE),
+        StageTable(KNN_KEY, TABLE_KNN, missing=NEEDS_ARTICLE),
         StageTable("cs-model", "CS-model", missing=NEEDS_ARTICLE),
         _shown("all-results", "All results", results_table(results)),
     )
@@ -421,7 +425,7 @@ def blind_predictions(
     Raises:
         DatasetError: Unknown split, or the split file is missing or breaks the convention.
     """
-    part = TABLES
+    part = COMPARISON_PART
     option = part.option(key)
     root = _folder(folder)
     training, test = [], []
@@ -443,6 +447,6 @@ def blind_predictions(
     return part.classify(trained, tuple(test), staged(STAGES[1], progress))
 
 
-TABLES = TablesPart()
+COMPARISON_PART = ComparisonPart()
 """The registered instance."""
-CLASSIFIER_PARTS.add(KEY, TABLES, summary=TABLES.title)
+CLASSIFIER_PARTS.add(KEY, COMPARISON_PART, summary=COMPARISON_PART.title)

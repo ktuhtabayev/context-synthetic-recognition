@@ -75,8 +75,8 @@ TAB_TITLES = {
     "per-object": mark("Per object"),
     "confusion": mark("Confusion"),
     "check": mark("Check"),
-    "table-7": mark("Table 7"),
-    "table-8": mark("Table 8"),
+    "standard-classifiers": mark("Standard classifiers"),
+    "knn-by-metric": mark("k-NN by metric"),
     "cs-model": mark("CS-model"),
     "all-results": mark("All results"),
 }

@@ -185,7 +185,7 @@ _ESTIMATORS = {
         "sklearn.linear_model", "LogisticRegression", "logistic regression", {"max_iter": 1000}
     ),
     "random-forest": _Estimator(
-        "sklearn.ensemble", "RandomForestClassifier", "random forest", {"n_estimators": 200}
+        "sklearn.ensemble", "RandomForestClassifier", "Random Forest", {"n_estimators": 200}
     ),
     "svm": _Estimator("sklearn.svm", "SVC", "SVM (RBF)"),
     "decision-tree": _Estimator("sklearn.tree", "DecisionTreeClassifier", "decision tree"),
