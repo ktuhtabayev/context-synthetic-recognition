@@ -1,7 +1,7 @@
 """The staged workbench of the *Classifiers* page: one view per classifier part (ADR-084).
 
 A :class:`PartView` shows any part of :data:`~context_synthetic_recognition.services.
-classifier_parts.CLASSIFIER_PARTS` from the protocol alone: the sample selector, the stepper
+classifier_parts.CLASSIFIER_PARTS` from the protocol alone: the tree of samples, the stepper
 ① *Training* → ② *Test* → ③ *Evaluation*, and the tabs each stage returns. Every stage runs in a
 worker thread (:class:`~.workers.Task`) through the services; the view computes nothing and
 offers no setting to change.
@@ -25,8 +25,11 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSpinBox,
+    QSplitter,
     QStackedWidget,
     QTabWidget,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -35,6 +38,7 @@ from context_synthetic_recognition.export.tables import Cell
 from context_synthetic_recognition.export.text import DEFAULT_DECIMALS
 from context_synthetic_recognition.gui.i18n import mark, tr
 from context_synthetic_recognition.gui.models import TableStyle
+from context_synthetic_recognition.gui.settings import Settings
 from context_synthetic_recognition.gui.theme import LIGHT, CellRole, Palette
 from context_synthetic_recognition.gui.widgets import TablePanel, WarningBox, hint, section_title
 from context_synthetic_recognition.gui.workers import (
@@ -47,8 +51,8 @@ from context_synthetic_recognition.gui.workers import (
     part_check_job,
     part_classify_job,
     part_evaluate_job,
-    part_options_job,
     part_run_all_job,
+    part_samples_job,
     part_train_job,
     part_write_job,
 )
@@ -58,9 +62,11 @@ from context_synthetic_recognition.services.classifier_parts import (
     CheckablePart,
     ClassifierPart,
     SampleOption,
+    SampleTree,
     ShownTable,
     StageTable,
     WritablePart,
+    methods_table,
 )
 
 STEPS = (mark("① Training"), mark("② Test"), mark("③ Evaluation"))
@@ -75,8 +81,8 @@ TAB_TITLES = {
     "per-object": mark("Per object"),
     "confusion": mark("Confusion"),
     "check": mark("Check"),
-    "table-7": mark("Table 7"),
-    "table-8": mark("Table 8"),
+    "standard-classifiers": mark("Standard classifiers"),
+    "knn-by-metric": mark("k-NN by metric"),
     "cs-model": mark("CS-model"),
     "all-results": mark("All results"),
 }
@@ -399,6 +405,120 @@ class StepView(QWidget):
             tab.set_palette(colours)
 
 
+# ---------------------------------------------------------------- the samples
+
+
+KEY_ROLE = Qt.ItemDataRole.UserRole
+"""Where a split's item keeps its key."""
+TREE_HEIGHT = 270
+"""The height the samples (and what a part adds beside them) start with, as far as the steps below
+leave room; the splitter between them changes it."""
+
+
+class SampleTreeView(QTreeWidget):
+    """The samples as a tree: datasets with their splits, ticked with checkboxes (ADR-091).
+
+    Ticking a dataset ticks all its splits; a dataset with some splits ticked shows the partial
+    mark. A split that cannot be used is greyed, without a checkbox, and says why in its tooltip.
+    The arrows move and Space ticks.
+    """
+
+    ticksChanged = Signal()
+    """The ticked splits changed (by the user or by :meth:`set_ticked`)."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """An empty tree."""
+        super().__init__(parent)
+        self.setObjectName("samples")
+        self.setHeaderHidden(True)
+        self.setUniformRowHeights(True)
+        self.setMinimumSize(200, 96)
+        self.setToolTip(tr("Tick the samples to run on: a split, a dataset, or several of them"))
+        self._last: tuple[str, ...] = ()
+        self._filling = False
+        self.itemChanged.connect(self._item_changed)
+
+    def set_tree(self, tree: SampleTree, ticked: Sequence[str]) -> None:
+        """Show a tree of samples with ``ticked`` ticked."""
+        self._filling = True
+        self.clear()
+        wanted = set(ticked)
+        for group in tree.groups:
+            parent = QTreeWidgetItem([group.title])
+            parent.setToolTip(0, group.title)
+            checkable = any(c.available for c in group.choices)
+            flags = parent.flags()
+            if checkable:
+                flags |= Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsAutoTristate
+            parent.setFlags(flags)
+            self.addTopLevelItem(parent)
+            for choice in group.choices:
+                item = QTreeWidgetItem(parent)
+                item.setData(0, KEY_ROLE, choice.key)
+                if choice.available:
+                    item.setText(0, choice.title)
+                    item.setToolTip(0, f"{choice.label}\n{choice.detail}".strip())
+                    item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                    state = (
+                        Qt.CheckState.Checked if choice.key in wanted else Qt.CheckState.Unchecked
+                    )
+                    item.setCheckState(0, state)
+                else:
+                    item.setText(0, f"⊘ {choice.title}")
+                    item.setToolTip(0, f"⊘ {choice.reason}\n{choice.detail}".strip())
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+            parent.setExpanded(any(c.key in wanted or not c.available for c in group.choices))
+        self._filling = False
+        first = self.topLevelItem(0)
+        if first is not None:
+            self.setCurrentItem(first)
+        self._emit_if_changed()
+
+    def groups(self) -> list[QTreeWidgetItem]:
+        """The items of the datasets, in the tree's order."""
+        found = (self.topLevelItem(g) for g in range(self.topLevelItemCount()))
+        return [g for g in found if g is not None]
+
+    def items(self) -> list[QTreeWidgetItem]:
+        """The items of the splits, in the tree's order."""
+        found = (g.child(c) for g in self.groups() for c in range(g.childCount()))
+        return [i for i in found if i is not None]
+
+    def item(self, key: str) -> QTreeWidgetItem | None:
+        """The item of a split."""
+        return next((i for i in self.items() if i.data(0, KEY_ROLE) == key), None)
+
+    def ticked(self) -> tuple[str, ...]:
+        """The keys of the ticked splits, in the tree's order."""
+        return tuple(
+            str(i.data(0, KEY_ROLE))
+            for i in self.items()
+            if i.data(0, Qt.ItemDataRole.CheckStateRole) is not None
+            and i.checkState(0) == Qt.CheckState.Checked
+        )
+
+    def set_ticked(self, keys: Sequence[str]) -> None:
+        """Tick exactly ``keys`` (the others are unticked)."""
+        wanted = set(keys)
+        self._filling = True
+        for item in self.items():
+            if item.data(0, Qt.ItemDataRole.CheckStateRole) is not None:
+                ticked = item.data(0, KEY_ROLE) in wanted
+                item.setCheckState(0, Qt.CheckState.Checked if ticked else Qt.CheckState.Unchecked)
+        self._filling = False
+        self._emit_if_changed()
+
+    def _item_changed(self, item: QTreeWidgetItem, column: int) -> None:
+        if not self._filling:
+            self._emit_if_changed()
+
+    def _emit_if_changed(self) -> None:
+        now = self.ticked()
+        if now != self._last:
+            self._last = now
+            self.ticksChanged.emit()
+
+
 # ---------------------------------------------------------------- a part
 
 
@@ -410,14 +530,16 @@ class PartView(QWidget):
     optionsRead = Signal()
     """The sample options were read."""
 
-    def __init__(self, part: ClassifierPart, parent: QWidget | None = None) -> None:
-        """Build the view of ``part`` from its protocol."""
+    def __init__(
+        self, part: ClassifierPart, settings: Settings | None = None, parent: QWidget | None = None
+    ) -> None:
+        """Build the view of ``part`` from its protocol; ``settings`` remember the ticks."""
         super().__init__(parent)
         self.part = part
+        self.settings = settings
         self.task: Task | None = None
         self.running_step: int | None = None
-        self.options: tuple[SampleOption, ...] = ()
-        self.methods: dict[str, StageTable] = {}
+        self.tree: SampleTree | None = None
         self.training: TrainingStep | None = None
         self.test: TestStep | None = None
         self.evaluation: EvaluationStep | None = None
@@ -433,13 +555,8 @@ class PartView(QWidget):
         self.title = section_title(part.title)
         self.title.setWordWrap(True)
         self.description = hint(part.description)
-        self.samples = QComboBox()
-        self.samples.setSizeAdjustPolicy(
-            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
-        )
-        self.samples.setMinimumContentsLength(16)
-        self.samples.setToolTip(tr("What the part runs on, with the sizes of the samples"))
-        self.samples.currentIndexChanged.connect(self._option_changed)
+        self.samples = SampleTreeView()
+        self.samples.ticksChanged.connect(self._ticks_changed)
         default = part.default_folder()
         self.splits = QLineEdit("" if default is None else str(default))
         self.splits.setToolTip(tr("The folder the samples are read from"))
@@ -447,13 +564,26 @@ class PartView(QWidget):
         self._folder_text = self.splits.text()
         self.browse_splits = QPushButton(tr("Browse…"))
         self.browse_splits.clicked.connect(self._browse_splits)
-        samples_row = QHBoxLayout()
-        samples_row.addWidget(QLabel(tr("Samples")))
-        samples_row.addWidget(self.samples, 3)
-        samples_row.addSpacing(8)
-        samples_row.addWidget(QLabel(tr("Split files")))
-        samples_row.addWidget(self.splits, 2)
-        samples_row.addWidget(self.browse_splits)
+        self.refresh_samples = QPushButton(tr("Refresh"))
+        self.refresh_samples.setToolTip(tr("Read the split folder again"))
+        self.refresh_samples.clicked.connect(self.read_samples)
+        folder_row = QHBoxLayout()
+        folder_row.addWidget(QLabel(tr("Samples")))
+        folder_row.addSpacing(12)
+        folder_row.addWidget(QLabel(tr("Split files")))
+        folder_row.addWidget(self.splits, 1)
+        folder_row.addWidget(self.browse_splits)
+        folder_row.addWidget(self.refresh_samples)
+        samples_column = QVBoxLayout()
+        samples_column.setContentsMargins(0, 0, 0, 0)
+        samples_column.addLayout(folder_row)
+        samples_column.addWidget(self.samples, 1)
+        self.choosers = QHBoxLayout()
+        """The samples, and beside them what a part adds (the designs)."""
+        self.choosers.setContentsMargins(0, 0, 0, 0)
+        self.choosers.addLayout(samples_column, 3)
+        self.top = QWidget()
+        self.top.setLayout(self.choosers)
 
         self.stepper = Stepper()
         self.stepper.stepChosen.connect(self.go_to_step)
@@ -547,14 +677,23 @@ class PartView(QWidget):
         self.status = QLabel(tr("Not run yet."))
         self.status.setWordWrap(True)
         self.problems = WarningBox()
+        steps = QWidget()
+        steps_column = QVBoxLayout(steps)
+        steps_column.setContentsMargins(0, 0, 0, 0)
+        steps_column.addLayout(steps_row)
+        steps_column.addWidget(self.stack, 1)
+        self.splitter = QSplitter(Qt.Orientation.Vertical)
+        self.splitter.setChildrenCollapsible(False)
+        self.splitter.addWidget(self.top)
+        self.splitter.addWidget(steps)
+        self.splitter.setStretchFactor(1, 1)
+        self.splitter.setSizes([TREE_HEIGHT, 600])
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
         layout.addWidget(self.title)
         layout.addWidget(self.description)
-        layout.addLayout(samples_row)
-        layout.addLayout(steps_row)
-        layout.addWidget(self.stack, 1)
+        layout.addWidget(self.splitter, 1)
         layout.addWidget(self.status)
         layout.addWidget(self.problems)
         self.go_to_step(0)
@@ -571,9 +710,8 @@ class PartView(QWidget):
         return self.task is None or self.task.wait(milliseconds)
 
     def option(self) -> SampleOption | None:
-        """The chosen samples."""
-        index = self.samples.currentIndex()
-        return self.options[index] if 0 <= index < len(self.options) else None
+        """The ticked samples (``None`` before the samples are read)."""
+        return None if self.tree is None else self.tree.option(self.samples.ticked())
 
     def _splits(self) -> Path | None:
         text = self.splits.text().strip()
@@ -585,10 +723,10 @@ class PartView(QWidget):
     def _unavailable(self) -> str:
         """Why the steps cannot run now (empty if they can)."""
         option = self.option()
-        if not self._read or not self.options:
+        if not self._read or option is None:
             return tr("The samples have not been read yet.")
-        if option is None:
-            return tr("Choose the samples.")
+        if not option.splits:
+            return self.tree.problem if self.tree and self.tree.problem else tr("Tick a sample.")
         return "" if option.available else option.reason
 
     def refresh(self) -> None:
@@ -609,6 +747,7 @@ class PartView(QWidget):
             self.samples,
             self.splits,
             self.browse_splits,
+            self.refresh_samples,
             self.output,
             self.browse_output,
         ):
@@ -676,62 +815,77 @@ class PartView(QWidget):
     # ------------------------------------------------------------------ the samples
 
     def showEvent(self, event: QShowEvent) -> None:
-        """Read the sample options the first time the view is shown."""
+        """Read the samples again whenever the view is shown (a file may have been added)."""
         super().showEvent(event)
-        if not self._read and self.task is None:
-            self.read_options()
+        if not self.is_running():
+            self.read_samples()
 
-    def read_options(self) -> None:
+    @property
+    def _saved_key(self) -> str:
+        return f"classifiers/samples/{self.part.key}"
+
+    def _saved(self) -> list[str]:
+        """The ticks remembered from an earlier session (unknown keys are dropped later)."""
+        return [] if self.settings is None else self.settings.recent(self._saved_key)
+
+    def read_samples(self) -> None:
         """Read what the part can run on, in a worker (the sizes need the files)."""
         if self.is_running():
             return
-        task = Task.with_progress(part_options_job, self.part, self._splits(), parent=self)
-        task.succeeded.connect(self._options_read)
+        task = Task.with_progress(part_samples_job, self.part, self._splits(), parent=self)
+        task.succeeded.connect(self._samples_read)
         self._launch(task, tr("Reading the samples…"), None)
 
-    def _options_read(self, found: Sequence[tuple[SampleOption, StageTable]]) -> None:
-        previous = self.option()
+    def _samples_read(self, tree: SampleTree) -> None:
+        before = self._signature()
+        wanted = self.samples.ticked() if self._read else tuple(self._saved())
+        ticked = tree.known(wanted) or tree.known(tree.default)
+        first = not self._read
         self._read = True
-        self.options = tuple(option for option, _ in found)
-        self.methods = {option.key: methods for option, methods in found}
+        self.tree = tree
         self.samples.blockSignals(True)
-        self.samples.clear()
-        for index, option in enumerate(self.options):
-            self.samples.addItem(option.label, option.key)
-            if not option.available:
-                self.samples.setItemData(index, f"⊘ {option.reason}", Qt.ItemDataRole.ToolTipRole)
-        keys = [o.key for o in self.options]
-        chosen = keys.index(previous.key) if previous is not None and previous.key in keys else 0
-        self.samples.setCurrentIndex(chosen)
+        self.samples.set_tree(tree, ticked)
         self.samples.blockSignals(False)
+        if not first and self._signature() != before:
+            self._stale(0, tr("The samples changed."))
         self._show_option()
         self.progress.setFormat("")
         self.progress.setValue(0)
         self.status.setText(tr("Samples read from {folder}.").format(folder=self.splits.text()))
         self.optionsRead.emit()
 
-    def _option_changed(self, index: int) -> None:
+    def _signature(self) -> tuple[str, ...]:
+        """What the steps were run on: the ticked samples as the tree shows them."""
+        if self.tree is None:
+            return ()
+        chosen = [self.tree.choice(key) for key in self.samples.ticked()]
+        return tuple(f"{c.key} {c.title} {c.available}" for c in chosen if c is not None)
+
+    def _ticks_changed(self) -> None:
         self._stale(0, tr("The samples changed."))
+        if self.settings is not None and self._read:
+            self.settings.store.setValue(self._saved_key, list(self.samples.ticked()))
         self._show_option()
 
     def _show_option(self) -> None:
         option = self.option()
         if option is None:
             return
-        methods = self.methods.get(option.key)
+        methods = methods_table(self.part.method_groups(option))
         others = (
             [] if self.training is None else [t for t in self.training.tabs if t.key != "methods"]
         )
-        if methods is not None:
-            self.training_view.show_tables([methods, *others])
-        self.problems.set_text("" if option.available else f"⚠ {option.reason}")
+        self.training_view.show_tables([methods, *others])
+        self.problems.set_text(
+            "" if option.available or not option.splits else f"⚠ {option.reason}"
+        )
         self.refresh()
 
     def _folder_edited(self) -> None:
         if self.splits.text() != self._folder_text:
             self._folder_text = self.splits.text()
             self._stale(0, tr("The split folder changed."))
-            self.read_options()
+            self.read_samples()
 
     def _browse_splits(self) -> None:
         folder = self.folder_dialog(tr("Split files"), self.splits.text())

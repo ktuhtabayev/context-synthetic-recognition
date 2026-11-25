@@ -19,8 +19,11 @@ from context_synthetic_recognition.services.classifier_parts import (
     MethodTraining,
     Predictions,
     Progress,
+    SampleChoice,
+    SampleGroup,
     SampleOption,
     SampleSet,
+    SampleTree,
     TrainedPart,
     TrainingSample,
     metrics_against,
@@ -40,8 +43,9 @@ class DummyPart:
     def default_folder(self) -> Path | None:
         return None
 
-    def sample_options(self, folder: Path | None) -> tuple[SampleOption, ...]:
-        return (SampleOption("toy", "Toy", ("toy",), "training 4 (2, 2) · test 3"),)
+    def samples(self, folder: Path | None) -> SampleTree:
+        toy = SampleChoice("toy", "Toy split · training 4 (2, 2) · test 3", "Toy · training 4")
+        return SampleTree((SampleGroup("Toy (7 objects)", (toy,)),), default=("toy",))
 
     def load(self, option: SampleOption, folder: Path | None) -> SampleSet:
         training = Dataset(
@@ -53,7 +57,9 @@ class DummyPart:
         return SampleSet(option, (TrainingSample("toy", "Toy", training),), (test,), (answers,))
 
     def method_groups(self, option: SampleOption) -> tuple[MethodGroup, ...]:
-        method = MethodInfo("nearest", "Nearest object", "all (1)", ("toy",))
+        method = MethodInfo(
+            "nearest", "Nearest object", "all (1)", ("toy",), "the nearest training object on x₁"
+        )
         return (MethodGroup("Trivial", "The class of the nearest training object.", (method,)),)
 
     def train(

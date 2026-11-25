@@ -113,10 +113,11 @@ SELF_TEST_SECONDS = 300.0
 
 
 def _check_comparison(check: Callable[[str, bool], None]) -> None:
-    """Tables 7 and 8 on the split files (ADR-081).
+    """The comparison with standard classifiers on the split files (ADR-081).
 
     The Windows build carries the split files and scikit-learn, so there the comparison must
-    run; an installation from source finds the split files only in the project.
+    run; an installation from source finds the split files only in the project. The samples of
+    the parts are listed by dataset, with the number of their splits.
     """
     frozen = bool(getattr(sys, "frozen", False))
     try:
@@ -124,6 +125,14 @@ def _check_comparison(check: Callable[[str, bool], None]) -> None:
     except CSRError as error:
         check(f"comparison: not checked here — {error}", not frozen)
         return
+    # the samples of every part that reads this folder: every split file, by dataset (ADR-091)
+    for part in parts():
+        if part.default_folder() is None:
+            continue
+        tree = part.samples(folder)
+        shown = "; ".join(f"{g.title} {len(g.choices)}" for g in tree.groups) or tree.problem
+        usable = bool(tree.groups) and all(c.available for c in tree.choices)
+        check(f"samples of {part.key}: {shown}", usable)
     try:
         outcome = comparison_job(folder)
     except CSRError as error:
@@ -185,7 +194,7 @@ def _self_test(app: QApplication, lines: list[str]) -> bool:
             check(f"export: {', '.join(formats)} ({written.count} files)", not missing)
         # the Classifiers page lists the registered parts (imported by name: ADR-084)
         found = [part.key for part in parts()]
-        check(f"classifier parts: {', '.join(found) or 'none'}", "tables-7-8" in found)
+        check(f"classifier parts: {', '.join(found) or 'none'}", "classifier-comparison" in found)
         _check_comparison(check)
         window.close()
         app.processEvents()
@@ -198,7 +207,7 @@ def self_test(report: Path | None = None) -> int:
     The window is built by the platform but never mapped on screen: every language is loaded,
     the default dataset is opened, the experiment is run in the worker thread, a table and a
     figure of the results are drawn, the run is exported, the classifier parts are registered and
-    Tables 7 and 8 are computed. The user's settings are not touched and nothing is written
+    the comparison tables are computed. The user's settings are not touched and nothing is written
     besides the report.
 
     Args:

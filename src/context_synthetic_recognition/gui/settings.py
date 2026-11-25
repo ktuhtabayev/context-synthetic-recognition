@@ -88,6 +88,17 @@ class Settings:
     def page(self, index: int) -> None:
         self.store.setValue("window/page", index)
 
+    # ------------------------------------------------------------------ the Classifiers page
+
+    @property
+    def classifier_part(self) -> str:
+        """The key of the part shown on the *Classifiers* page (empty: the first part)."""
+        return str(self.store.value("classifiers/part", ""))
+
+    @classifier_part.setter
+    def classifier_part(self, key: str) -> None:
+        self.store.setValue("classifiers/part", key)
+
     # ------------------------------------------------------------------ folders and files
 
     @property

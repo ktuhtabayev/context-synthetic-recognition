@@ -9,7 +9,7 @@
   :class:`~context_synthetic_recognition.data.samples.AnswerKey`, which only this stage reads.
 
 The k-NN vote keeps the training sample as its model and the CS-model keeps its fitted
-:class:`~context_synthetic_recognition.core.model.CSModel`. SVM and random forest live in the
+:class:`~context_synthetic_recognition.core.model.CSModel`. SVM and Random Forest live in the
 project's baselines, which fit and predict in one call: their fitted state is the training sample
 with the fixed options, and the *Test* stage fits them again — deterministically, so the decisions
 are those of a single fit (ADR-085). :func:`compare_split` is the three stages in a row.
@@ -30,6 +30,7 @@ from context_synthetic_recognition.comparison.cs_model import (
     CSModelResult,
     cs_model_config,
     cs_model_metrics,
+    cs_model_settings,
 )
 from context_synthetic_recognition.comparison.methods import (
     MethodResult,
@@ -41,12 +42,15 @@ from context_synthetic_recognition.comparison.settings import (
     KNN_KS,
     KNN_METRICS,
     METHOD_TITLES,
-    METRIC_TITLES,
     SKLEARN_OPTIONS,
-    TABLE_7,
-    TABLE_8,
     TABLE_CS_MODEL,
+    TABLE_KNN,
+    TABLE_STANDARD,
     SplitSpec,
+    knn_settings,
+    metric_title,
+    random_forest_settings,
+    svm_settings,
 )
 from context_synthetic_recognition.config import ExperimentConfig
 from context_synthetic_recognition.core.arrays import IntArray, readonly
@@ -73,7 +77,7 @@ from context_synthetic_recognition.evaluation.metrics import (
 )
 
 NOT_PRINTED = "Not printed"
-"""Group of the k-NN rows that Tables 7 and 8 do not print (the Zhuravlyov metric)."""
+"""Group of the k-NN rows in neither comparison table (the Zhuravlyov metric)."""
 
 
 @dataclass(frozen=True)
@@ -87,7 +91,7 @@ class MethodSpec:
     method: str
     """``svm``, ``random-forest``, ``knn`` or ``cs-model``."""
     group: str
-    """``Table 7``, ``Table 8``, ``Not printed`` or ``CS-model``."""
+    """``Standard classifiers``, ``k-NN by metric``, ``Not printed`` or ``CS-model``."""
     features: str
     """``all`` or ``quantitative``."""
     n_features: int = 0
@@ -95,34 +99,72 @@ class MethodSpec:
     metric: str | None = None
     k: int | None = None
     alpha: float | None = None
+    unavailable: str = ""
+    """Why the split cannot support the method (empty if it can, ADR-090)."""
+
+    @property
+    def settings(self) -> str:
+        """The method's own settings (ADR-094), never another method's."""
+        if self.method == "svm":
+            return svm_settings()
+        if self.method == "random-forest":
+            return random_forest_settings()
+        if self.method == "knn":
+            return knn_settings(str(self.metric), int(self.k or 0), self.features)
+        return cs_model_settings(str(self.metric), float(self.alpha or 0.0), self.features)
 
     @property
     def table(self) -> str | None:
-        """``Table 7`` or ``Table 8`` for the rows the tables print, otherwise ``None``."""
-        return self.group if self.group in (TABLE_7, TABLE_8) else None
+        """The table a row is in (``Standard classifiers``, ``k-NN by metric``), else ``None``."""
+        return self.group if self.group in (TABLE_STANDARD, TABLE_KNN) else None
 
 
-def method_specs(spec: SplitSpec, n: int = 0, n_quantitative: int = 0) -> tuple[MethodSpec, ...]:
-    """The methods of a split, in the order of the results: SVM, random forest, k-NN, CS-model.
+NO_QUANTITATIVE = "no quantitative features"
+"""Why a method on the quantitative features is unavailable on a split without them."""
+
+
+def _support(features: str, k: int | None, n: int, n_quantitative: int, m: int) -> str:
+    """Why a split cannot support a method (empty if it can, or if the sizes are not known)."""
+    if features == "quantitative" and n and not n_quantitative:
+        return NO_QUANTITATIVE
+    if k is not None and m and m <= k:
+        return f"k = {k} needs at least {k + 1} training objects, the training sample has {m}"
+    return ""
+
+
+def method_specs(
+    spec: SplitSpec, n: int = 0, n_quantitative: int = 0, m: int = 0
+) -> tuple[MethodSpec, ...]:
+    """The methods of a split by the fixed rule of ADR-090, in the order of the results.
+
+    SVM and Random Forest on every feature; the k-NN vote (k = 3, 5) and the CS-model (α = 0.1,
+    0.2) with the Euclidean, Chebyshev and Canberra metrics on the quantitative features, and with
+    the split's own metric on every feature where :func:`~.settings.own_metrics` adds it. A method
+    the split cannot support is kept with the reason (``unavailable``).
 
     Args:
         spec: The split.
         n: Its number of features (0 if not known).
         n_quantitative: Its number of quantitative features.
+        m: The number of training objects (0 if not known).
     """
-    found = [MethodSpec(key, METHOD_TITLES[key], key, TABLE_7, "all", n) for key in SKLEARN_OPTIONS]
+    found = [
+        MethodSpec(key, METHOD_TITLES[key], key, TABLE_STANDARD, "all", n)
+        for key in SKLEARN_OPTIONS
+    ]
     for metric in (*KNN_METRICS, *spec.extra_knn):
         printed = metric in KNN_METRICS
         found += [
             MethodSpec(
                 knn_key(metric, k),
-                f"k-NN {METRIC_TITLES[metric]}, k = {k}",
+                f"k-NN {metric_title(metric)}, k = {k}",
                 "knn",
-                TABLE_8 if printed else NOT_PRINTED,
+                TABLE_KNN if printed else NOT_PRINTED,
                 "quantitative" if printed else "all",
                 n_quantitative if printed else n,
                 metric=metric,
                 k=k,
+                unavailable=_support("quantitative" if printed else "all", k, n, n_quantitative, m),
             )
             for k in KNN_KS
         ]
@@ -131,13 +173,16 @@ def method_specs(spec: SplitSpec, n: int = 0, n_quantitative: int = 0) -> tuple[
         found += [
             MethodSpec(
                 f"cs-model-{metric}-{alpha}",
-                f"CS-model {METRIC_TITLES[metric]}, α = {alpha}",
+                f"CS-model {metric_title(metric)}, α = {alpha}",
                 "cs-model",
                 TABLE_CS_MODEL,
                 "all" if every else "quantitative",
                 n if every else n_quantitative,
                 metric=metric,
                 alpha=alpha,
+                unavailable=_support(
+                    "all" if every else "quantitative", None, n, n_quantitative, m
+                ),
             )
             for alpha in ALPHAS
         ]
@@ -198,11 +243,13 @@ class FittedBaseline(FittedMethod):
         return self.training.feature_names, self.training.feature_types
 
     def _decide(self, sample: UnlabelledSample) -> Decisions:
+        if self.undefined:
+            return Decisions(None, None, self.undefined)
         data = BaselineInput(self.training, sample.X, None, self.config)
         if self.spec.method == "knn":
-            params = KnnVoteParams(ks=KNN_KS, operators=(METRIC_TITLES[str(self.spec.metric)],))
+            params = KnnVoteParams(ks=KNN_KS, operators=(metric_title(str(self.spec.metric)),))
             output = knn_vote(data, params)[KNN_KS.index(int(self.spec.k or 0))]
-        else:  # SVM, random forest: fitted again on the training sample (deterministic)
+        else:  # SVM, Random Forest: fitted again on the training sample (deterministic)
             baseline = BASELINES.get(self.spec.method)
             (output,) = baseline(data, SklearnParams(options=dict(self.options)))
         return Decisions(output.decisions, output.scores)
@@ -270,18 +317,23 @@ def fit_split(spec: SplitSpec, training: Dataset) -> FittedSplit:
         ValueError: The training sample does not have two classes.
     """
     if len(training.classes) != 2:
-        raise ValueError(f"{spec.key}: the comparison needs two classes")
+        raise ValueError(f"{spec.name}: the comparison needs two classes")
     config = comparison_config(spec)
     on_training = BaselineInput(training, training.X, np.arange(training.m, dtype=np.int64), config)
-    specs = method_specs(spec, training.n, int(training.quantitative.sum()))
+    specs = method_specs(spec, training.n, int(training.quantitative.sum()), training.m)
+    metrics = dict.fromkeys(str(m.metric) for m in specs if m.method == "knn" and not m.unavailable)
     knn = {
-        metric: knn_vote(on_training, KnnVoteParams(ks=KNN_KS, operators=(METRIC_TITLES[metric],)))
-        for metric in (*KNN_METRICS, *spec.extra_knn)
+        metric: knn_vote(on_training, KnnVoteParams(ks=KNN_KS, operators=(metric_title(metric),)))
+        for metric in metrics
     }
     names, types = training.feature_names, training.feature_types
     methods: list[FittedMethod] = []
     for method in specs:
-        if method.method in SKLEARN_OPTIONS:
+        if method.unavailable and method.method != "cs-model":
+            methods.append(
+                FittedBaseline(method, training, config, None, undefined=method.unavailable)
+            )
+        elif method.method in SKLEARN_OPTIONS:
             options = SKLEARN_OPTIONS[method.method]
             baseline = BASELINES.get(method.method)
             (trained,) = baseline(on_training, SklearnParams(options=dict(options)))
@@ -304,6 +356,8 @@ def _fit_cs_model(
     types: tuple[FeatureType, ...],
 ) -> FittedCSModel:
     metric, alpha = str(method.metric), float(method.alpha or 0.0)
+    if method.unavailable:
+        return FittedCSModel(method, None, names, types, undefined=method.unavailable)
     config = cs_model_config(metric, alpha, all_features=metric in spec.extra_knn)
     try:
         model = fit_model(training, config)
@@ -373,7 +427,7 @@ def evaluate_split(decided: SplitDecisions, answers: AnswerKey) -> SplitResult:
                 )
             )
             continue
-        if (
+        if not method.undefined and (
             test.decisions is None
             or method.training_decisions is None
             or tested is None
@@ -393,6 +447,7 @@ def evaluate_split(decided: SplitDecisions, answers: AnswerKey) -> SplitResult:
                 training_decisions=method.training_decisions,
                 test=tested,
                 training=trained,
+                undefined=method.undefined,
             )
         )
     size, k1, k2 = answers.sizes
@@ -417,7 +472,7 @@ def compare_split(spec: SplitSpec, split: FixedSplit) -> SplitResult:
         ValueError: The split does not have two classes.
     """
     if len(split.dataset.classes) != 2:
-        raise ValueError(f"{spec.key}: the comparison needs two classes")
+        raise ValueError(f"{spec.name}: the comparison needs two classes")
     fitted = fit_split(spec, split.training_part)
     decided = classify_split(fitted, split.test_objects())
     return evaluate_split(decided, split.test_answers())

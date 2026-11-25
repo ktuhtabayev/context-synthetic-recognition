@@ -1448,7 +1448,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
 - The additional features are named d₁ … d_p wherever they are shown (CLI, run results, Excel
   mirror, validation report); the earlier r₁ … r_p are gone.
 
-## ADR-079 — Standard classifiers on the article's training and test samples: Tables 7 and 8 (author)
+## ADR-079 — Standard classifiers on the article's training and test samples (author)
 
 *Accepted, 2026-11-22. Its split-file layout is superseded by ADR-082.*
 
@@ -1467,7 +1467,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   `random-forest` and `knn-vote` baselines, the metric registry and the table model with explicit
   options and changes none of them; no default was changed.
 - Settings, fixed before any run (*author*); nothing is tuned or chosen on the test samples:
-  - SVM `SVC(kernel="rbf", C=1.0, gamma="scale")`; random forest
+  - SVM `SVC(kernel="rbf", C=1.0, gamma="scale")`; Random Forest
     `RandomForestClassifier(n_estimators=200, random_state=42)`. Both use every feature of the
     file: the quantitative ones min–max fitted on the training sample, the nominal ones one-hot
     encoded with the training sample's categories (an unseen category encodes as all zeros).
@@ -1479,12 +1479,12 @@ blocked objects keep covering, but differ in single objects. The gap is reported
     accuracy (the mean recall of the two classes), the majority-class rate of the test sample,
     and the sample sizes. The accuracy on the training sample is resubstitution as in Definition
     2: a k-NN training object is not its own neighbour (*author*, after the first run).
-- Table 7 has rows SVM and random forest; Table 8 has rows Euclidean, Chebyshev and Canberra, with
-  each cell "k = 3 / k = 5". The draft prints Table 8 as a second "Table 7"; it is numbered 8
-  here. Both have the three German splits as columns, and their notes give the majority-class
+- The *Standard classifiers* table has rows SVM and Random Forest; the *k-NN by metric* table has
+  rows Euclidean, Chebyshev and Canberra, with each cell "k = 3 / k = 5". The tables are named
+  by their content, not numbered (the article numbers its tables; ADR-092). Both have the three German splits as columns, and their notes give the majority-class
   rates and the settings. They are written as CSV, Markdown and LaTeX, with `results.csv|md`,
   `summary.json` and `checksums.sha256`, to `experiments/comparison/`.
-- `summary.json` records the versions of numpy and scikit-learn (the random forest depends on
+- `summary.json` records the versions of numpy and scikit-learn (the Random Forest depends on
   them), not the package version, so a version bump changes no file. The byte-for-byte test of
   a new run is skipped when the installed versions differ from the recorded ones; the pinned
   numbers are checked in any case.
@@ -1499,13 +1499,13 @@ blocked objects keep covering, but differ in single objects. The gap is reported
 
 *Accepted, 2026-11-22.*
 
-- The CS-model runs on the same three German splits as Tables 7 and 8, fitted on the training
+- The CS-model runs on the same three German splits as the comparison tables, fitted on the training
   sample, with the test objects classified without their class (the Theorem). The author approved
   the settings before the first run; nothing is tuned or chosen on the test samples:
   - one base operator per metric, as in the k-NN rows: Euclidean, Chebyshev and Canberra on the
     quantitative features of every split, and Zhuravlyov on all 20 features of the 336 split
     only. Every operator is min–max scaled on the training sample (*author*: the same distances
-    as Table 8's k-NN; raw values would keep the 336 file's scaling over all 1000 objects, test
+    as the k-NN by metric table; raw values would keep the 336 file's scaling over all 1000 objects, test
     objects included);
   - odd k = 3 … 41 and the zero value of the article's experiments (Table 1), α = 0.1 and 0.2,
     as in ADR-070; otherwise the article's defaults (final class means, one majorizing pass, no ⚠
@@ -1513,10 +1513,10 @@ blocked objects keep covering, but differ in single objects. The gap is reported
 - Reported: accuracy on the test sample with refusals as errors (Definition 3), accuracy on the
   answered objects, refusals, balanced accuracy, accuracy on the training sample (Definition 2),
   r, the features left out for the zero value, and TUPLAM.
-- The results go into a separate table, `cs-model` (CSV, Markdown, LaTeX), beside Tables 7 and 8.
+- The results go into a separate table, `cs-model` (CSV, Markdown, LaTeX), beside the comparison tables.
   Its rows are the metrics and each cell is "α = 0.1 / α = 0.2". The rows are also added to
-  `results.csv|md` and `summary.json`, and the table is shown on the *Classifiers* page. Tables 7
-  and 8 keep the article's layout.
+  `results.csv|md` and `summary.json`, and the table is shown on the *Classifiers* page. The
+  comparison tables keep the article's layout.
 - Result: r = 20 on every split, and no synthetic feature takes 0 on a training object (as in
   ADR-070). No setting reaches the majority-class rate of a test sample. Each model assigns most
   test objects to one class, and which one depends on the metric and α. Test accuracies therefore
@@ -1535,7 +1535,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   under the folder the application runs in.
 - `scripts/build_exe.py` stops when scikit-learn is not installed, and CI installs the
   `[sklearn]` extra for the executable, so a build cannot silently lack it.
-- The frozen application's self-test also computes Tables 7 and 8 and fails when scikit-learn
+- The frozen application's self-test also computes the comparison tables and fails when scikit-learn
   or the split files are missing. Run from source, it checks them only where the project's split
   files are found.
 
@@ -1558,7 +1558,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   corrected with the author's approval: the Euclidean and Chebyshev splits held `0 0` in columns 8
   and 9, and Heart's 13th cell held `0     0`. Each now holds the n types followed by two empty
   cells. The objects, classes, types and samples are unchanged, and so is every number of
-  Tables 7 and 8 and of the CS-model. Only the files' SHA-256 changed, pinned in a test and
+  the comparison tables and of the CS-model. Only the files' SHA-256 changed, pinned in a test and
   recorded in `summary.json`.
 - `data.splits.load_split_file` reads n from the header and checks the convention, naming the file
   and the row of every departure: exactly three numbers in the header; m object rows; exactly
@@ -1578,7 +1578,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   Windows-1252 and shows "—" as "â€”" and α as "Î±".
 - One helper writes them: `export.text.write_csv` (with `csv_bytes` for the files a service builds
   in memory and `csv_rows` for rows without a `Table`). It is used by the comparison
-  (`table-7.csv`, `table-8.csv`, `cs-model.csv`, `results.csv`), the study
+  (`standard-classifiers.csv`, `knn-by-metric.csv`, `cs-model.csv`, `results.csv`), the study
   (`experiments/results/*.csv`), the export format `csv` (`tables/<key>.csv`, `tables/index.csv`),
   every run folder (`predictions.csv`, `folds.csv`) and the desktop application's *Save CSV…*
   button.
@@ -1598,7 +1598,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   a unit of work in three stages: ① *Training* on the training sample, ② *Test*, where the test
   objects are classified without their class, and ③ *Evaluation*, where the decisions are
   compared with the true classes. The comparison of ADR-079 and ADR-080 is the first part,
-  "Tables 7 and 8" (standard classifiers and the CS-model). Further parts are registered in the
+  "Comparison with standard classifiers" (standard classifiers and the CS-model). Further parts are registered in the
   services; the page does not change.
 - Modules:
   - `data.samples`: `UnlabelledSample` and `AnswerKey` (ADR-085).
@@ -1607,7 +1607,8 @@ blocked objects keep covering, but differ in single objects. The gap is reported
     numbers and the byte-for-byte test exercise the staged code.
   - `services.classifier_parts`: the protocol `ClassifierPart`, the registry `CLASSIFIER_PARTS`
     (a `core.registry.Registry`), the stage types and the tables every part gets.
-  - `services.comparison_part`: the part "Tables 7 and 8", registered under `tables-7-8`.
+  - `services.comparison_part`: the part "Comparison with standard classifiers", registered under
+    `classifier-comparison` (ADR-092).
   - `gui.workbench`: `PartView`, the stepper and the three step views; `gui.pages.classifiers`:
     the page with the list of parts.
 - The protocol (types of `services.classifier_parts`):
@@ -1627,7 +1628,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
     and the correctness of every object;
   - optional capabilities, found by `isinstance` on runtime-checkable protocols:
     `write(evaluation, folder)` with `write_problem(evaluation)` and `default_output()`, and
-    `check(folder, splits)`. "Tables 7 and 8" has both: the files and the check of
+    `check(folder, splits)`. The comparison part has both: the files and the check of
     `csr compare run | check`.
   - The registry gains `Registry.remove`, so that a test can register a part and take it away;
     built-in parts are the modules of `BUILTIN_PARTS`, imported on first use, and a part of
@@ -1642,20 +1643,20 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   test registers a dummy part and runs it through the page.
 - How the comparison maps onto the stages: *Training* fits the k-NN vote and the CS-model on the
   training sample and classifies the training objects (resubstitution, Definition 2). SVM and
-  random forest are scikit-learn estimators inside the `svm` and `random-forest` baselines, which
+  Random Forest are scikit-learn estimators inside the `svm` and `random-forest` baselines, which
   fit and predict in one call; their fitted state is the training sample with the fixed options,
   and *Test* fits them again on it, deterministically (ADR-085). *Evaluation* builds the same
-  `SplitResult`s as before, so Tables 7 and 8, the CS-model's table, the results table and the
-  files of `experiments/comparison` are the same byte for byte. Tables 7 and 8 and the CS-model's
-  table need the three article splits; with fewer splits these tabs say so, and writing is allowed
+  `SplitResult`s as before, so the comparison tables, the CS-model's table, the results table and the
+  files of `experiments/comparison` are the same byte for byte. The comparison tables and the
+  CS-model's table need German's three splits; with fewer splits these tabs say so, and writing is allowed
   only for the full set.
 - The page (wireframe at 1360 × 860; the parts list collapses to a narrow strip):
 
   ```text
   ┌────────────┬─────────────────────────────────────────────────────────────────────────────┐
-  │ PARTS   ◀  │ Tables 7 and 8 — standard classifiers and the CS-model                      │
-  │ ● Tables   │ one-line description                                                        │
-  │   7 and 8  │ Samples [All article splits (336, 341, 367) ▾] Split files [datasets\…] [Browse…] │
+  │ PARTS   ◀  │ Comparison with standard classifiers                                        │
+  │ ● Compari… │ one-line description                                                        │
+  │   son      │ Samples [the samples ▾] Split files [datasets\…] [Browse…]                 │
   │            │ [① Training ✓ done] ─ [② Test ○ not run] ─ [③ Evaluation ○ not run]  [Run all] ▓▓░ │
   │            │ ┌─ step view ─────────────────────────────────────────────────────────────┐ │
   │            │ │ banner · action button                                                  │ │
@@ -1676,7 +1677,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
     common*), *Predicted classes* (method × split: predicted K1, K2 and refusals, counts and
     shares).
   - ③ *Evaluation*: the banner "True classes revealed", the button *Compare with the true
-    classes*; tabs *Table 7*, *Table 8*, *CS-model*, *All results*, *Per object* (✓ / ✗ / 0
+    classes*; tabs *Standard classifiers*, *k-NN by metric*, *CS-model*, *All results*, *Per object* (✓ / ✗ / 0
     against the true class), *Confusion* (2 × 2 and refusals per method and split) and *Check*;
     the results folder, *Write the files*, *Check the written files*, *Open the folder*.
   - Step states, each shown by an icon and a word, never by colour alone: ○ not run, ◔ running,
@@ -1701,13 +1702,13 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   `classify(trained, unlabelled)` takes nothing else. A `Dataset` (which carries classes) is
   rejected: by mypy (a static assertion in `services.classifier_parts`, which fails the type check
   if a `Dataset` were ever accepted) and at run time (`TypeError`).
-- SVM and random forest are fitted again on the training sample at the *Test* stage: the project's
+- SVM and Random Forest are fitted again on the training sample at the *Test* stage: the project's
   baselines fit and predict in one call, and splitting them would change the plug-in signature of
   every baseline. The fit is deterministic (fixed options, `random_state = 42`), so the decisions
   are the same as those of a single fit. The k-NN vote keeps the training sample as its model;
   the CS-model keeps the fitted `CSModel` and classifies with `CSModel.classify` (the Theorem).
 - Tests prove the blindness: shuffling, flipping or deleting the classes of the test objects
-  changes no decision and no score of any method — SVM, random forest, every k-NN row and every
+  changes no decision and no score of any method — SVM, Random Forest, every k-NN row and every
   CS-model.
 
 ## ADR-086 — `csr compare predict`: the blind predictions as a file
@@ -1715,7 +1716,7 @@ blocked objects keep covering, but differ in single objects. The gap is reported
 *Accepted, 2026-11-24.*
 
 - `csr compare predict [--split KEY] [--out FILE] [--splits FOLDER]` trains the methods of
-  "Tables 7 and 8" on the training sample of one split (336 by default; 341, 367 or 76) and
+  the comparison part on the training sample of one split (336 by default; 341, 367 or 76) and
   classifies its test objects without their class. It writes one CSV file through the project's
   CSV writer (ADR-083): the object, then one column per method with the decision 1, 2 or 0. There
   is no class column.
@@ -1761,9 +1762,9 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   were (*author*): the header counts the features only (`2102 57 2` instead of `2102 58 2`), no
   line starts with a tab, and the type row holds the 57 types followed by two empty cells — the
   601 file held `0 0` there, the 722 file a merged `0       0`. Every object row is unchanged.
-- The part "Tables 7 and 8" offers them as samples, like Heart's split: the *Classifiers* page runs
+- The comparison part offers them as samples, like Heart's split: the *Classifiers* page runs
   the three stages on them and `csr compare predict --split 601 | 722` writes their blind
-  predictions. They are not columns of Tables 7 and 8, and no result of theirs is written to
+  predictions. They are not columns of the comparison tables, and no result of theirs is written to
   `experiments/`. The Windows build carries them with the other split files (ADR-081).
 
 ## ADR-089 — No garbage collection in a worker thread
@@ -1779,6 +1780,152 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   is switched off while any worker works (`gui.workers.CollectorPause`, counted, so overlapping
   workers are safe); the last worker to end switches it back on, unless it was off before.
   Reference counting still frees everything without a cycle while a worker runs.
+
+## ADR-090 — Every split file of the folder is a sample
+
+*Accepted, 2026-11-25. Amends ADR-079, ADR-084 and ADR-088 for the list of splits.*
+
+- The split files are no longer listed in code. `services.split_discovery.discover_splits` scans
+  `datasets/splits` (or the folder given) recursively for `*.dat` and reads every file by its name
+  and its content, so a file added later is found without a change to the code:
+  - the name follows `<Dataset> (<m>, <n>, <c>) — training <t> (<metric>).dat`
+    (`data.splits.parse_split_name`);
+  - the file follows the split-file convention (ADR-082), its header holds the m, n and c of the
+    name, and its split markers give t training objects;
+  - the metric is registered in `METRICS` (an alias is read as its canonical name).
+- A file that fails a check is listed as unavailable, with its file, its row (where the problem
+  has one: the loader's row, or row 1 for a header that contradicts the name) and the reason. It is
+  never used and never stops the other files.
+- The key of a split is `<Dataset>-<t>`: `German-336`, `German-341`, `German-367`,
+  `Heart-Disease-76`, `Spambase-601`, `Spambase-722`. Keys are internal: the desktop application
+  never shows them. Two files with one key are both unavailable, and the reason names the other
+  file. The keys of the earlier versions — the training size alone, `336` … `722` — stay accepted
+  by the CLI, as the training size of exactly one split; a size that two splits share is reported
+  as ambiguous with their keys.
+- The only list of splits kept in code is the comparison set, `comparison.settings.COMPARISON_SPLITS`
+  = German's three splits (Zhuravlyov 336, Euclidean 341, Chebyshev 367): the columns of the
+  *Standard classifiers*, *k-NN by metric* and *CS-model* tables and the content of
+  `experiments/comparison`.
+- The methods of a split follow one fixed rule, `comparison.stages.method_specs`, not a list per
+  file; their settings stay those of ADR-079 and ADR-080:
+  - every split: SVM and Random Forest on every feature; the k-NN vote (k = 3, 5) and the CS-model
+    (α = 0.1, 0.2) with the Euclidean, Chebyshev and Canberra metrics on the quantitative
+    features;
+  - a split of the comparison set whose own metric is none of these three also gets the k-NN vote
+    and the CS-model with its own metric on every feature — German's Zhuravlyov split 336, as
+    before;
+  - a method a split cannot support is listed as unavailable with the reason, never an error: no
+    quantitative features (the Euclidean, Chebyshev and Canberra k-NN and CS-model), or fewer than
+    k + 1 training objects (the k-NN vote leaves an object out of its own neighbourhood).
+  - The rule gives every split of today exactly its earlier methods: 336 keeps its two Zhuravlyov
+    k-NN rows and its two Zhuravlyov CS-models; 341, 367, Heart-Disease 76 and Spambase's two have
+    none. Extending the own-metric rows to every split would have added four methods to
+    Heart-Disease 76, whose method list was to stay unchanged; widening the rule later is one line.
+- `csr compare run` without options writes the comparison set to `experiments/comparison`.
+  `csr compare run --split KEY --out DIR` writes one split's evaluation (`results.csv`,
+  `results.md`, `summary.json`, `checksums.sha256`) to DIR, never to `experiments/comparison`.
+  `csr compare check` reads the keys of the splits from the folder's `summary.json` and checks
+  either kind of folder. `csr compare predict --split KEY` takes any key or old key
+  (`German-336` by default); its default file is `predictions-<key>.csv`.
+- Every label of a split that a user sees uses the dataset's name:
+  `German · Euclidean split · training 341 (173, 168)`, in the column headers, the notes, the
+  results table, `summary.json` (beside the key) and the CLI's output. Spambase's two Euclidean
+  splits differ in their training sizes. No number changed: the values of `results.csv` and
+  `summary.json` were compared before and after.
+- Why Spambase was missing from the *Classifiers* page of the Windows build: `dist\` held the
+  v0.10.0 build of 2026-11-24, made before Spambase's split files were added (ADR-088). Its code
+  listed four split files and its copy of `datasets/splits` (`data/split_files`) held German's and
+  Heart-Disease's only. Run from source, the page listed Spambase already. With the discovery the
+  build lists whatever its copy of the folder holds, and `scripts/build_exe.py` copies the whole
+  folder, so a rebuild carries every split file.
+
+## ADR-091 — The samples of the *Classifiers* page as a tree of datasets
+
+*Accepted, 2026-11-25. Amends ADR-084 for the samples.*
+
+- The drop-down of sample options is replaced by a tree with checkboxes built from the discovery
+  (ADR-090): one node per dataset, alphabetical, with its object count ("German (1000 objects)");
+  under it one node per split, by training size, with its metric, its number of features (the
+  splits of one dataset can differ: German has 20, 7 and 7), its training sample and its test
+  size — "Euclidean split · 7 features · training 341 (173, 168) · test 659".
+- Ticking a dataset ticks all its splits; a dataset with some of its splits ticked shows the
+  partial mark. Any set can be ticked: one split, a dataset, or splits of several datasets. The
+  keyboard moves with the arrows and ticks with Space. German's three splits are ticked by
+  default. An unavailable file is shown greyed under its dataset (by the sub-folder when its name
+  does not follow the pattern), without a checkbox, with the reason in its tooltip.
+- The tree is read again when the page is shown, when the split folder changes and with a new
+  *Refresh* button; the ticks are kept for the splits still there.
+- The option of the three article splits together is gone. When German's three splits — and
+  only they — are ticked, the
+  evaluation shows the *Standard classifiers*, *k-NN by metric* and *CS-model* tables; otherwise
+  those tabs say which splits they need. The files of `csr compare run` are written only for that
+  set (to any results folder chosen); other selections are written by
+  `csr compare run --split KEY --out DIR` (ADR-090).
+- The protocol of a part changes accordingly: `samples(folder) → SampleTree` (groups of
+  `SampleChoice`s with their availability, the default ticks and the set the part's own tables
+  need) replaces `sample_options(folder)`; `SampleTree.option(keys)` builds the `SampleOption`
+  that `load` and the stages receive. The *Methods* tab follows the ticked splits.
+- The page remembers the chosen part and the ticked splits (`classifiers/part`,
+  `classifiers/samples/<part>`). A saved key that no longer exists — the part's key of v0.10.0,
+  `article`, `336` — is dropped silently; when none is left the default applies.
+- Every label of a split on the page — the tree, the progress, the status line, the tables'
+  *Split* column and the choice of split above a per-split table — uses the dataset's name.
+
+## ADR-092 — The comparison tables are named by their content
+
+*Accepted, 2026-11-25. Amends ADR-079, ADR-080, ADR-083, ADR-084 and ADR-086 for the names.*
+
+- The article numbers its tables, and the draft prints the k-NN table under the same number as
+  the table of SVM and Random Forest. The project therefore names its tables by their content and
+  numbers none of them; LaTeX numbers the captions. Until v0.10.0 the two tables and their part
+  carried the article's numbers; now:
+  - the table of SVM and Random Forest → *Standard classifiers*: key `standard-classifiers`, files
+    `standard-classifiers.csv | md | tex`, title "Standard classifiers: accuracy of SVM and Random
+    Forest on the test samples, %";
+  - the k-NN table → *k-NN by metric*: key `knn-by-metric`, files `knn-by-metric.csv | md | tex`, title
+    "k-NN by metric: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, %";
+  - their part → *Comparison with standard classifiers*, key
+    `classifier-comparison`.
+- Identifiers follow (`TABLE_STANDARD`, `TABLE_KNN`, `STANDARD_KEY`, `KNN_KEY`,
+  `standard_classifiers_table`, `knn_by_metric_table`, `ComparisonPart`); `latex_caption` is gone,
+  since no title carries a number to drop. There are no aliases for the old table or part keys.
+- The old names were replaced in every tracked file: code, tests, the desktop application and its
+  Russian and Uzbek translations (obsolete entries removed by `scripts/update_translations.py`),
+  CLI help, the documentation, README, the earlier ADRs and the earlier CHANGELOG entries. The
+  generated files were regenerated (`experiments/comparison`, the screenshots, the Windows build).
+  Git history, the tags and the published v0.10.0 release keep the old names. The article's own
+  table numbers that the project cites (Tables 1–6, the study of ADR-070) are citations and stay.
+- No number changed: the values of `results.csv` and `summary.json` are equal before and after;
+  only file names, titles, captions, labels and text changed, with `checksums.sha256`.
+
+## ADR-093 — "Random Forest" with capital letters
+
+*Accepted, 2026-11-25.*
+
+- The method is written "Random Forest" wherever a user reads it: the desktop application
+  (labels, tabs, tooltips, status lines, banners), CLI help and output, the titles, notes, column
+  headers and captions of every output (CSV, Markdown, LaTeX, the text of `summary.json`, the HTML
+  and PDF report), the documentation, README, the ADRs, the CHANGELOG and the screenshots; also in
+  docstrings and comments.
+- Unchanged: identifiers and keys (`random-forest`, `random_forest`, `RandomForestClassifier`) and
+  quotations of library names. The Russian and Uzbek interfaces keep their own term; a Latin
+  "Random Forest" in them is written with capitals.
+
+## ADR-094 — Every method shows its own settings
+
+*Accepted, 2026-11-25. Amends ADR-079, ADR-080 and ADR-084 for the settings text.*
+
+- A method's row — on the *Methods* tab, in the tables' notes, in `summary.json` and in the
+  documentation — shows its own settings, never another method's or a text shared by a group:
+  - SVM: "SVC, RBF kernel, C = 1.0, gamma = scale";
+  - Random Forest: "200 trees, random_state = 42";
+  - k-NN: its metric, k, the features it uses and the tie rule;
+  - CS-model: its metric, α, the k range and the values of the synthetic features.
+- What the methods of a table share — the scaling and the encoding fitted on the training sample
+  — is said once, in the table's note.
+- `MethodInfo.settings` carries the text (`MethodGroup.note` the shared facts), and each method of
+  `summary.json` has a `settings` field. A long settings text wraps, and every text cell shows in
+  full in its tooltip; nothing is cut off without a way to read it.
 
 ## Open questions for the author
 

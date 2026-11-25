@@ -9,7 +9,8 @@ The result is ``dist\csr-gui\`` — a folder with ``csr-gui.exe`` and everything
 copied as a whole — and ``dist\csr-gui-<version>-windows.zip``, the same folder packed. The
 script then runs ``csr-gui.exe --self-test``: the frozen application loads every language, opens
 the default dataset, runs the experiment, draws a table and a figure, exports the run and
-computes Tables 7 and 8; the report is ``dist\self-test.txt`` (``--no-test`` skips this).
+computes the comparison with standard classifiers; the report is ``dist\self-test.txt``
+(``--no-test`` skips this).
 
 The executable contains Python, numpy, matplotlib, Qt, scikit-learn and the package with its
 datasets, translations and a copy of the article's split files (``datasets/splits``), so the

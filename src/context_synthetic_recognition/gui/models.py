@@ -244,6 +244,10 @@ def style_for(
     return TableStyle(headers, cell, _object_column(table, objects))
 
 
+TOOLTIP_TEXT = 24
+"""A text cell longer than this shows in full in its tooltip."""
+
+
 class TableModel(QAbstractTableModel):
     """A table of a run as a Qt model."""
 
@@ -336,7 +340,10 @@ class TableModel(QAbstractTableModel):
             )
             return int(horizontal | Qt.AlignmentFlag.AlignVCenter)
         if role == Qt.ItemDataRole.ToolTipRole:
-            return repr(value) if isinstance(value, float) else None
+            # the exact value; a text in full, so that a long one is never cut off unread
+            if isinstance(value, float):
+                return repr(value)
+            return value if isinstance(value, str) and len(value) > TOOLTIP_TEXT else None
         if role == Qt.ItemDataRole.FontRole:
             return self._bold if column < self.table.labels else None
         if role in (Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.ForegroundRole):

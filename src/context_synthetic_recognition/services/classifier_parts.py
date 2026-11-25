@@ -47,7 +47,7 @@ from context_synthetic_recognition.export.tables import Cell, Table
 from context_synthetic_recognition.export.text import csv_rows
 
 Progress = Callable[[str, int, int], None]
-"""(what is being done, done, total) — e.g. ``("336", 0, 3)``."""
+"""(what is being done, done, total), e.g. ``("German · Euclidean split", 1, 3)``."""
 
 GROUP = "Classifiers"
 """Group of the tables of this module."""
@@ -84,7 +84,7 @@ class ShownTable:
     cells: tuple[CellMeaning, ...]
     """One meaning per column."""
     label: str = ""
-    """The variant's name in a tab with several tables (the split, e.g. ``336``)."""
+    """The variant's name in a tab with several tables (the split's name)."""
     object_column: int | None = None
     """The column that names the object of a row (cross-highlighting)."""
     decimals: int | None = None
@@ -113,11 +113,12 @@ class StageTable:
 
 @dataclass(frozen=True)
 class SampleOption:
-    """What a part can run on: one or several splits."""
+    """What a part runs on: the splits ticked in the tree of samples."""
 
     key: str
+    """The keys of the splits joined by ``+`` (internal)."""
     title: str
-    """E.g. ``All article splits (336, 341, 367)``."""
+    """The splits' labels, e.g. ``German · Euclidean split · training 341 (173, 168)``."""
     splits: tuple[str, ...]
     """Keys of the splits."""
     sizes: str = ""
@@ -130,8 +131,89 @@ class SampleOption:
 
     @property
     def label(self) -> str:
-        """The entry of the sample selector: the title and the sizes."""
+        """The title and the sizes."""
         return f"{self.title} · {self.sizes}" if self.sizes else self.title
+
+
+@dataclass(frozen=True)
+class SampleChoice:
+    """A sample in the tree of samples: one split (ADR-091)."""
+
+    key: str
+    """Internal key, e.g. ``German-341``; never shown."""
+    title: str
+    """Its line in the tree: ``Euclidean split · 7 features · training 341 (173, 168) · …``."""
+    label: str
+    """Its name everywhere else: ``German · Euclidean split · training 341 (173, 168)``."""
+    available: bool = True
+    reason: str = ""
+    """Why it cannot be used (shown in its tooltip), with its file and row."""
+    detail: str = ""
+    """More about it for the tooltip, e.g. its file."""
+
+
+@dataclass(frozen=True)
+class SampleGroup:
+    """A dataset in the tree of samples, with its splits."""
+
+    title: str
+    """``German (1000 objects)``."""
+    choices: tuple[SampleChoice, ...]
+
+
+@dataclass(frozen=True)
+class SampleTree:
+    """What a part can run on: datasets with their splits, any set of which can be ticked."""
+
+    groups: tuple[SampleGroup, ...]
+    default: tuple[str, ...] = ()
+    """The keys ticked by default."""
+    complete: tuple[str, ...] = ()
+    """The set the part's own tables and files need, in their order (empty: none)."""
+    problem: str = ""
+    """Why nothing could be read (e.g. the folder does not exist)."""
+    complete_note: str = ""
+    """What the part's own tables need, when another set is ticked."""
+
+    @property
+    def choices(self) -> tuple[SampleChoice, ...]:
+        """Every sample, in the tree's order."""
+        return tuple(c for g in self.groups for c in g.choices)
+
+    def choice(self, key: str) -> SampleChoice | None:
+        """A sample by key."""
+        return next((c for c in self.choices if c.key == key), None)
+
+    def known(self, keys: Sequence[str]) -> tuple[str, ...]:
+        """The available samples among ``keys``, in the tree's order (unknown keys dropped)."""
+        wanted = set(keys)
+        return tuple(c.key for c in self.choices if c.key in wanted and c.available)
+
+    def option(self, keys: Sequence[str]) -> SampleOption:
+        """The option of a set of ticked samples, in the tree's order.
+
+        It is unavailable when nothing is ticked or a ticked sample is unavailable (the reason
+        says which); ``complete`` when it is exactly :attr:`complete`.
+        """
+        wanted = set(keys)
+        chosen = [c for c in self.choices if c.key in wanted]
+        unknown = sorted(wanted - {c.key for c in chosen})
+        ordered = tuple(c.key for c in chosen)
+        title = "; ".join(c.label for c in chosen)
+        if unknown:
+            reason = f"no such sample: {', '.join(unknown)}"
+        elif not chosen:
+            reason = self.problem or "Tick at least one sample."
+        else:
+            reason = next((c.reason or "unavailable" for c in chosen if not c.available), "")
+        return SampleOption(
+            "+".join(ordered),
+            title,
+            ordered,
+            available=not reason,
+            reason=reason,
+            complete=bool(self.complete) and ordered == self.complete,
+        )
 
 
 @dataclass(frozen=True)
@@ -143,15 +225,17 @@ class MethodInfo:
     features: str
     """E.g. ``quantitative (7)``."""
     splits: tuple[str, ...]
-    """The splits it runs on."""
+    """The splits it runs on, by name."""
+    settings: str = ""
+    """Its own fixed settings (ADR-094), never another method's."""
 
 
 @dataclass(frozen=True)
 class MethodGroup:
-    """Methods grouped as in the article, with their fixed settings."""
+    """Methods grouped as in the article; the note says what they share (said once)."""
 
     title: str
-    settings: str
+    note: str
     methods: tuple[MethodInfo, ...]
 
 
@@ -160,9 +244,9 @@ class TrainingSample:
     """The training sample of one split, with its classes."""
 
     key: str
-    """The split's key, e.g. ``336``."""
+    """The split's key, e.g. ``German-336`` (internal)."""
     title: str
-    """E.g. ``336 — Zhuravlyov split``."""
+    """The split's name, e.g. ``German · Zhuravlyov split · training 336 (196, 140)``."""
     data: Dataset
     """The training objects (named by their place in the file) with their classes."""
     file: str = ""
@@ -286,8 +370,8 @@ class ClassifierPart(Protocol):
         """The folder the samples are read from by default (``None``: the part needs none)."""
         ...
 
-    def sample_options(self, folder: Path | None) -> tuple[SampleOption, ...]:
-        """What the part can run on, with sizes — and why an option is unavailable."""
+    def samples(self, folder: Path | None) -> SampleTree:
+        """What the part can run on, as a tree — and why a sample is unavailable."""
         ...
 
     def load(self, option: SampleOption, folder: Path | None) -> SampleSet:
@@ -483,17 +567,27 @@ def _value(x: float) -> Cell:
 def methods_table(groups: Sequence[MethodGroup]) -> StageTable:
     """*Methods*: every method with its group, features, splits and fixed settings."""
     rows = tuple(
-        (group.title, method.title, method.features, ", ".join(method.splits), group.settings)
+        (
+            group.title,
+            method.title,
+            method.features,
+            ", ".join(method.splits),
+            method.settings or None,
+        )
         for group in groups
         for method in group.methods
     )
+    shared = " ".join(f"{g.title}: {g.note}" for g in groups if g.note and g.methods)
     table = Table(
         key="methods",
         title="Methods and their fixed settings",
         columns=("Group", "Method", "Features", "Splits", "Settings"),
         rows=rows,
         group=GROUP,
-        note="The settings were fixed before any run; nothing is tuned on the test samples.",
+        note=(
+            "The settings were fixed before any run; nothing is tuned on the test samples. "
+            f"{shared}"
+        ).strip(),
         labels=2,
     )
     return StageTable("methods", "Methods", (ShownTable(table, (CellMeaning.PLAIN,) * 5),))
@@ -522,7 +616,7 @@ def training_sample_table(samples: Sequence[TrainingSample]) -> StageTable:
             ),
         )
         cells = (CellMeaning.PLAIN, *_feature_meanings(data), CellMeaning.CLASS)
-        variants.append(ShownTable(table, cells, sample.key, object_column=0))
+        variants.append(ShownTable(table, cells, sample.title, object_column=0))
     return StageTable("training-sample", "Training sample", tuple(variants))
 
 
@@ -533,12 +627,12 @@ def training_results_table(trained: TrainedPart) -> StageTable:
         truth = sample.data.class_index + 1
         for method in trained.methods[sample.key]:
             if method.decisions is None:
-                rows.append((sample.key, method.title, sample.data.m, None, None, None))
+                rows.append((sample.title, method.title, sample.data.m, None, None, None))
                 continue
             metrics = classification_metrics(truth, method.decisions)
             rows.append(
                 (
-                    sample.key,
+                    sample.title,
                     method.title,
                     metrics.n,
                     percent(metrics.accuracy),
@@ -573,10 +667,21 @@ def training_results_table(trained: TrainedPart) -> StageTable:
     )
 
 
-def unlabelled_table(unlabelled: Sequence[UnlabelledSample], keys: Sequence[str]) -> StageTable:
-    """*Test objects*: their feature values only — there is no class column."""
+def unlabelled_table(
+    unlabelled: Sequence[UnlabelledSample],
+    keys: Sequence[str],
+    labels: Sequence[str] | None = None,
+) -> StageTable:
+    """*Test objects*: their feature values only — there is no class column.
+
+    Args:
+        unlabelled: The objects of every split.
+        keys: The splits' keys (the tables' keys).
+        labels: The splits' names (the choice above the table); the keys by default.
+    """
     variants = []
-    for key, sample in zip(keys, unlabelled, strict=True):
+    names = list(keys if labels is None else labels)
+    for index, (key, sample) in enumerate(zip(keys, unlabelled, strict=True)):
         rows = tuple(
             (sample.object_ids[i], *(_value(v) for v in sample.X[i])) for i in range(sample.m)
         )
@@ -592,7 +697,7 @@ def unlabelled_table(unlabelled: Sequence[UnlabelledSample], keys: Sequence[str]
             ),
         )
         cells = (CellMeaning.PLAIN, *_feature_meanings(sample))
-        variants.append(ShownTable(table, cells, key, object_column=0))
+        variants.append(ShownTable(table, cells, names[index], object_column=0))
     return StageTable("test-objects", "Test objects", tuple(variants))
 
 
@@ -648,7 +753,7 @@ def predictions_table(predictions: Predictions) -> StageTable:
                 "method is undefined on this split."
             ),
         )
-        variants.append(ShownTable(table, tuple(cells), sample.key, object_column=0, decimals=4))
+        variants.append(ShownTable(table, tuple(cells), sample.title, object_column=0, decimals=4))
     return StageTable("predictions", "Predictions", tuple(variants))
 
 
@@ -659,13 +764,13 @@ def predicted_classes_table(predictions: Predictions) -> StageTable:
         titles = {m.method: m.title for m in predictions.trained.methods[sample.key]}
         for key, decided in predictions.decisions[sample.key].items():
             if decided.decisions is None:
-                rows.append((sample.key, titles.get(key, key), objects.m, *(None,) * 6))
+                rows.append((sample.title, titles.get(key, key), objects.m, *(None,) * 6))
                 continue
             counts = [int(np.count_nonzero(decided.decisions == code)) for code in (1, 2, 0)]
             shares = [percent(c / objects.m) for c in counts]
             rows.append(
                 (
-                    sample.key,
+                    sample.title,
                     titles.get(key, key),
                     objects.m,
                     counts[0],
@@ -745,7 +850,7 @@ def per_object_table(evaluation: Evaluation) -> StageTable:
             CellMeaning.PLAIN,
             *(CellMeaning.OUTCOME,) * len(decided),
         )
-        variants.append(ShownTable(table, cells, sample.key, object_column=0))
+        variants.append(ShownTable(table, cells, sample.title, object_column=0))
     return StageTable("per-object", "Per object", tuple(variants))
 
 
@@ -757,12 +862,12 @@ def confusion_table(evaluation: Evaluation) -> StageTable:
         titles = {m.method: m.title for m in predictions.trained.methods[sample.key]}
         for key, metrics in evaluation.metrics[sample.key].items():
             if metrics is None:
-                rows.append((sample.key, titles.get(key, key), *(None,) * 7))
+                rows.append((sample.title, titles.get(key, key), *(None,) * 7))
                 continue
             (k1k1, k1k2, k1r), (k2k1, k2k2, k2r) = metrics.matrix.tolist()
             rows.append(
                 (
-                    sample.key,
+                    sample.title,
                     titles.get(key, key),
                     k1k1,
                     k1k2,
@@ -823,9 +928,9 @@ def training_view(
 
 def prediction_view(predictions: Predictions) -> tuple[StageTable, ...]:
     """The tabs of ② *Test*: *Test objects*, *Predictions*, *Predicted classes*, the part's."""
-    keys = [s.key for s in predictions.trained.samples]
+    samples = predictions.trained.samples
     return (
-        unlabelled_table(predictions.objects, keys),
+        unlabelled_table(predictions.objects, [s.key for s in samples], [s.title for s in samples]),
         predictions_table(predictions),
         predicted_classes_table(predictions),
         *predictions.tables,

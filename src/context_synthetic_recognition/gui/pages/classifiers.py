@@ -4,7 +4,8 @@ Apart from the CS-model's workflow: the page needs no dataset and no run. On the
 the registered parts (:data:`~context_synthetic_recognition.services.classifier_parts.
 CLASSIFIER_PARTS`), collapsible like the stage tree of the *Results* page; on the right, the
 :class:`~context_synthetic_recognition.gui.workbench.PartView` of the chosen part. The first part
-is Tables 7 and 8 (ADR-079, ADR-080): ``csr compare run`` and ``csr compare check`` in three steps.
+is the comparison with standard classifiers (ADR-079, ADR-080): ``csr compare run`` and
+``csr compare check`` in three steps.
 """
 
 from __future__ import annotations
@@ -53,7 +54,7 @@ class ClassifiersPage(Page):
             parent,
         )
         self.parts = parts()
-        self.views = [PartView(part) for part in self.parts]
+        self.views = [PartView(part, settings) for part in self.parts]
         self.list = QListWidget()
         self.list.setObjectName("parts")
         for part in self.parts:
@@ -84,7 +85,13 @@ class ClassifiersPage(Page):
         row.addWidget(self.side)
         row.addWidget(self.stack, 1)
         self.body.addLayout(row, 1)
-        self.list.setCurrentRow(0)
+        # the part shown last time; a part that is no longer registered gives the first one
+        saved = (
+            [p.key for p in self.parts].index(settings.classifier_part)
+            if (settings.classifier_part in [p.key for p in self.parts])
+            else 0
+        )
+        self.list.setCurrentRow(saved)
         # with one part the list starts collapsed: a narrow strip that opens it
         self.set_parts_open(len(self.parts) > 1)
         self.apply_palette(self.colours)
@@ -107,6 +114,7 @@ class ClassifiersPage(Page):
     def _part_chosen(self, row: int) -> None:
         if 0 <= row < len(self.views):
             self.stack.setCurrentIndex(row)
+            self.settings.classifier_part = self.parts[row].key
 
     def choose(self, key: str) -> bool:
         """Show the part registered as ``key``."""

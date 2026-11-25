@@ -1,4 +1,4 @@
-"""Tables 7 and 8: standard classifiers on the article's training and test samples (ADR-079),
+"""The comparison with standard classifiers on the article's training and test samples (ADR-079),
 and the CS-model on the same samples (ADR-080).
 
 The pinned numbers are those of the project's own run (scikit-learn 1.9.1, numpy 2.5.3); they
@@ -20,9 +20,7 @@ from typer.testing import CliRunner
 from context_synthetic_recognition.cli.app import EXIT_FAILED, EXIT_USAGE, app
 from context_synthetic_recognition.comparison import (
     ALPHAS,
-    HEART_SPLIT,
-    SPAMBASE_SPLITS,
-    SPLITS,
+    COMPARISON_SPLITS,
     SplitResult,
     SplitSpec,
     compare_split,
@@ -33,11 +31,10 @@ from context_synthetic_recognition.comparison import (
 )
 from context_synthetic_recognition.comparison.tables import (
     cs_model_table,
-    latex_caption,
+    knn_by_metric_table,
     results_table,
+    standard_classifiers_table,
     summary_data,
-    table_7,
-    table_8,
 )
 from context_synthetic_recognition.config import DatasetConfig
 from context_synthetic_recognition.config.presets import active_deviations
@@ -61,10 +58,24 @@ from context_synthetic_recognition.services.comparison import (
     run_comparison,
     splits_folder,
 )
+from context_synthetic_recognition.services.split_discovery import discover_splits
 
 from .conftest import ROOT
 
 SPLITS_FOLDER = ROOT / "datasets" / "splits"
+NAMES = discover_splits(SPLITS_FOLDER, read=())
+"""The split files by their names (ADR-090)."""
+
+
+def spec(key: str) -> SplitSpec:
+    found = NAMES.find(key)
+    assert found is not None, key
+    return found.spec
+
+
+SPLITS = tuple(spec(key) for key in COMPARISON_SPLITS)
+HEART_SPLIT = spec("Heart-Disease-76")
+SPAMBASE_SPLITS = (spec("Spambase-601"), spec("Spambase-722"))
 OUT = ROOT / "experiments" / "comparison"
 runner = CliRunner()
 
@@ -91,24 +102,31 @@ FILES = {
 """The article's split files, in the split-file convention (ADR-082)."""
 
 COUNTS = {
-    "336": ((336, 196, 140), (664, 504, 160), 20),
-    "341": ((341, 173, 168), (659, 527, 132), 7),
-    "367": ((367, 190, 177), (633, 510, 123), 7),
-    "76": ((76, 36, 40), (194, 114, 80), 13),
-    "601": ((601, 361, 240), (1501, 903, 598), 57),
-    "722": ((722, 467, 255), (1380, 797, 583), 57),
+    "German-336": ((336, 196, 140), (664, 504, 160), 20),
+    "German-341": ((341, 173, 168), (659, 527, 132), 7),
+    "German-367": ((367, 190, 177), (633, 510, 123), 7),
+    "Heart-Disease-76": ((76, 36, 40), (194, 114, 80), 13),
+    "Spambase-601": ((601, 361, 240), (1501, 903, 598), 57),
+    "Spambase-722": ((722, 467, 255), (1380, 797, 583), 57),
 }
 """Training (n, K1, K2), test (n, K1, K2) and features of every split."""
-QUANTITATIVE = {"336": 7, "341": 7, "367": 7, "76": 7, "601": 57, "722": 57}
+QUANTITATIVE = {
+    "German-336": 7,
+    "German-341": 7,
+    "German-367": 7,
+    "Heart-Disease-76": 7,
+    "Spambase-601": 57,
+    "Spambase-722": 57,
+}
 """Quantitative features of every split."""
 ALL_SPLITS = (*SPLITS, HEART_SPLIT, *SPAMBASE_SPLITS)
-"""Every split file: the three of Tables 7 and 8, Heart's and Spambase's two."""
+"""Every split file: the three of the comparison tables, Heart's and Spambase's two."""
 
-MAJORITY = {"336": 75.90, "341": 79.97, "367": 80.57}
+MAJORITY = {"German-336": 75.90, "German-341": 79.97, "German-367": 80.57}
 """Majority-class rate of the test sample, %."""
 
 PINNED = {
-    "336": {
+    "German-336": {
         "svm": (74.85, 70.63, 83.63),
         "random-forest": (74.25, 69.81, 100.0),
         "knn-euclidean-3": (57.38, 50.60, 58.93),
@@ -120,7 +138,7 @@ PINNED = {
         "knn-zhuravlyov-3": (68.83, 61.55, 50.30),
         "knn-zhuravlyov-5": (73.49, 64.20, 54.17),
     },
-    "341": {
+    "German-341": {
         "svm": (50.68, 52.41, 59.53),
         "random-forest": (56.45, 52.61, 100.0),
         "knn-euclidean-3": (58.42, 54.98, 48.97),
@@ -130,7 +148,7 @@ PINNED = {
         "knn-canberra-3": (54.63, 52.89, 46.04),
         "knn-canberra-5": (56.75, 55.07, 49.56),
     },
-    "367": {
+    "German-367": {
         "svm": (61.14, 57.99, 62.67),
         "random-forest": (59.87, 55.97, 100.0),
         "knn-euclidean-3": (57.50, 54.81, 50.68),
@@ -144,7 +162,7 @@ PINNED = {
 """Test accuracy, balanced accuracy (test) and training accuracy (Definition 2), %."""
 
 CS_MODEL = {
-    "336": {
+    "German-336": {
         "cs-model-euclidean-0.1": (62.95, 51.92, 58.93, 2),
         "cs-model-euclidean-0.2": (69.13, 50.87, 59.23, 0),
         "cs-model-chebyshev-0.1": (30.87, 48.07, 44.94, 0),
@@ -154,7 +172,7 @@ CS_MODEL = {
         "cs-model-zhuravlyov-0.1": (71.54, 53.31, 62.20, 21),
         "cs-model-zhuravlyov-0.2": (68.07, 56.36, 63.69, 0),
     },
-    "341": {
+    "German-341": {
         "cs-model-euclidean-0.1": (56.90, 48.07, 53.08, 0),
         "cs-model-euclidean-0.2": (56.15, 52.42, 52.20, 0),
         "cs-model-chebyshev-0.1": (39.15, 49.18, 53.37, 0),
@@ -162,7 +180,7 @@ CS_MODEL = {
         "cs-model-canberra-0.1": (77.39, 51.23, 51.32, 0),
         "cs-model-canberra-0.2": (77.39, 51.23, 51.32, 0),
     },
-    "367": {
+    "German-367": {
         "cs-model-euclidean-0.1": (77.41, 48.66, 53.95, 0),
         "cs-model-euclidean-0.2": (77.41, 48.66, 53.95, 0),
         "cs-model-chebyshev-0.1": (78.36, 54.18, 54.77, 0),
@@ -266,7 +284,7 @@ def test_the_split_files_hold_the_projects_datasets() -> None:
 
 
 def test_the_pinned_numbers(outcome: ComparisonOutcome) -> None:
-    assert [r.spec.key for r in outcome.results] == ["336", "341", "367"]
+    assert [r.spec.key for r in outcome.results] == ["German-336", "German-341", "German-367"]
     for result in outcome.results:
         training, test, n = COUNTS[result.spec.key]
         assert (result.training_sizes, result.test_sizes, result.n_features) == (
@@ -306,10 +324,10 @@ def test_the_methods_and_their_tables(outcome: ComparisonOutcome) -> None:
         "k-NN Euclidean, k = 5",
     ]
     assert {m.key: m.table for m in german_336.methods} == {
-        "svm": "Table 7",
-        "random-forest": "Table 7",
+        "svm": "Standard classifiers",
+        "random-forest": "Standard classifiers",
         **{
-            f"knn-{m}-{k}": "Table 8"
+            f"knn-{m}-{k}": "k-NN by metric"
             for m in ("euclidean", "chebyshev", "canberra")
             for k in (3, 5)
         },
@@ -320,7 +338,7 @@ def test_the_methods_and_their_tables(outcome: ComparisonOutcome) -> None:
     assert features["svm"] == ("all", 20)
     assert features["knn-euclidean-3"] == ("quantitative", 7)
     assert features["knn-zhuravlyov-5"] == ("all", 20)
-    assert german_336.column == "336 (196, 140)"
+    assert german_336.label == "German · Zhuravlyov split · training 336 (196, 140)"
     with pytest.raises(KeyError):
         german_336.method("logistic-regression")
     config = comparison_config(SPLITS[0])
@@ -335,39 +353,52 @@ def test_the_methods_and_their_tables(outcome: ComparisonOutcome) -> None:
     assert len(comparison_config(SPLITS[1]).local_context.operators) == 3
 
 
-def test_tables_7_and_8(outcome: ComparisonOutcome) -> None:
-    seven, eight, _, results = outcome.tables
+def test_comparison_tables(outcome: ComparisonOutcome) -> None:
+    standard, knn, _, results = outcome.tables
     columns = (
-        "336 (196, 140) — Zhuravlyov split",
-        "341 (173, 168) — Euclidean split",
-        "367 (190, 177) — Chebyshev split",
+        "German · Zhuravlyov split · training 336 (196, 140)",
+        "German · Euclidean split · training 341 (173, 168)",
+        "German · Chebyshev split · training 367 (190, 177)",
     )
-    assert seven.columns == ("Method", *columns)
-    assert seven.rows == (
+    assert standard.columns == ("Method", *columns)
+    assert standard.rows == (
         ("SVM", 74.85, 50.68, 61.14),
         ("Random Forest", 74.25, 56.45, 59.87),
     )
-    assert eight.columns == ("Metric", *columns)
-    assert eight.rows == (
+    assert knn.columns == ("Metric", *columns)
+    assert knn.rows == (
         ("Euclidean", "57.38 / 60.09", "58.42 / 54.78", "57.50 / 59.87"),
         ("Chebyshev", "54.37 / 56.78", "58.88 / 59.64", "59.08 / 60.19"),
         ("Canberra", "57.08 / 60.09", "54.63 / 56.75", "58.61 / 60.03"),
     )
     majority = (
-        "Majority-class rate of the test sample: 75.90 % (336), 79.97 % (341), 80.57 % (367)."
+        "Majority-class rate of the test sample: 75.90 % (German · Zhuravlyov split · training "
+        "336), 79.97 % (German · Euclidean split · training 341), 80.57 % (German · Chebyshev "
+        "split · training 367)."
     )
-    assert majority in seven.note
-    assert majority in eight.note
-    assert "random_state = 42" in seven.note
-    assert "10 decimals" in eight.note
+    assert majority in standard.note
+    assert majority in knn.note
+    assert "random_state = 42" in standard.note
+    assert "10 decimals" in knn.note
     assert len(results.rows) == 46  # 26 methods, 20 CS-models
-    assert results.rows[0][:5] == ("336", "Zhuravlyov", "SVM", "all (20)", "Table 7")
+    assert results.rows[0][:5] == (
+        columns[0],
+        "Zhuravlyov",
+        "SVM",
+        "all (20)",
+        "Standard classifiers",
+    )
     assert results.rows[8][2:5] == ("k-NN Zhuravlyov, k = 3", "all (20)", None)
-    assert table_7([]).rows == (("SVM",), ("Random Forest",))
-    assert table_8(outcome.results).rows == eight.rows
+    assert standard_classifiers_table([]).rows == (("SVM",), ("Random Forest",))
+    assert knn_by_metric_table(outcome.results).rows == knn.rows
     assert results_table(outcome.results[:1]).rows == results.rows[:18]
-    assert latex_caption(seven).title == "Accuracy of SVM and random forest on the test samples, %"
-    assert latex_caption(results) is results
+    assert standard.title == (
+        "Standard classifiers: accuracy of SVM and Random Forest on the test samples, %"
+    )
+    assert (
+        knn.title
+        == "k-NN by metric: accuracy of the k-NN vote on the test samples, k = 3 / k = 5, %"
+    )
 
 
 def test_the_summary(outcome: ComparisonOutcome) -> None:
@@ -376,7 +407,27 @@ def test_the_summary(outcome: ComparisonOutcome) -> None:
     assert summary["settings"]["svm"] == {"kernel": "rbf", "C": 1.0, "gamma": "scale"}
     assert summary["settings"]["random-forest"] == {"n_estimators": 200, "random_state": 42}
     assert summary["settings"]["knn"]["ks"] == [3, 5]
+    assert summary["settings"]["standard_classifiers_features"].startswith(
+        "Both use every feature of the file"
+    )
     split = summary["splits"][0]
+    # every method has its own settings (ADR-094): Random Forest's are not SVM's
+    settings = {m["key"]: m["settings"] for m in split["methods"]}
+    assert settings["svm"] == "SVC, RBF kernel, C = 1.0, gamma = scale"
+    assert settings["random-forest"] == "200 trees, random_state = 42"
+    assert settings["knn-chebyshev-5"] == (
+        "Chebyshev metric, k = 5, on the quantitative features; equal distances go to the "
+        "smaller training index"
+    )
+    assert settings["knn-zhuravlyov-3"].startswith("Zhuravlyov metric, k = 3, on the all features")
+    assert split["cs_model"][7]["settings"] == (
+        "Zhuravlyov metric on the all features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, "
+        "2 (those that take 0 on a training object left out)"
+    )
+    assert len(set(settings.values())) == len(settings)
+    note = outcome.tables[0].note
+    assert note.count("SVC, RBF kernel") == note.count("200 trees") == 1
+    assert note.count("Both use every feature of the file") == 1  # the shared facts, once
     assert split["file_sha256"] == FILES[split["file"]]
     assert split["training"] == {"n": 336, "K1": 196, "K2": 140}
     assert split["majority_rate"] == 75.9
@@ -414,12 +465,12 @@ def test_two_classes_are_needed(outcome: ComparisonOutcome) -> None:
 def test_the_checksums_of_the_committed_results() -> None:
     lines = (OUT / CHECKSUMS).read_text(encoding="utf-8").splitlines()
     assert [line.split("  ")[1] for line in lines] == [
-        "table-7.csv",
-        "table-7.md",
-        "table-7.tex",
-        "table-8.csv",
-        "table-8.md",
-        "table-8.tex",
+        "standard-classifiers.csv",
+        "standard-classifiers.md",
+        "standard-classifiers.tex",
+        "knn-by-metric.csv",
+        "knn-by-metric.md",
+        "knn-by-metric.tex",
         "cs-model.csv",
         "cs-model.md",
         "cs-model.tex",
@@ -434,19 +485,19 @@ def test_the_checksums_of_the_committed_results() -> None:
 
 
 def test_the_committed_tables_hold_the_pinned_numbers() -> None:
-    seven = (OUT / "table-7.csv").read_text(encoding="utf-8-sig").splitlines()
-    assert seven[1:] == ["SVM,74.85,50.68,61.14", "Random Forest,74.25,56.45,59.87"]
+    standard = (OUT / "standard-classifiers.csv").read_text(encoding="utf-8-sig").splitlines()
+    assert standard[1:] == ["SVM,74.85,50.68,61.14", "Random Forest,74.25,56.45,59.87"]
     # the CSV files carry a byte-order mark, so that Excel reads them as UTF-8 (ADR-083)
-    for name in ("table-7.csv", "table-8.csv", "cs-model.csv", "results.csv"):
+    for name in ("standard-classifiers.csv", "knn-by-metric.csv", "cs-model.csv", "results.csv"):
         data = (OUT / name).read_bytes()
         assert data.startswith(b"\xef\xbb\xbf"), name
         assert data.count(b"\xef\xbb\xbf") == 1, name
-    for name in ("table-7.md", "table-7.tex", "summary.json", CHECKSUMS):
+    for name in ("standard-classifiers.md", "standard-classifiers.tex", "summary.json", CHECKSUMS):
         assert not (OUT / name).read_bytes().startswith(b"\xef\xbb\xbf"), name
-    eight = (OUT / "table-8.md").read_text(encoding="utf-8")
-    assert "| Chebyshev | 54.37 / 56.78 | 58.88 / 59.64 | 59.08 / 60.19 |" in eight
-    tex = (OUT / "table-7.tex").read_text(encoding="utf-8")
-    assert r"\label{tab:table-7}" in tex
+    knn = (OUT / "knn-by-metric.md").read_text(encoding="utf-8")
+    assert "| Chebyshev | 54.37 / 56.78 | 58.88 / 59.64 | 59.08 / 60.19 |" in knn
+    tex = (OUT / "standard-classifiers.tex").read_text(encoding="utf-8")
+    assert r"\label{tab:standard-classifiers}" in tex
     assert "SVM & 74.85 & 50.68 & 61.14" in tex
 
 
@@ -535,7 +586,7 @@ def test_csr_compare_run_and_check(tmp_path: Path) -> None:
         app, ["compare", "check", "-o", str(out), "--splits", str(SPLITS_FOLDER)]
     )
     assert checked.exit_code == 0, checked.output
-    assert "✓ table-7.csv" in checked.output
+    assert "✓ standard-classifiers.csv" in checked.output
     assert "comparison check passed" in checked.output
 
     summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
@@ -557,7 +608,7 @@ def test_csr_compare_reports_missing_split_files(tmp_path: Path) -> None:
         app, ["compare", "run", "-o", str(tmp_path), "--splits", str(tmp_path / "none")]
     )
     assert result.exit_code == EXIT_USAGE
-    assert "split file not found" in result.output
+    assert "no folder of split files" in result.output
     result = runner.invoke(
         app, ["compare", "check", "-o", str(tmp_path), "--splits", str(tmp_path / "none")]
     )
@@ -568,12 +619,60 @@ def test_csr_compare_reports_missing_split_files(tmp_path: Path) -> None:
         app, ["compare", "check", "-o", str(tmp_path), "--splits", str(tmp_path / "none")]
     )
     assert result.exit_code == EXIT_USAGE  # the new run cannot read the split files
-    assert "split file not found" in result.output
+    assert "no folder of split files" in result.output
+
+
+def test_csr_compare_run_of_one_split(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    out = tmp_path / "spambase"
+    # the key of the earlier versions still names the split (ADR-090)
+    ran = runner.invoke(
+        app,
+        ["compare", "run", "--split", "601", "-o", str(out), "--splits", str(SPLITS_FOLDER)],
+    )
+    assert ran.exit_code == 0, ran.output
+    assert "Spambase · Euclidean split · training 601: Spambase (2102, 57, 2)" in ran.output
+    assert sorted(p.name for p in out.iterdir()) == [
+        CHECKSUMS,
+        "results.csv",
+        "results.md",
+        "summary.json",
+    ]
+    summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
+    (split,) = summary["splits"]
+    assert (split["key"], split["label"]) == (
+        "Spambase-601",
+        "Spambase · Euclidean split · training 601 (361, 240)",
+    )
+    assert len(split["methods"]) == 8
+    assert len(split["cs_model"]) == 6
+    checked = runner.invoke(
+        app, ["compare", "check", "-o", str(out), "--splits", str(SPLITS_FOLDER)]
+    )
+    assert checked.exit_code == 0, checked.output
+    assert "Spambase · Euclidean split · training 601" in checked.output
+    # one split is never written to experiments/comparison, and needs a folder
+    monkeypatch.chdir(ROOT)
+    for arguments in (["--split", "601"], ["--split", "601", "-o", str(OUT)]):
+        refused = runner.invoke(app, ["compare", "run", *arguments])
+        assert refused.exit_code == EXIT_USAGE, refused.output
+        assert "experiments/comparison holds German's three splits only" in refused.output
+    unknown = runner.invoke(app, ["compare", "run", "--split", "999", "-o", str(tmp_path / "x")])
+    assert unknown.exit_code == EXIT_USAGE
+    assert "unknown split '999'" in unknown.output
+
+
+def test_a_check_reads_the_keys_of_the_earlier_versions(tmp_path: Path) -> None:
+    assert service.recorded_keys(tmp_path) == COMPARISON_SPLITS
+    (tmp_path / "summary.json").write_text('{"splits": [{"key": "341"}]}', encoding="utf-8")
+    assert service.recorded_keys(tmp_path) == ("341",)
+    outcome = run_comparison(SPLITS_FOLDER, keys=service.recorded_keys(tmp_path))
+    assert [r.spec.key for r in outcome.results] == ["German-341"]
+    assert [t.key for t in outcome.tables] == ["results"]
 
 
 def test_the_documentation_shows_the_committed_tables() -> None:
     page = (ROOT / "docs" / "comparison.md").read_text(encoding="utf-8")
-    for name in ("table-7.md", "table-8.md", "cs-model.md"):
+    for name in ("standard-classifiers.md", "knn-by-metric.md", "cs-model.md"):
         lines = (OUT / name).read_text(encoding="utf-8").splitlines()
         rows = [line for line in lines if line.startswith("|")]
         assert len(rows) >= 4
@@ -638,7 +737,6 @@ def test_the_cs_model_table(outcome: ComparisonOutcome) -> None:
         ("Zhuravlyov", "71.54 / 68.07", None, None),
     )
     assert "Refusals count as errors (Definition 3)" in table.note
-    assert latex_caption(table) is table
 
 
 def test_no_cs_model_reaches_the_majority_class_rate(outcome: ComparisonOutcome) -> None:
@@ -672,5 +770,7 @@ def test_an_undefined_cs_model_is_reported(
     assert data["splits"][0]["cs_model"][0] == {
         "key": "cs-model-euclidean-0.1",
         "title": "CS-model Euclidean, α = 0.1",
+        "settings": models[0].settings,
         "undefined": "no admissible k",
     }
+    assert models[0].settings.startswith("Euclidean metric on the quantitative features, α = 0.1")

@@ -1312,12 +1312,12 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
         <translation>Tekshirish</translation>
     </message>
     <message>
-        <source>Table 7</source>
-        <translation>7-jadval</translation>
+        <source>Standard classifiers</source>
+        <translation>Standart klassifikatorlar</translation>
     </message>
     <message>
-        <source>Table 8</source>
-        <translation>8-jadval</translation>
+        <source>k-NN by metric</source>
+        <translation>Metrikalar boʻyicha k-NN</translation>
     </message>
     <message>
         <source>CS-model</source>
@@ -1356,12 +1356,16 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
         <translation>Boʻlinish</translation>
     </message>
     <message>
-        <source>What the part runs on, with the sizes of the samples</source>
-        <translation>Qism nimada bajariladi, tanlanmalar hajmi bilan</translation>
+        <source>Tick the samples to run on: a split, a dataset, or several of them</source>
+        <translation>Ishga tushirish uchun tanlanmalarni belgilang: boʻlinish, maʼlumotlar toʻplami yoki ulardan bir nechtasi</translation>
     </message>
     <message>
         <source>The folder the samples are read from</source>
         <translation>Tanlanmalar oʻqiladigan papka</translation>
+    </message>
+    <message>
+        <source>Read the split folder again</source>
+        <translation>Boʻlinishlar papkasini qayta oʻqish</translation>
     </message>
     <message>
         <source>Run all</source>
@@ -1406,10 +1410,6 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
     <message>
         <source>The samples have not been read yet.</source>
         <translation>Tanlanmalar hali oʻqilmagan.</translation>
-    </message>
-    <message>
-        <source>Choose the samples.</source>
-        <translation>Tanlanmalarni tanlang.</translation>
     </message>
     <message>
         <source>Compare with the true classes first.</source>
@@ -1498,6 +1498,10 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
     <message>
         <source>True classes revealed: the decisions are compared with the test objects' classes.</source>
         <translation>Haqiqiy sinflar ochildi: qarorlar test obyektlarining sinflari bilan solishtiriladi.</translation>
+    </message>
+    <message>
+        <source>Tick a sample.</source>
+        <translation>Tanlanmani belgilang.</translation>
     </message>
     <message>
         <source>The tables as CSV, Markdown and LaTeX, the results and their checksums</source>

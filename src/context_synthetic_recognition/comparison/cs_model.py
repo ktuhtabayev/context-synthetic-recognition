@@ -1,4 +1,4 @@
-"""The CS-model on the article's training and test samples, beside Tables 7 and 8 (ADR-080).
+"""The CS-model on the article's training and test samples, beside the comparison tables (ADR-080).
 
 Settings approved by the author before any run; nothing is chosen on the test objects:
 
@@ -21,8 +21,8 @@ from dataclasses import dataclass, field
 
 from context_synthetic_recognition.comparison.settings import (
     KNN_METRICS,
-    METRIC_TITLES,
     SplitSpec,
+    metric_title,
 )
 from context_synthetic_recognition.config import ExperimentConfig, OperatorConfig, plugin
 from context_synthetic_recognition.core.arrays import IntArray, readonly
@@ -40,6 +40,15 @@ K_START, K_STOP = 3, 41
 """Odd k = 3 … 41 (the article's experiments, Table 1)."""
 NORMALIZER = "minmax"
 """Scaling of every operator, fitted on the training sample."""
+
+
+def cs_model_settings(metric: str, alpha: float, features: str) -> str:
+    """A CS-model's own settings: its metric, α, the k range and the synthetic-feature values."""
+    return (
+        f"{metric_title(metric)} metric on the {features} features, α = {alpha}, odd k = "
+        f"{K_START} … {K_STOP}, synthetic features 0, 1, 2 (those that take 0 on a training "
+        "object left out)"
+    )
 
 
 @dataclass(frozen=True, eq=False)
@@ -78,9 +87,14 @@ class CSModelResult:
         return f"cs-model-{self.metric}-{self.alpha}"
 
     @property
+    def settings(self) -> str:
+        """Its own settings (:func:`cs_model_settings`)."""
+        return cs_model_settings(self.metric, self.alpha, self.features)
+
+    @property
     def title(self) -> str:
         """``CS-model Euclidean, α = 0.1``."""
-        return f"CS-model {METRIC_TITLES[self.metric]}, α = {self.alpha}"
+        return f"CS-model {metric_title(self.metric)}, α = {self.alpha}"
 
 
 def cs_model_metrics(spec: SplitSpec) -> tuple[str, ...]:

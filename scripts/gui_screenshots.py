@@ -9,9 +9,10 @@ Run from the repository root::
 The application runs the experiment on Heart-Disease (10, 13, 2) for real — the default settings
 (the article), then the excel-experiment preset — and every page is grabbed at 1360 × 860; the
 window is then rebuilt in Russian and in Uzbek for the two language images. The *Classifiers*
-page is grabbed at each of its three steps after *Run all*, and once in the dark theme;
-``--only classifiers`` makes just those four images. Nothing appears on screen: the window is
-laid out by the native Windows platform (for the system fonts) but never mapped.
+page is grabbed with its whole tree of samples (a taller image), at each of its three steps
+after *Run all*, and once in the dark theme; ``--only classifiers`` makes just those five images.
+Nothing appears on screen: the window is laid out by the native Windows platform (for the system
+fonts) but never mapped.
 """
 
 from __future__ import annotations
@@ -40,6 +41,8 @@ ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "docs" / "images" / "gui"
 SIZE = (1360, 860)
 NEW_OBJECT = "58 1 3 125 250 0 2 150 0 1 2 1 7"
+TALLER = 220
+"""The image of the tree of samples is this much taller, so that the whole tree shows."""
 
 
 def pump(app: QApplication, seconds: float = 0.25) -> None:
@@ -61,22 +64,34 @@ def run(app: QApplication, window: MainWindow) -> None:
 def classifiers(
     app: QApplication, window: MainWindow, work: Path, shot: Callable[[str], None]
 ) -> None:
-    """The Classifiers page: Run all on the article's splits, one image per step, one dark."""
+    """The Classifiers page: Run all on German's three splits, one image per step, one dark."""
     # the article's split files under relative paths: no path of this machine is shown
     shutil.copytree(ROOT / "datasets" / "splits", work / "datasets" / "splits")
     page = window.classifiers_page
     window.go_to(page)
     view = page.view
+    view.wait()  # the samples the page read when it was shown
+    pump(app)
     view.splits.setText(str(Path("datasets") / "splits"))
     view.output.setText(str(Path("experiments") / "comparison"))
     ended: list[bool] = []
     view.finished.connect(lambda: ended.append(True))
-    for start in (view.read_options, view.run_all):
+    for start in (view.read_samples, view.run_all):
         ended.clear()
         start()
         while not ended:
             pump(app, 0.05)
     view.finished.disconnect()
+    view.samples.expandAll()  # every dataset of the tree, German's three splits ticked
+    pump(app)
+    view.go_to_step(0)
+    view.training_view.open("methods")
+    window.resize(SIZE[0], SIZE[1] + TALLER)  # room for the whole tree
+    pump(app)
+    view.splitter.setSizes([TALLER + 120, 10_000])
+    pump(app)
+    shot("classifiers-samples")
+    window.resize(*SIZE)
     pump(app)
     view.go_to_step(0)
     view.training_view.open("training-results")
@@ -85,7 +100,7 @@ def classifiers(
     view.test_view.open("predictions")
     shot("classifiers-test")
     view.go_to_step(2)
-    view.evaluation_view.open("table-7")
+    view.evaluation_view.open("standard-classifiers")
     shot("classifiers-evaluation")
     window.set_theme("dark")
     view.evaluation_view.open("per-object")
@@ -159,7 +174,7 @@ def main() -> None:
         shot("compare")
         window.go_to(window.export_page)
         shot("export")
-        # Tables 7 and 8, apart from the workflow
+        # the comparison with standard classifiers, apart from the workflow
         classifiers(app, window, work, shot)
         window.set_theme("dark")
         window.go_to(results)

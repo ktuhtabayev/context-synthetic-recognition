@@ -1,17 +1,17 @@
-"""Standard classifiers on the article's training and test samples (Tables 7 and 8).
+"""Standard classifiers on the article's training and test samples (ADR-079).
 
 Every setting is fixed here, before any run, and nothing is chosen on the test objects (ADR-079):
 
-- SVM and random forest: the project's ``svm`` and ``random-forest`` baselines with explicit
+- SVM and Random Forest: the project's ``svm`` and ``random-forest`` baselines with explicit
   options — ``SVC(kernel="rbf", C=1.0, gamma="scale")`` and
   ``RandomForestClassifier(n_estimators=200, random_state=42)`` — on every feature of the file:
   quantitative features min–max scaled on the training sample, nominal features one-hot encoded
   with the categories of the training sample (an unseen category encodes as all zeros);
 - k-NN: the project's ``knn-vote`` baseline, majority vote with k = 3 and k = 5, on the
   quantitative features min–max scaled on the training sample, with the Euclidean, Chebyshev and
-  Canberra metrics (Table 8) and, where a split lists it, the Zhuravlyov metric on all features
-  (an extra row, not printed). Distances are rounded to 10 decimals and equal distances go to the
-  smaller training index (ADR-008).
+  Canberra metrics (the k-NN by metric table) and, where a split lists it, the Zhuravlyov metric
+  on all features (an extra row, in neither table). Distances are rounded to 10 decimals and equal
+  distances go to the smaller training index (ADR-008).
 
 Each method is fitted on the training sample only and classifies the test objects without their
 class: :mod:`.stages` runs the comparison in three stages (training, test, evaluation), and
@@ -31,9 +31,12 @@ from context_synthetic_recognition.comparison.settings import (
     DISTANCE_DECIMALS,
     KNN_METRICS,
     METHOD_TITLES,
-    METRIC_TITLES,
     SEED,
     SplitSpec,
+    knn_settings,
+    metric_title,
+    random_forest_settings,
+    svm_settings,
 )
 from context_synthetic_recognition.config import (
     ExperimentConfig,
@@ -56,7 +59,7 @@ class MethodResult:
     method: str
     """Registry name of the baseline: ``svm``, ``random-forest`` or ``knn``."""
     metric: str | None
-    """The k-NN metric (``None`` for SVM and random forest)."""
+    """The k-NN metric (``None`` for SVM and Random Forest)."""
     k: int | None
     """The k of the k-NN vote."""
     features: str
@@ -64,25 +67,37 @@ class MethodResult:
     n_features: int
     """Number of original features the method uses."""
     table: str | None
-    """``Table 7``, ``Table 8`` or ``None`` (not printed)."""
-    test_decisions: IntArray = field(repr=False)
-    """(test objects,) decisions: 1 = K1, 2 = K2, 0 = refusal."""
-    training_decisions: IntArray = field(repr=False)
+    """``Standard classifiers``, ``k-NN by metric`` or ``None`` (in neither table)."""
+    test_decisions: IntArray | None = field(repr=False)
+    """(test objects,) decisions: 1 = K1, 2 = K2, 0 = refusal; ``None`` if unavailable."""
+    training_decisions: IntArray | None = field(repr=False)
     """(training objects,) resubstitution decisions."""
-    test: ClassificationMetrics = field(repr=False)
-    training: ClassificationMetrics = field(repr=False)
+    test: ClassificationMetrics | None = field(repr=False)
+    training: ClassificationMetrics | None = field(repr=False)
+    undefined: str = ""
+    """Why the split cannot support the method (empty if it can, ADR-090)."""
 
     def __post_init__(self) -> None:
         """Freeze the decisions."""
-        readonly(self.test_decisions)
-        readonly(self.training_decisions)
+        for decisions in (self.test_decisions, self.training_decisions):
+            if decisions is not None:
+                readonly(decisions)
+
+    @property
+    def settings(self) -> str:
+        """Its own settings (ADR-094): SVM's, Random Forest's, or the k-NN row's."""
+        if self.method == "svm":
+            return svm_settings()
+        if self.method == "random-forest":
+            return random_forest_settings()
+        return knn_settings(str(self.metric), int(self.k or 0), self.features)
 
     @property
     def title(self) -> str:
         """Display name: ``SVM``, ``Random Forest``, ``k-NN Euclidean, k = 3`` and so on."""
         if self.metric is None:
             return METHOD_TITLES[self.method]
-        return f"k-NN {METRIC_TITLES[self.metric]}, k = {self.k}"
+        return f"k-NN {metric_title(self.metric)}, k = {self.k}"
 
 
 @dataclass(frozen=True, eq=False)
@@ -106,10 +121,9 @@ class SplitResult:
         return max(self.test_sizes[1:]) / self.test_sizes[0]
 
     @property
-    def column(self) -> str:
-        """``336 (196, 140)`` — the training sample's size and class split."""
-        size, k1, k2 = self.training_sizes
-        return f"{size} ({k1}, {k2})"
+    def label(self) -> str:
+        """``German · Zhuravlyov split · training 336 (196, 140)`` — the split's name (ADR-090)."""
+        return self.spec.label(self.training_sizes)
 
     def method(self, key: str) -> MethodResult:
         """The result of a method by its key.
@@ -131,11 +145,11 @@ def knn_key(metric: str, k: int) -> str:
 def comparison_config(spec: SplitSpec) -> ExperimentConfig:
     """The configuration the baselines read: min–max, the k-NN operators, rounding, seed."""
     operators = [
-        OperatorConfig(label=METRIC_TITLES[m], metric=plugin(m), features="quantitative")
+        OperatorConfig(label=metric_title(m), metric=plugin(m), features="quantitative")
         for m in KNN_METRICS
     ]
     operators += [
-        OperatorConfig(label=METRIC_TITLES[m], metric=plugin(m), features="all")
+        OperatorConfig(label=metric_title(m), metric=plugin(m), features="all")
         for m in spec.extra_knn
     ]
     return ExperimentConfig(

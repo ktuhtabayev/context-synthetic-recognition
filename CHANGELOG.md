@@ -14,9 +14,39 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 - Spambase's two training and test samples (ADR-088), brought to the split-file convention and kept
   as `datasets/splits/Spambase/Spambase (2102, 57, 2) — training 601 (euclidean).dat` and
   `… — training 722 (euclidean).dat`: samples of the *Classifiers* page and of
-  `csr compare predict --split 601 | 722`, not part of Tables 7 and 8.
+  `csr compare predict --split 601 | 722`, not part of the comparison tables.
+- Every split file of `datasets/splits` is a sample, now and for files added later (ADR-090):
+  `services.split_discovery` finds them by their name,
+  `<Dataset> (<m>, <n>, <c>) — training <t> (<metric>).dat`, and checks the header against the
+  name, the training size against the split markers and the metric against the registry. A file
+  that fails a check is listed as unavailable with its file, row and reason. Split keys are
+  `<Dataset>-<t>` (`German-341`); the CLI still accepts the training size alone (`--split 601`).
+  How to add one: [Adding a split file](docs/comparison.md#adding-a-split-file).
+- `csr compare run --split KEY --out DIR` writes one split's evaluation (results, summary,
+  checksums), never into `experiments/comparison`; `csr compare check` checks such a folder too.
+- The *Classifiers* page shows the samples as a tree of datasets with checkboxes (ADR-091): one
+  split, a whole dataset or splits of several datasets can be ticked, with the keyboard as well;
+  German's three splits are ticked by default; unavailable files are greyed with their reason;
+  *Refresh* reads the folder again. The page remembers the part and the ticks.
 
 ### Changed
+
+- The comparison tables are named by their content, not by the article's numbers (ADR-092): the
+  table of SVM and Random Forest is *Standard classifiers* (`standard-classifiers.*`), the k-NN
+  table *k-NN by metric* (`knn-by-metric.*`), and the part *Comparison with standard classifiers*
+  (`classifier-comparison`). The numbered names are gone from the project, the earlier entries of
+  this changelog included; there are no aliases. No number changed.
+- "Random Forest" is written with capital letters wherever a user reads it (ADR-093).
+- Every split is named by its dataset in every table, note, file, progress line and status:
+  "German · Euclidean split · training 341 (173, 168)" instead of "341". The option of the three
+  article splits together is gone: the comparison tables appear when German's three splits are
+  ticked.
+- Every method shows its own settings — on the *Methods* tab, in the tables' notes and in
+  `summary.json` — and the facts a group shares are said once (ADR-094); Random Forest's row no
+  longer shows SVM's settings. A long text shows in full in its tooltip.
+- The methods of a split follow one rule instead of a list per split; every split keeps exactly
+  its earlier methods, and a method a split cannot support is shown as unavailable with the reason
+  (ADR-090).
 
 - The original datasets are grouped by the kind of their features: `datasets/raw/Heterogeneous/`,
   `Nominal/` and `Quantitative/` (ADR-087). German and Heart-Disease keep their bytes and ids.
@@ -28,17 +58,21 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 - The desktop application could crash with an access violation when Python's garbage collector ran
   in a worker thread and freed Qt objects there; workers now pause the collector, and it collects
   in the interface's thread (ADR-089).
+- Spambase was missing from the *Classifiers* page of the Windows build: the build of 0.10.0
+  predates Spambase's split files, so neither its code nor its copy of `datasets/splits` had them.
+  The splits are now found from the folder the build carries, so a rebuild includes every file of
+  `datasets/splits`.
 
-## [0.10.0] — 2026-11-24 — Tables 7 and 8 and a staged Classifiers page
+## [0.10.0] — 2026-11-24 — Standard classifiers and a staged Classifiers page
 
-Standard classifiers on the article's training and test samples (Tables 7 and 8), with the
-CS-model beside them, the split files read by the author's convention, CSV files that open in
-Excel, and the *Classifiers* page as a workbench in three steps whose test step classifies the
+Standard classifiers on the article's training and test samples (the Standard classifiers and
+k-NN by metric tables), with the CS-model beside them, the split files read by the author's
+convention, CSV files that open in Excel, and the *Classifiers* page as a workbench in three steps whose test step classifies the
 objects without their class.
 
 ### Added
 
-- Tables 7 and 8 of the article: SVM, random forest and k-NN on the article's training and test
+- The comparison with standard classifiers: SVM, Random Forest and k-NN on the article's training and test
   samples, apart from the CS-model's pipeline (ADR-079). The split files are kept in
   `datasets/splits/` and read by `data.splits.load_split_file`. The package `comparison`,
   the service `services.comparison`, `csr compare run | check`, `scripts/run_comparison.py`
@@ -47,12 +81,12 @@ objects without their class.
   every number. No method reaches the majority-class rate of a test sample.
 - The CS-model on the same samples, with settings approved before the run (ADR-080): one operator
   per metric, min–max on the training sample, odd k = 3 … 41, the zero value, α = 0.1 and 0.2.
-  It is written to a separate `cs-model` table beside Tables 7 and 8, and its rows are added to the
+  It is written to a separate `cs-model` table beside the comparison tables, and its rows are added to the
   results and the summary. Its balanced accuracy stays between 48 % and 57 %.
 - Classifier parts (ADR-084): units of work in three stages — training on the training sample,
   the test objects classified without their class, and the evaluation against the true classes.
   The protocol and the registry `services.classifier_parts.CLASSIFIER_PARTS` (with
-  `Registry.remove`); Tables 7 and 8 are the first part. A new part is registered in the services
+  `Registry.remove`); the comparison with standard classifiers is the first part. A new part is registered in the services
   and appears on the *Classifiers* page without a change to the page (`docs/extending.md`).
 - The blind test (ADR-085): `data.samples.UnlabelledSample` (the objects' places, feature values,
   types and names, and no class), `AnswerKey` (the classes, kept apart for the evaluation) and
@@ -65,17 +99,17 @@ objects without their class.
 ### Changed
 
 - The Windows build carries scikit-learn and the article's split files, so the *Classifiers*
-  page works in `csr-gui.exe`. Its self-test also computes Tables 7 and 8 (ADR-081), and checks
+  page works in `csr-gui.exe`. Its self-test also computes the comparison tables (ADR-081), and checks
   that the classifier parts are registered.
 - The *Classifiers* page is a staged workbench (ADR-084): a list of parts, the samples (the three
   article splits, each split alone, Heart's split, with their sizes), and the steps ① Training,
   ② Test (the classes hidden: test objects, predictions, predicted classes) and ③ Evaluation (the
-  classes revealed: Tables 7 and 8, the CS-model's table, all results, per object, confusion,
+  classes revealed: the Standard classifiers and k-NN by metric tables, the CS-model's table, all results, per object, confusion,
   check, writing the files). Each step shows its state by a symbol and a word (not run, running,
   done, out of date, unavailable); *Run all* runs the three in a row; Alt+← / Alt+→ move between
   the steps. Run all on the three article splits gives today's tables and files byte for byte.
 - The comparison runs in three stages (`comparison.stages`); `compare_split` is the three in a row
-  and gives the same numbers. Its SVM and random forest are fitted again on the training sample at
+  and gives the same numbers. Its SVM and Random Forest are fitted again on the training sample at
   the test stage, deterministically (ADR-085).
 
 ### Fixed
@@ -83,7 +117,7 @@ objects without their class.
 - The split files are read by the author's convention (ADR-082): the header gives `m n c` with n
   the number of features, each object row holds the n values, the class and the split marker, and
   the last row holds the n types and two empty cells. Three type rows that broke it are
-  corrected, so only those lines and the files' checksums changed; every number of Tables 7 and 8
+  corrected, so only those lines and the files' checksums changed; every number of the comparison tables
   and of the CS-model stays the same. `data.splits.load_split_file` checks the convention and
   names the file and the row of every departure, and the *Classifiers* page shows the message.
 - CSV files open correctly in Excel: every CSV file the project writes starts with a byte-order
@@ -308,7 +342,7 @@ The project is rebuilt on the author's article (ADR-058): its stages, its names 
   re-fitted per fold), `stratified-k-fold`, `repeated-k-fold`, `hold-out`; undefined folds refuse
   and are flagged; progress and cancel callbacks (ADR-032).
 - Baselines on the same folds: the k-NN vote per operator and k, and scikit-learn classifiers
-  (logistic regression, random forest, SVM, decision tree, naive Bayes; optional extra
+  (logistic regression, Random Forest, SVM, decision tree, naive Bayes; optional extra
   `[sklearn]`) (ADR-032).
 - Metrics with the workbook's conventions: confusion counts with refusals separate, accuracy,
   coverage, precision/recall/F1 per class and macro, Mann–Whitney AUC on rounded scores, ROC table;

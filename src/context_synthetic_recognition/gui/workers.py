@@ -20,7 +20,7 @@ from typing import Any, Literal
 
 from PySide6.QtCore import QObject, QThread, Signal
 
-from context_synthetic_recognition.comparison import SPLITS
+from context_synthetic_recognition.comparison import COMPARISON_SPLITS
 from context_synthetic_recognition.config import ExperimentConfig
 from context_synthetic_recognition.data import AnswerKey, Dataset, UnlabelledSample
 from context_synthetic_recognition.errors import ConfigError, CSRError
@@ -43,6 +43,7 @@ from context_synthetic_recognition.services.classifier_parts import (
     Predictions,
     SampleOption,
     SampleSet,
+    SampleTree,
     StageTable,
     TrainedPart,
     WritablePart,
@@ -143,7 +144,7 @@ def _split_progress(progress: Progress | None) -> Callable[[str], None] | None:
     done = [0]
 
     def report(line: str) -> None:
-        progress(line, done[0], len(SPLITS))
+        progress(line, done[0], len(COMPARISON_SPLITS))
         done[0] += 1
 
     return report
@@ -152,14 +153,16 @@ def _split_progress(progress: Progress | None) -> Callable[[str], None] | None:
 def comparison_job(
     splits: Path | None, *, progress: Progress | None = None, cancelled: Cancelled | None = None
 ) -> ComparisonOutcome:
-    """Tables 7 and 8 on the split files of ``splits`` (the project's by default); not written.
+    """The comparison tables on the split files of ``splits`` (the project's by default).
+
+    Nothing is written.
 
     A run takes a few seconds and is not interrupted (``cancelled`` is not polled).
     """
     del cancelled
     outcome = run_comparison(splits, progress=_split_progress(progress))
     if progress is not None:
-        progress("done", len(SPLITS), len(SPLITS))
+        progress("done", len(COMPARISON_SPLITS), len(COMPARISON_SPLITS))
     return outcome
 
 
@@ -174,7 +177,7 @@ def comparison_check_job(
     del cancelled
     check = check_comparison(folder, splits=splits, progress=_split_progress(progress))
     if progress is not None:
-        progress("done", len(SPLITS), len(SPLITS))
+        progress("done", len(COMPARISON_SPLITS), len(COMPARISON_SPLITS))
     return check
 
 
@@ -228,29 +231,29 @@ class CheckOutcome:
     tab: StageTable
 
 
-def part_options_job(
+def part_samples_job(
     part: ClassifierPart,
     folder: Path | None,
     *,
     progress: Progress | None = None,
     cancelled: Cancelled | None = None,
-) -> tuple[tuple[SampleOption, StageTable], ...]:
-    """What a part can run on, each option with its *Methods* tab."""
+) -> SampleTree:
+    """What a part can run on: its tree of samples, read from ``folder`` (ADR-091)."""
     del cancelled
-    options = part.sample_options(folder)
-    found = tuple((option, parts.methods_table(part.method_groups(option))) for option in options)
+    tree = part.samples(folder)
     if progress is not None:
         progress("done", 1, 1)
-    return found
+    return tree
 
 
 def _training_step(part: ClassifierPart, samples: SampleSet, trained: TrainedPart) -> TrainingStep:
     keys = [s.key for s in samples.training]
+    labels = [s.title for s in samples.training]
     return TrainingStep(
         samples,
         trained,
         parts.training_view(part, trained.option, trained),
-        (parts.unlabelled_table(samples.test, keys),),
+        (parts.unlabelled_table(samples.test, keys, labels),),
     )
 
 

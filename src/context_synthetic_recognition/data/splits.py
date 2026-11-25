@@ -20,11 +20,15 @@ A :class:`FixedSplit` holds every object with its class: the classes of the test
 needed to score a method, never to classify. :meth:`FixedSplit.test_objects` gives the test
 objects without their class and :meth:`FixedSplit.test_answers` their classes, kept apart
 (:mod:`.samples`, ADR-085).
+
+A split file is named ``<Dataset> (<m>, <n>, <c>) — training <t> (<metric>).dat``:
+:func:`parse_split_name` reads the name into a :class:`SplitName` (ADR-090).
 """
 
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -41,6 +45,53 @@ TRAINING_FLAG = 0
 """Split marker of a training object."""
 TEST_FLAG = 1
 """Split marker of a test object."""
+SPLIT_SUFFIX = ".dat"
+"""Extension of a split file."""
+NAME_PATTERN = "<Dataset> (<m>, <n>, <c>) — training <t> (<metric>).dat"
+"""How a split file is named (ADR-090)."""
+_NAME = re.compile(
+    r"(?P<dataset>\S.*?) \((?P<m>\d+), (?P<n>\d+), (?P<c>\d+)\) — training (?P<t>\d+) "
+    r"\((?P<metric>[^()\s]+)\)\.dat",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class SplitName:
+    """What the name of a split file says: the dataset, its sizes, the training size, the metric."""
+
+    dataset: str
+    """The dataset's name, e.g. ``German``."""
+    m: int
+    """Objects of the file."""
+    n: int
+    """Features."""
+    c: int
+    """Classes."""
+    training: int
+    """Objects of the training sample."""
+    metric: str
+    """The proximity measure the split was made with, as written in the name."""
+
+    @property
+    def key(self) -> str:
+        """The split's key: ``German-341`` (internal; ADR-090)."""
+        return f"{self.dataset}-{self.training}"
+
+
+def parse_split_name(file_name: str) -> SplitName:
+    """Read a split file's name (:data:`NAME_PATTERN`).
+
+    Raises:
+        DatasetError: The name does not follow the pattern; the message gives the pattern.
+    """
+    found = _NAME.fullmatch(file_name.strip())
+    if found is None:
+        raise DatasetError(f"{file_name}: the name does not follow “{NAME_PATTERN}”")
+    m, n, c, t = (int(found[part]) for part in ("m", "n", "c", "t"))
+    if min(m, n, c, t) <= 0:
+        raise DatasetError(f"{file_name}: the sizes in the name must be positive")
+    return SplitName(found["dataset"].strip(), m, n, c, t, found["metric"].lower())
 
 
 @dataclass(frozen=True, eq=False)
