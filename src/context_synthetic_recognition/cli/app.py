@@ -18,6 +18,7 @@ from typing import Annotated
 import typer
 
 from context_synthetic_recognition import __version__
+from context_synthetic_recognition.comparison import COMPARISON_SPLITS
 from context_synthetic_recognition.comparison.tables import DECIMALS as COMPARISON_DECIMALS
 from context_synthetic_recognition.config import (
     ConfigFormat,
@@ -69,9 +70,30 @@ from context_synthetic_recognition.services.comparison import (
     run_comparison,
     write_comparison,
 )
-from context_synthetic_recognition.services.comparison_part import blind_predictions
+from context_synthetic_recognition.services.comparison_part import (
+    COMPARISON_PART,
+    blind_predictions,
+)
 from context_synthetic_recognition.services.configs import config_problems
 from context_synthetic_recognition.services.datasets import parse_object, summarize
+from context_synthetic_recognition.services.design_outputs import (
+    ALL_DESIGNS_KEY,
+    all_designs_files,
+)
+from context_synthetic_recognition.services.design_runs import (
+    ALL as ALL_DESIGNS,
+)
+from context_synthetic_recognition.services.design_runs import (
+    check_files,
+    design_keys,
+    recorded_splits,
+    run_designs,
+    write_design,
+)
+from context_synthetic_recognition.services.design_runs import (
+    default_output as designs_output,
+)
+from context_synthetic_recognition.services.designs import DIRECT
 from context_synthetic_recognition.services.runner import (
     ExperimentResult,
     RunError,
@@ -898,11 +920,67 @@ def _single_split_folder(out: Path | None) -> Path:
     return out
 
 
+DesignOption = Annotated[
+    str,
+    typer.Option(
+        "--design",
+        help="The evaluation design: direct (default), reversed, training-self, test-self, "
+        "random-control, cross-validation, nested-selection, size-curve, cross-split, or all.",
+    ),
+]
+
+
+def _design_progress(what: str, done: int, total: int) -> None:
+    if what != "done" and (done % 10 == 0 or done + 1 == total):
+        typer.echo(f"  [{done + 1}/{total}] {what}")
+
+
+def _run_designs(design: str, out: Path | None, splits: Path | None, split: str | None) -> None:
+    """``csr compare run --design``: the design files of German's three splits or of one split."""
+    keys = design_keys(design)
+    folder = splits or COMPARISON_PART.default_folder()
+    if split is None:
+        option = COMPARISON_PART.option(COMPARISON_SPLITS, folder)
+        base = out or designs_output()
+    else:
+        base = _single_split_folder(out)
+        option = COMPARISON_PART.option((split,), folder)
+    results = {}
+    for key in keys:
+        typer.echo(f"design {key}:")
+        (outcome,) = run_designs(COMPARISON_PART, option, folder, (key,), progress=_design_progress)
+        results[key] = outcome.result
+        target = base / key if (split is None or len(keys) > 1) else base
+        written = write_design(outcome, target)
+        typer.echo(
+            f"  {outcome.result.seconds:.1f} s; written to {target}: "
+            f"{', '.join(p.name for p in written)}"
+        )
+    if design == ALL_DESIGNS:
+        target = base / ALL_DESIGNS_KEY
+        target.mkdir(parents=True, exist_ok=True)
+        for name, data in all_designs_files(results).items():
+            (target / name).write_bytes(data)
+        typer.echo(f"method × design: written to {target}")
+
+
 @compare_app.command("run")
 def compare_run(
-    out: ComparisonFolder = None, splits: SplitsFolder = None, split: SplitOption = None
+    out: ComparisonFolder = None,
+    splits: SplitsFolder = None,
+    split: SplitOption = None,
+    design: DesignOption = DIRECT,
 ) -> None:
-    """Run SVM, Random Forest, k-NN and the CS-model on the article's splits; write the tables."""
+    """Run SVM, Random Forest, k-NN and the CS-model on the article's splits; write the tables.
+
+    Another design than the one as given (--design) writes experiments/designs/<design>/.
+    """
+    if design != DIRECT:
+        try:
+            _run_designs(design, out, splits, split)
+        except CSRError as error:
+            raise _fail(error) from error
+        return
     typer.echo("splits:")
     try:
         if split is None:
@@ -926,9 +1004,48 @@ def compare_run(
         typer.echo(f"  {path.name}")
 
 
+def _check_designs(design: str, out: Path | None, splits: Path | None) -> None:
+    """``csr compare check --design``: every design folder against its checksums and a new run."""
+    failed = False
+    folder = splits or COMPARISON_PART.default_folder()
+    results = {}
+    for key in design_keys(design):
+        target = (out or designs_output()) / key if design == ALL_DESIGNS or out is None else out
+        keys = recorded_splits(target)
+        option = COMPARISON_PART.option(keys, folder)
+        typer.echo(f"design {key}: {target}")
+        (outcome,) = run_designs(COMPARISON_PART, option, folder, (key,), progress=_design_progress)
+        results[key] = outcome.result
+        problems = check_files(target, outcome.files)
+        for problem in problems:
+            typer.echo(f"  ✗ {problem}")
+        if not problems:
+            typer.echo(f"  ✓ {len(outcome.files)} files")
+        failed = failed or bool(problems)
+    if design == ALL_DESIGNS:
+        target = (out or designs_output()) / ALL_DESIGNS_KEY
+        problems = check_files(target, all_designs_files(results))
+        typer.echo(f"method × design: {target}")
+        for problem in problems:
+            typer.echo(f"  ✗ {problem}")
+        failed = failed or bool(problems)
+    if failed:
+        typer.echo("design check FAILED", err=True)
+        raise typer.Exit(EXIT_FAILED)
+    typer.echo("design check passed")
+
+
 @compare_app.command("check")
-def compare_check(out: ComparisonFolder = None, splits: SplitsFolder = None) -> None:
+def compare_check(
+    out: ComparisonFolder = None, splits: SplitsFolder = None, design: DesignOption = DIRECT
+) -> None:
     """Check written results: their checksums, and a new run gives them byte for byte."""
+    if design != DIRECT:
+        try:
+            _check_designs(design, out, splits)
+        except CSRError as error:
+            raise _fail(error) from error
+        return
     try:
         folder = out or default_output()
         typer.echo(f"results: {folder}")
@@ -967,6 +1084,14 @@ def compare_predict(
         ),
     ] = None,
     splits: SplitsFolder = None,
+    design: Annotated[
+        str,
+        typer.Option(
+            "--design",
+            help="direct (default): train on the training sample, predict the test objects; "
+            "reversed: train on the test sample, predict the training objects.",
+        ),
+    ] = DIRECT,
 ) -> None:
     """Train on a split's training sample; write the blind predictions of its test objects."""
 
@@ -975,7 +1100,7 @@ def compare_predict(
             typer.echo(f"  {what}")
 
     try:
-        predictions = blind_predictions(split, splits, progress)
+        predictions = blind_predictions(split, splits, progress, design=design)
         (sample,) = predictions.trained.samples
         path = write_csv(
             out or Path(f"predictions-{sample.key}.csv"), predictions_csv(predictions, sample.key)
@@ -984,9 +1109,13 @@ def compare_predict(
         raise _fail(error) from error
     (objects,) = predictions.objects
     sizes = ", ".join(map(str, sample.data.class_sizes))
+    classified = "training" if design == "reversed" else "test"
+    trained_on = (
+        f"the {sample.data.m} test" if design == "reversed" else f"{sample.data.m} training"
+    )
     typer.echo(
-        f"trained on {sample.data.m} training objects ({sizes}); "
-        f"{objects.m} test objects classified without their class by "
+        f"trained on {trained_on} objects ({sizes}); "
+        f"{objects.m} {classified} objects classified without their class by "
         f"{len(predictions.decisions[sample.key])} methods"
     )
     typer.echo(f"written to {path} (no class column)")

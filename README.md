@@ -140,7 +140,8 @@ datasets/           the author's datasets: default (10, 13, 2), raw/<Heterogeneo
                     splits/ = training and test samples (the article's, Spambase's)
 docs/               documentation (mkdocs): glossary, algorithm reference, DECISIONS.md, …
 experiments/        the article's computational experiment: results/*.csv, summary.json, checksums;
-                    comparison/ = the comparison with standard classifiers
+                    comparison/ = the comparison with standard classifiers;
+                    designs/ = the nine evaluation designs on the same splits
 scripts/            run_experiments.py, run_comparison.py, build_exe.py, gui_screenshots.py,
                     update_translations.py
 src/context_synthetic_recognition/
@@ -157,7 +158,8 @@ src/context_synthetic_recognition/
   config/           typed configuration (schema 2), presets, the switches
   data/             dataset schema, loaders, built-in datasets, split files
   services/         runner, run folders, validation against the workbooks, switch sensitivity,
-                    dataset summaries — shared by the CLI and the GUI
+                    dataset summaries, the split files' discovery, the classifier parts and
+                    the evaluation designs — shared by the CLI and the GUI
   export/           Excel workbook, tables (CSV, JSON, Markdown, LaTeX), figures, report
   gui/              desktop application (PySide6); it computes nothing itself
   cli/              the csr command

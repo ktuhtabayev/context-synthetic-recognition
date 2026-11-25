@@ -101,7 +101,7 @@ class ShownTable:
 
 @dataclass(frozen=True)
 class StageTable:
-    """A tab of a stage: one table, one per split, or why there is none."""
+    """A tab of a stage: one table, one per split, a figure, or why there is none."""
 
     key: str
     title: str
@@ -109,6 +109,8 @@ class StageTable:
     variants: tuple[ShownTable, ...] = ()
     missing: str = ""
     """Shown instead of a table (why there is none)."""
+    figure: FigureSpec | None = None
+    """A figure shown instead of a table (the designs' figures, ADR-096)."""
 
 
 @dataclass(frozen=True)
@@ -461,6 +463,7 @@ def parts() -> list[ClassifierPart]:
 
 
 if TYPE_CHECKING:  # a static check, run by mypy: a dataset cannot be classified (ADR-085)
+    from context_synthetic_recognition.export.figures import FigureSpec
 
     def _a_dataset_is_not_unlabelled(
         part: ClassifierPart, trained: TrainedPart, data: Dataset

@@ -1328,6 +1328,42 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
         <translation>Barcha natijalar</translation>
     </message>
     <message>
+        <source>Design</source>
+        <translation>Baholash sxemasi</translation>
+    </message>
+    <message>
+        <source>Design plan</source>
+        <translation>Sxema rejasi</translation>
+    </message>
+    <message>
+        <source>Figure</source>
+        <translation>Rasm</translation>
+    </message>
+    <message>
+        <source>Every round</source>
+        <translation>Barcha raundlar</translation>
+    </message>
+    <message>
+        <source>All designs</source>
+        <translation>Barcha sxemalar</translation>
+    </message>
+    <message>
+        <source>Swapping the subsets</source>
+        <translation>Tanlanmalarni almashtirish</translation>
+    </message>
+    <message>
+        <source>Comparison points</source>
+        <translation>Taqqoslash nuqtalari</translation>
+    </message>
+    <message>
+        <source>Honest estimate</source>
+        <translation>Halol baho</translation>
+    </message>
+    <message>
+        <source>Optional extras</source>
+        <translation>Qoʻshimcha</translation>
+    </message>
+    <message>
         <source>not run</source>
         <translation>bajarilmagan</translation>
     </message>
@@ -1348,6 +1384,78 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
         <translation>mavjud emas</translation>
     </message>
     <message>
+        <source>Training → Test (as given)</source>
+        <translation>Oʻrgatish → Nazorat (berilganidek)</translation>
+    </message>
+    <message>
+        <source>Fit on the training sample, classify the test sample: the article's evaluation.</source>
+        <translation>Oʻrgatuvchi tanlanmada oʻrgatish, nazorat tanlanmasini tanish: maqoladagi baholash.</translation>
+    </message>
+    <message>
+        <source>Test → Training (reversed)</source>
+        <translation>Nazorat → Oʻrgatish (teskari)</translation>
+    </message>
+    <message>
+        <source>Fit on the test sample, classify the training sample: the two samples swapped.</source>
+        <translation>Nazorat tanlanmasida oʻrgatish, oʻrgatuvchi tanlanmani tanish: ikki tanlanma almashtirilgan.</translation>
+    </message>
+    <message>
+        <source>Training → Training (self-check)</source>
+        <translation>Oʻrgatish → Oʻrgatish (oʻz-oʻzini tekshirish)</translation>
+    </message>
+    <message>
+        <source>The training sample on itself: each object left out of its own classification where the method allows it (Definition 2).</source>
+        <translation>Oʻrgatuvchi tanlanma oʻzida: usul imkon bergan joyda har bir obyekt oʻz tanilishidan chetlatiladi (2-taʼrif).</translation>
+    </message>
+    <message>
+        <source>Test → Test (self-check)</source>
+        <translation>Nazorat → Nazorat (oʻz-oʻzini tekshirish)</translation>
+    </message>
+    <message>
+        <source>The test sample on itself, the same way: how well the test objects explain each other.</source>
+        <translation>Nazorat tanlanmasi oʻzida, xuddi shunday: nazorat obyektlari bir-birini qanchalik tushuntiradi.</translation>
+    </message>
+    <message>
+        <source>Random training samples (control)</source>
+        <translation>Tasodifiy oʻrgatuvchi tanlanmalar (nazorat)</translation>
+    </message>
+    <message>
+        <source>Random training samples of the same size and classes: is the given one better than chance?</source>
+        <translation>Xuddi shu hajm va sinflardagi tasodifiy oʻrgatuvchi tanlanmalar: berilgani tasodifdan yaxshimi?</translation>
+    </message>
+    <message>
+        <source>Whole dataset, cross-validation</source>
+        <translation>Butun maʼlumotlar toʻplami, kross-validatsiya</translation>
+    </message>
+    <message>
+        <source>Stratified 10-fold cross-validation on all objects; the split markers are ignored.</source>
+        <translation>Barcha obyektlarda stratifikatsiyalangan 10 qismli kross-validatsiya; boʻlinish belgilari hisobga olinmaydi.</translation>
+    </message>
+    <message>
+        <source>Selection inside folds</source>
+        <translation>Qismlar ichida tanlash</translation>
+    </message>
+    <message>
+        <source>R-IPS picks the training sample from each fold's training objects only: an honest estimate of selection and fit together.</source>
+        <translation>R-IPS oʻrgatuvchi tanlanmani har bir qismning faqat oʻrgatuvchi obyektlaridan tanlaydi: tanlash va oʻrgatishning birgalikdagi halol bahosi.</translation>
+    </message>
+    <message>
+        <source>Training-size curve</source>
+        <translation>Oʻrgatish hajmi egri chizigʻi</translation>
+    </message>
+    <message>
+        <source>Smaller stratified parts of the training sample: how the accuracy grows with its size.</source>
+        <translation>Oʻrgatuvchi tanlanmaning kichikroq stratifikatsiyalangan qismlari: aniqlik uning hajmi bilan qanday oʻsadi.</translation>
+    </message>
+    <message>
+        <source>Split to split</source>
+        <translation>Boʻlinishdan boʻlinishga</translation>
+    </message>
+    <message>
+        <source>Fit on one split's training sample, classify another split's test objects of the same dataset.</source>
+        <translation>Bir boʻlinishning oʻrgatuvchi tanlanmasida oʻrgatish, xuddi shu maʼlumotlar toʻplamining boshqa boʻlinishi nazorat obyektlarini tanish.</translation>
+    </message>
+    <message>
         <source>The split whose table is shown</source>
         <translation>Jadvali koʻrsatilgan boʻlinish</translation>
     </message>
@@ -1358,6 +1466,10 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
     <message>
         <source>Tick the samples to run on: a split, a dataset, or several of them</source>
         <translation>Ishga tushirish uchun tanlanmalarni belgilang: boʻlinish, maʼlumotlar toʻplami yoki ulardan bir nechtasi</translation>
+    </message>
+    <message>
+        <source>How the split's objects are used for training and for classification</source>
+        <translation>Boʻlinish obyektlari oʻrgatish va tanish uchun qanday ishlatiladi</translation>
     </message>
     <message>
         <source>The folder the samples are read from</source>
@@ -1374,6 +1486,10 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
     <message>
         <source>Training, test and evaluation in a row</source>
         <translation>Oʻrgatish, test va baholash ketma-ket</translation>
+    </message>
+    <message>
+        <source>Stop the running step after its current round</source>
+        <translation>Bajarilayotgan qadamni joriy raunddan keyin toʻxtatish</translation>
     </message>
     <message>
         <source>Fit every method on the training sample, with its fixed settings</source>
@@ -1418,6 +1534,10 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
     <message>
         <source>Reading the samples…</source>
         <translation>Tanlanmalar oʻqilmoqda…</translation>
+    </message>
+    <message>
+        <source>The design changed.</source>
+        <translation>Baholash sxemasi oʻzgardi.</translation>
     </message>
     <message>
         <source>The samples changed.</source>
@@ -1538,6 +1658,10 @@ Tanib olish algoritmlarining kontekstli-sintetik modeli (KS-model): R-IPS → k 
     <message>
         <source>{n} test object(s) classified without their class.</source>
         <translation>{n} ta test obyekti sinfisiz sinflandi.</translation>
+    </message>
+    <message>
+        <source>Fixed settings</source>
+        <translation>Qatʼiy sozlamalar</translation>
     </message>
     <message>
         <source>Check passed: {folder}</source>

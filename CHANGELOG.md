@@ -24,6 +24,13 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
   How to add one: [Adding a split file](docs/comparison.md#adding-a-split-file).
 - `csr compare run --split KEY --out DIR` writes one split's evaluation (results, summary,
   checksums), never into `experiments/comparison`; `csr compare check` checks such a folder too.
+- Nine evaluation designs on the same split files (ADR-095, ADR-096): the samples swapped and on
+  themselves, 100 random training samples as a control, cross-validation on the whole dataset,
+  R-IPS inside each fold, a training-size curve and split to split. A *Design* chooser on the
+  *Classifiers* page (with progress, *Cancel*, two figures and an *All designs* tab),
+  `csr compare run | check --design KEY|all` and `csr compare predict --design reversed`.
+  `experiments/designs/` holds every design on German's three splits; tests pin the numbers. The
+  designs are registered in `services.designs.DESIGNS`, so a later design is one registration.
 - The *Classifiers* page shows the samples as a tree of datasets with checkboxes (ADR-091): one
   split, a whole dataset or splits of several datasets can be ticked, with the keyboard as well;
   German's three splits are ticked by default; unavailable files are greyed with their reason;
@@ -61,7 +68,7 @@ and [Semantic Versioning](https://semver.org/). Each milestone is a minor versio
 - Spambase was missing from the *Classifiers* page of the Windows build: the build of 0.10.0
   predates Spambase's split files, so neither its code nor its copy of `datasets/splits` had them.
   The splits are now found from the folder the build carries, so a rebuild includes every file of
-  `datasets/splits`.
+  `datasets/splits`, and the self-test lists the samples of every part by dataset.
 
 ## [0.10.0] — 2026-11-24 — Standard classifiers and a staged Classifiers page
 

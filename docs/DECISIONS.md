@@ -1927,6 +1927,101 @@ blocked objects keep covering, but differ in single objects. The gap is reported
   `summary.json` has a `settings` field. A long settings text wraps, and every text cell shows in
   full in its tooltip; nothing is cut off without a way to read it.
 
+## ADR-095 — Nine evaluation designs on the same split files
+
+*Accepted, 2026-11-25.*
+
+- A split file gives the training sample T, the test sample Q and all its m objects. The
+  article's evaluation fits on T and classifies Q; nine **evaluation designs** use the same files
+  in other ways, so that the comparison of the methods can be read from other points of view.
+  They are offered for every split the discovery finds (ADR-090):
+
+  | Group | Design (key) | What it does |
+  | :--- | :--- | :--- |
+  | Swapping the subsets | Training → Test, as given (`direct`) | fit on T, classify Q: the article's evaluation, the default |
+  | | Test → Training, reversed (`reversed`) | fit on Q, classify T |
+  | | Training → Training, self-check (`training-self`) | T on itself by resubstitution (Definition 2) |
+  | | Test → Test, self-check (`test-self`) | Q on itself, the same way |
+  | Comparison points | Random training samples, control (`random-control`) | 100 samples drawn from the m objects with T's size and class counts, each fitted and the other objects classified; the percentile of T among them |
+  | | Whole dataset, cross-validation (`cross-validation`) | stratified 10-fold on the m objects; the split markers ignored |
+  | Honest estimate | Selection inside folds (`nested-selection`) | stratified 10-fold; in each fold R-IPS chooses the training sample from the fold's training objects only |
+  | Optional extras | Training-size curve (`size-curve`) | stratified subsamples of T (25, 50, 75 %) and T itself, Q classified |
+  | | Split to split (`cross-split`) | fit on split A's T, classify split B's Q without the objects of A's T |
+
+- Their settings are fixed in `services.designs` and shown read-only; nothing is tuned:
+  - seeds: repetition i of a repeated design uses seed 42 + i (the random control 42 … 141, the
+    curve 42 … 61), the folds seed 42;
+  - 100 random samples; 10 folds, stratified (`evaluation.protocols.stratified_k_fold`); the
+    curve's shares 25, 50 and 75 % of each class of T, rounded half up and at least one object,
+    20 repetitions each;
+  - R-IPS with the article's defaults (`RIPSConfig`) and the metric of the split's file name, on
+    every feature (on the quantitative ones for a metric of quantitative features only); its
+    normalization is fitted on the fold's training objects;
+  - split to split: two splits are compatible when their files hold the same objects with
+    identical values and types; their rows (values and class) are matched one to one, identical
+    rows in file order. German's Zhuravlyov split (20 features) and its Euclidean split (7) are
+    not compatible, nor are Spambase's two splits (one holds scaled values);
+  - the methods and their settings are those of the comparison (ADR-079, ADR-080, ADR-090).
+- The blind rule (ADR-085) holds in every design: each round runs the part's own stages — `train`
+  on the round's training objects, `classify` on the classified objects as an `UnlabelledSample` —
+  and the classes reach only the comparison afterwards (`AnswerKey`). Normalization, encoding,
+  R-IPS and every fit use only the round's training objects. In the two self-checks the
+  classified objects are the training objects themselves, each left out of its own
+  classification where the method allows it: their decisions are those of the training stage. A
+  test shuffles and flips the classes of the classified objects of every other design's round
+  and finds the same decisions.
+- Reported for each design, split, case and method: the accuracy and the balanced accuracy, the
+  refusals, the majority-class rate of the classified objects and the sizes; a repeated design adds
+  the standard deviation (n − 1), the minimum and the maximum, and the random control the
+  percentile of T (the share of the random samples below it, ties counted half). The selection
+  inside folds also reports the sizes R-IPS chose and — reported, not used — whether R-IPS on all m
+  objects reproduces each split file's training sample.
+- A method or a case a split cannot support is shown with the reason and never stops the rest:
+  an undefined CS-model on a small training sample, a k-NN vote with too few objects, a split to
+  split pair that is not compatible.
+- The designs are registered in `services.designs.DESIGNS`, a `core.registry.Registry` beside the
+  classifier parts: a later design is one registration (a `BaseDesign` with its `cases`), and
+  the page, the CLI and the tables follow without a change. A part runs designs when it can give
+  the ticked splits whole (`design_splits`, the protocol `DesignablePart`); the comparison part
+  can.
+- The design as given on German's three splits gives exactly the comparison's numbers, and the
+  training self-check exactly the comparison's training accuracies; tests pin both.
+
+## ADR-096 — The designs on the page, in the CLI and in `experiments/designs`
+
+*Accepted, 2026-11-25.*
+
+- *Classifiers* page: a *Design* chooser beside the samples, the designs under the four headings,
+  each with a one-line explanation and its fixed settings in the tooltip; *Training → Test (as
+  given)* is the default and the choice is remembered (`classifiers/design/<part>`). The stepper
+  stays:
+  - ① *Training* fits on the design's first round (for a repeated design the first repetition)
+    and adds a *Design plan* tab: every case with its rounds and their sizes;
+  - ② *Test* shows the objects being classified, without their class (a self-check: the training
+    objects, with their resubstitution decisions);
+  - ③ *Evaluation* runs every round and shows the design's table, its figure (the random control:
+    every method's 100 accuracies with T's as a diamond; the curve: the mean accuracy at each share
+    ± one SD), every round, the first round's *Per object* and *Confusion*, and *All designs*:
+    method × design for each ticked split, from the designs run so far on these samples.
+  - A long design shows the split, the case and the round in the progress bar and stops with
+    *Cancel* after its current round; closing the window cancels it first. The files of
+    `csr compare run` are written for the design as given only.
+- CLI: `csr compare run --design KEY|all [--split KEY] [--out DIR]`. Without `--design` (or with
+  `direct`) it writes `experiments/comparison` as before. `--design all` on German's three splits
+  writes `experiments/designs/<design>/` for all nine: `<design>.csv | md | tex`, `rounds.csv`
+  for a repeated design, `summary.json` and `checksums.sha256`. With `--split` it needs `--out`.
+  `csr compare check --design KEY|all` runs the designs again and compares the folders byte for
+  byte; `csr compare predict --design reversed` trains on the test sample and predicts the
+  training objects.
+- `--design all` also writes `experiments/designs/all-designs/` (`all-designs.csv | md`,
+  checksums): method × design for each split, the main case of a repeated design.
+- Every number of `experiments/designs` comes from that run (9.9 minutes here: the random control
+  348 s, the cross-validation 61 s, the selection inside folds 33 s, the curve 135 s, the others
+  1–5 s) and is pinned by `tests/test_design_results.py`, which also runs eight designs again and
+  compares their files byte for byte. The random control's new run (300 rounds) takes longer than
+  CI should wait: that check is marked slow and runs only when `CSR_SLOW_DESIGNS` is set; it was
+  run locally before the merge.
+
 ## Open questions for the author
 
 *Open, 2026-11-22.* Each is flagged where it is used; none is decided silently.

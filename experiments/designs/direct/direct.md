@@ -1,0 +1,52 @@
+## Training → Test (as given): accuracy and balanced accuracy, %
+
+| Split | Method | Training | Classified | Majority rate, % | Accuracy, % | Balanced accuracy, % | Refusals | Note |
+| :--- | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
+| German · Zhuravlyov split · training 336 (196, 140) | SVM | 336 | 664 | 75.90 | 74.85 | 70.63 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | Random Forest | 336 | 664 | 75.90 | 74.25 | 69.81 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | k-NN Euclidean, k = 3 | 336 | 664 | 75.90 | 57.38 | 50.60 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | k-NN Euclidean, k = 5 | 336 | 664 | 75.90 | 60.09 | 51.74 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | k-NN Chebyshev, k = 3 | 336 | 664 | 75.90 | 54.37 | 46.48 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | k-NN Chebyshev, k = 5 | 336 | 664 | 75.90 | 56.78 | 48.71 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | k-NN Canberra, k = 3 | 336 | 664 | 75.90 | 57.08 | 51.68 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | k-NN Canberra, k = 5 | 336 | 664 | 75.90 | 60.09 | 53.02 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | k-NN Zhuravlyov, k = 3 | 336 | 664 | 75.90 | 68.83 | 61.55 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | k-NN Zhuravlyov, k = 5 | 336 | 664 | 75.90 | 73.49 | 64.20 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | CS-model Euclidean, α = 0.1 | 336 | 664 | 75.90 | 62.95 | 51.92 | 2 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | CS-model Euclidean, α = 0.2 | 336 | 664 | 75.90 | 69.13 | 50.87 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | CS-model Chebyshev, α = 0.1 | 336 | 664 | 75.90 | 30.87 | 48.07 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | CS-model Chebyshev, α = 0.2 | 336 | 664 | 75.90 | 30.87 | 48.07 | 0 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | CS-model Canberra, α = 0.1 | 336 | 664 | 75.90 | 70.18 | 53.06 | 18 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | CS-model Canberra, α = 0.2 | 336 | 664 | 75.90 | 69.88 | 53.50 | 20 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | CS-model Zhuravlyov, α = 0.1 | 336 | 664 | 75.90 | 71.54 | 53.31 | 21 |  |
+| German · Zhuravlyov split · training 336 (196, 140) | CS-model Zhuravlyov, α = 0.2 | 336 | 664 | 75.90 | 68.07 | 56.36 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | SVM | 341 | 659 | 80.00 | 50.68 | 52.41 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | Random Forest | 341 | 659 | 80.00 | 56.45 | 52.61 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | k-NN Euclidean, k = 3 | 341 | 659 | 80.00 | 58.42 | 54.98 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | k-NN Euclidean, k = 5 | 341 | 659 | 80.00 | 54.78 | 49.58 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | k-NN Chebyshev, k = 3 | 341 | 659 | 80.00 | 58.88 | 54.13 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | k-NN Chebyshev, k = 5 | 341 | 659 | 80.00 | 59.64 | 53.75 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | k-NN Canberra, k = 3 | 341 | 659 | 80.00 | 54.63 | 52.89 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | k-NN Canberra, k = 5 | 341 | 659 | 80.00 | 56.75 | 55.07 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | CS-model Euclidean, α = 0.1 | 341 | 659 | 80.00 | 56.90 | 48.07 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | CS-model Euclidean, α = 0.2 | 341 | 659 | 80.00 | 56.15 | 52.42 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | CS-model Chebyshev, α = 0.1 | 341 | 659 | 80.00 | 39.15 | 49.18 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | CS-model Chebyshev, α = 0.2 | 341 | 659 | 80.00 | 35.51 | 50.59 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | CS-model Canberra, α = 0.1 | 341 | 659 | 80.00 | 77.39 | 51.23 | 0 |  |
+| German · Euclidean split · training 341 (173, 168) | CS-model Canberra, α = 0.2 | 341 | 659 | 80.00 | 77.39 | 51.23 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | SVM | 367 | 633 | 80.60 | 61.14 | 57.99 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | Random Forest | 367 | 633 | 80.60 | 59.87 | 55.97 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | k-NN Euclidean, k = 3 | 367 | 633 | 80.60 | 57.50 | 54.81 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | k-NN Euclidean, k = 5 | 367 | 633 | 80.60 | 59.87 | 56.59 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | k-NN Chebyshev, k = 3 | 367 | 633 | 80.60 | 59.08 | 51.47 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | k-NN Chebyshev, k = 5 | 367 | 633 | 80.60 | 60.19 | 53.39 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | k-NN Canberra, k = 3 | 367 | 633 | 80.60 | 58.61 | 53.96 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | k-NN Canberra, k = 5 | 367 | 633 | 80.60 | 60.03 | 56.69 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | CS-model Euclidean, α = 0.1 | 367 | 633 | 80.60 | 77.41 | 48.66 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | CS-model Euclidean, α = 0.2 | 367 | 633 | 80.60 | 77.41 | 48.66 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | CS-model Chebyshev, α = 0.1 | 367 | 633 | 80.60 | 78.36 | 54.18 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | CS-model Chebyshev, α = 0.2 | 367 | 633 | 80.60 | 29.07 | 51.04 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | CS-model Canberra, α = 0.1 | 367 | 633 | 80.60 | 21.33 | 49.33 | 0 |  |
+| German · Chebyshev split · training 367 (190, 177) | CS-model Canberra, α = 0.2 | 367 | 633 | 80.60 | 21.33 | 49.33 | 0 |  |
+
+*Fit on the training sample, classify the test sample: the article's evaluation. Training and Classified: the numbers of objects (the mean over the rounds). Majority rate: the share of the larger class among the classified objects. Balanced accuracy: the mean recall of the two classes. Refusals count as errors (Definition 3).*

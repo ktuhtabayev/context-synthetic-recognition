@@ -217,8 +217,10 @@ def test_run_all_reproduces_todays_tables(window: MainWindow, qtbot: QtBot, tmp_
         "k-NN by metric",
         "CS-model",
         "All results",
+        "Design",
         "Per object",
         "Confusion",
+        "All designs",
         "Check",
     ]
     assert tabs.current_key() == "standard-classifiers"

@@ -54,6 +54,16 @@ from context_synthetic_recognition.services.comparison import (
     check_comparison,
     run_comparison,
 )
+from context_synthetic_recognition.services.design_runs import (
+    DesignablePart,
+    classify_first_round,
+    design_plan,
+    design_tabs,
+    direct_result,
+    evaluate_design,
+    first_round,
+)
+from context_synthetic_recognition.services.designs import DESIGNS, DIRECT, DesignResult
 from context_synthetic_recognition.services.runner import load_run, run_experiment, save_run
 from context_synthetic_recognition.services.sensitivity import SwitchVariant, switch_sensitivity
 
@@ -194,6 +204,10 @@ class TrainingStep:
     """The tabs of the *Training* step."""
     test_tabs: tuple[StageTable, ...]
     """The tabs of the *Test* step before the objects are classified (*Test objects*)."""
+    design: str = DIRECT
+    """The evaluation design the steps follow (ADR-095)."""
+    self_check: bool = False
+    """The design classifies the training objects by resubstitution."""
 
 
 @dataclass(frozen=True, eq=False)
@@ -212,6 +226,8 @@ class EvaluationStep:
     tabs: tuple[StageTable, ...]
     write_problem: str = ""
     """Why the evaluation cannot be written (empty if it can, or if the part writes nothing)."""
+    design: DesignResult | None = None
+    """The design's results on every ticked split (the *All designs* tab gathers them)."""
 
 
 @dataclass(frozen=True, eq=False)
@@ -257,36 +273,88 @@ def _training_step(part: ClassifierPart, samples: SampleSet, trained: TrainedPar
     )
 
 
-def _evaluation_step(part: ClassifierPart, evaluation: Evaluation) -> EvaluationStep:
+WRITES_DIRECT = (
+    "Only the design as given is written from this page; csr compare run --design KEY writes "
+    "the others."
+)
+
+
+def _evaluation_step(
+    part: ClassifierPart, evaluation: Evaluation, design: str = DIRECT
+) -> EvaluationStep:
     problem = part.write_problem(evaluation) if isinstance(part, WritablePart) else ""
-    return EvaluationStep(evaluation, parts.evaluation_view(evaluation), problem)
+    if not isinstance(part, DesignablePart):
+        return EvaluationStep(evaluation, parts.evaluation_view(evaluation), problem)
+    if design != DIRECT:
+        return EvaluationStep(
+            evaluation,
+            parts.evaluation_view(evaluation),
+            WRITES_DIRECT if isinstance(part, WritablePart) else "",
+            evaluation.result,
+        )
+    result = direct_result(evaluation)
+    tabs = (
+        *evaluation.tables,
+        *design_tabs(DESIGNS.get(DIRECT), result),
+        *parts.evaluation_view(evaluation)[len(evaluation.tables) :],
+    )
+    return EvaluationStep(evaluation, tabs, problem, result)
+
+
+def _designed(part: ClassifierPart, design: str) -> bool:
+    return design != DIRECT and isinstance(part, DesignablePart)
 
 
 def part_train_job(
     part: ClassifierPart,
     option: SampleOption,
     folder: Path | None,
+    design: str = DIRECT,
     *,
     progress: Progress | None = None,
     cancelled: Cancelled | None = None,
 ) -> TrainingStep:
-    """① Read the samples and fit the part's methods on the training samples."""
+    """① Read the samples and fit the part's methods on the training samples.
+
+    Another design than the one as given fits on its first round's training objects (ADR-095).
+    """
     del cancelled
-    samples, trained = parts.train(part, option, folder, progress)
-    return _training_step(part, samples, trained)
+    if not _designed(part, design):
+        samples, trained = parts.train(part, option, folder, progress)
+        return _training_step(part, samples, trained)
+    assert isinstance(part, DesignablePart)
+    chosen = DESIGNS.get(design)
+    samples = first_round(chosen, part, option, folder)
+    trained = part.train(option, samples.training, progress)
+    step = _training_step(part, samples, trained)
+    plan = design_plan(chosen, part.design_splits(option, folder))
+    return TrainingStep(
+        samples,
+        trained,
+        (*step.tabs, plan),
+        step.test_tabs,
+        design,
+        bool(getattr(chosen, "self_check", False)),
+    )
 
 
 def part_classify_job(
     part: ClassifierPart,
     trained: TrainedPart,
     unlabelled: tuple[UnlabelledSample, ...],
+    design: str = DIRECT,
+    self_check: bool = False,
     *,
     progress: Progress | None = None,
     cancelled: Cancelled | None = None,
 ) -> TestStep:
-    """② Classify the test objects from their feature values only."""
+    """② Classify the objects from their feature values only (a self-check: resubstitution)."""
     del cancelled
-    predictions = parts.classify(part, trained, unlabelled, progress)
+    if design == DIRECT:
+        predictions = parts.classify(part, trained, unlabelled, progress)
+    else:
+        chosen = DESIGNS.get(design)
+        predictions = classify_first_round(chosen, part, trained, unlabelled, self_check=self_check)
     return TestStep(predictions, parts.prediction_view(predictions))
 
 
@@ -294,31 +362,68 @@ def part_evaluate_job(
     part: ClassifierPart,
     predictions: Predictions,
     answers: tuple[AnswerKey, ...],
+    design: str = DIRECT,
+    folder: Path | None = None,
     *,
     progress: Progress | None = None,
     cancelled: Cancelled | None = None,
 ) -> EvaluationStep:
-    """③ Compare the decisions with the true classes."""
-    del cancelled
-    return _evaluation_step(part, parts.evaluate(part, predictions, answers, progress))
+    """③ Compare the decisions with the true classes; another design runs all its rounds.
+
+    A long design reports the round and the split, and stops when ``cancelled`` says so.
+    """
+    if not _designed(part, design):
+        return _evaluation_step(part, parts.evaluate(part, predictions, answers, progress))
+    evaluation = evaluate_design(
+        DESIGNS.get(design),
+        part,
+        predictions,
+        answers,
+        folder,
+        progress=progress,
+        cancelled=cancelled,
+    )
+    return _evaluation_step(part, evaluation, design)
 
 
 def part_run_all_job(
     part: ClassifierPart,
     option: SampleOption,
     folder: Path | None,
+    design: str = DIRECT,
     *,
     progress: Progress | None = None,
     cancelled: Cancelled | None = None,
 ) -> StagesDone:
     """The three steps in a row; the progress names the stage and the split."""
-    del cancelled
-    run = parts.run_stages(part, option, folder, progress)
-    return StagesDone(
-        _training_step(part, run.samples, run.trained),
-        TestStep(run.predictions, parts.prediction_view(run.predictions)),
-        _evaluation_step(part, run.evaluation),
+    if not _designed(part, design):
+        run = parts.run_stages(part, option, folder, progress)
+        return StagesDone(
+            _training_step(part, run.samples, run.trained),
+            TestStep(run.predictions, parts.prediction_view(run.predictions)),
+            _evaluation_step(part, run.evaluation),
+        )
+    training = part_train_job(
+        part, option, folder, design, progress=parts.staged(parts.STAGES[0], progress)
     )
+    test = part_classify_job(
+        part,
+        training.trained,
+        training.samples.test,
+        design,
+        training.self_check,
+        progress=parts.staged(parts.STAGES[1], progress),
+    )
+    evaluation = part_evaluate_job(
+        part,
+        test.predictions,
+        training.samples.answers,
+        design,
+        folder,
+        progress=parts.staged(parts.STAGES[2], progress),
+        cancelled=cancelled,
+    )
+    return StagesDone(training, test, evaluation)
 
 
 def part_write_job(

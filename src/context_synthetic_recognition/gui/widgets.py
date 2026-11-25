@@ -247,6 +247,7 @@ class TablePanel(QWidget):
         self._model: TableModel | None = None
         self._proxy = SortProxy(self)
         self.title = section_title("")
+        self.title.setWordWrap(True)  # a long title wraps instead of widening the window
         self.note = hint("", "note")
         self.filter = QLineEdit()
         self.filter.setPlaceholderText(tr("Filter rows…"))

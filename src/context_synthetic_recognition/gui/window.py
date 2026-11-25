@@ -632,6 +632,7 @@ class MainWindow(QMainWindow):
         self.run_page.cancel()
         self.run_page.wait()
         self.export_page.wait()
+        self.classifiers_page.cancel()  # a long design stops after its current round
         self.classifiers_page.wait()
         self.run_page.log_bridge.detach()
         self.settings.save_geometry(self.saveGeometry())

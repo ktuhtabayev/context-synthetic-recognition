@@ -1,0 +1,1052 @@
+{
+  "design": "test-self",
+  "title": "Test → Test (self-check)",
+  "group": "Swapping the subsets",
+  "explanation": "The test sample on itself, the same way: how well the test objects explain each other.",
+  "settings": "Resubstitution as in Definition 2, on the test sample.",
+  "description": "An evaluation design on the article's split files (ADR-095): every method of the comparison with fixed settings, the classified objects without their class. Percentages with two decimals.",
+  "versions": {
+    "numpy": "2.5.3",
+    "scikit-learn": "1.9.1"
+  },
+  "splits": [
+    {
+      "key": "German-336",
+      "label": "German · Zhuravlyov split · training 336 (196, 140)",
+      "file": "German/German (1000, 20, 2) — training 336 (zhuravlyov).dat",
+      "file_sha256": "de91b117361122bdf22430a56ea4b2f06582739e037845d2e799a8da46b56135",
+      "cases": [
+        {
+          "key": "as-given",
+          "title": "",
+          "rounds": 1,
+          "training": [
+            664
+          ],
+          "classified": [
+            664
+          ],
+          "majority_rate": 75.9,
+          "methods": [
+            {
+              "key": "svm",
+              "title": "SVM",
+              "accuracy": {
+                "mean": 90.51,
+                "sd": null,
+                "min": 90.51,
+                "max": 90.51
+              },
+              "balanced_accuracy": {
+                "mean": 82.66,
+                "sd": null,
+                "min": 82.66,
+                "max": 82.66
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "random-forest",
+              "title": "Random Forest",
+              "accuracy": {
+                "mean": 100.0,
+                "sd": null,
+                "min": 100.0,
+                "max": 100.0
+              },
+              "balanced_accuracy": {
+                "mean": 100.0,
+                "sd": null,
+                "min": 100.0,
+                "max": 100.0
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-euclidean-3",
+              "title": "k-NN Euclidean, k = 3",
+              "accuracy": {
+                "mean": 71.08,
+                "sd": null,
+                "min": 71.08,
+                "max": 71.08
+              },
+              "balanced_accuracy": {
+                "mean": 54.5,
+                "sd": null,
+                "min": 54.5,
+                "max": 54.5
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-euclidean-5",
+              "title": "k-NN Euclidean, k = 5",
+              "accuracy": {
+                "mean": 73.04,
+                "sd": null,
+                "min": 73.04,
+                "max": 73.04
+              },
+              "balanced_accuracy": {
+                "mean": 53.66,
+                "sd": null,
+                "min": 53.66,
+                "max": 53.66
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-chebyshev-3",
+              "title": "k-NN Chebyshev, k = 3",
+              "accuracy": {
+                "mean": 70.63,
+                "sd": null,
+                "min": 70.63,
+                "max": 70.63
+              },
+              "balanced_accuracy": {
+                "mean": 53.78,
+                "sd": null,
+                "min": 53.78,
+                "max": 53.78
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-chebyshev-5",
+              "title": "k-NN Chebyshev, k = 5",
+              "accuracy": {
+                "mean": 73.64,
+                "sd": null,
+                "min": 73.64,
+                "max": 73.64
+              },
+              "balanced_accuracy": {
+                "mean": 55.55,
+                "sd": null,
+                "min": 55.55,
+                "max": 55.55
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-canberra-3",
+              "title": "k-NN Canberra, k = 3",
+              "accuracy": {
+                "mean": 72.29,
+                "sd": null,
+                "min": 72.29,
+                "max": 72.29
+              },
+              "balanced_accuracy": {
+                "mean": 55.51,
+                "sd": null,
+                "min": 55.51,
+                "max": 55.51
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-canberra-5",
+              "title": "k-NN Canberra, k = 5",
+              "accuracy": {
+                "mean": 73.8,
+                "sd": null,
+                "min": 73.8,
+                "max": 73.8
+              },
+              "balanced_accuracy": {
+                "mean": 55.22,
+                "sd": null,
+                "min": 55.22,
+                "max": 55.22
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-zhuravlyov-3",
+              "title": "k-NN Zhuravlyov, k = 3",
+              "accuracy": {
+                "mean": 81.93,
+                "sd": null,
+                "min": 81.93,
+                "max": 81.93
+              },
+              "balanced_accuracy": {
+                "mean": 71.25,
+                "sd": null,
+                "min": 71.25,
+                "max": 71.25
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-zhuravlyov-5",
+              "title": "k-NN Zhuravlyov, k = 5",
+              "accuracy": {
+                "mean": 81.17,
+                "sd": null,
+                "min": 81.17,
+                "max": 81.17
+              },
+              "balanced_accuracy": {
+                "mean": 69.04,
+                "sd": null,
+                "min": 69.04,
+                "max": 69.04
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-euclidean-0.1",
+              "title": "CS-model Euclidean, α = 0.1",
+              "accuracy": {
+                "mean": 75.9,
+                "sd": null,
+                "min": 75.9,
+                "max": 75.9
+              },
+              "balanced_accuracy": {
+                "mean": 50.43,
+                "sd": null,
+                "min": 50.43,
+                "max": 50.43
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-euclidean-0.2",
+              "title": "CS-model Euclidean, α = 0.2",
+              "accuracy": {
+                "mean": 75.9,
+                "sd": null,
+                "min": 75.9,
+                "max": 75.9
+              },
+              "balanced_accuracy": {
+                "mean": 50.43,
+                "sd": null,
+                "min": 50.43,
+                "max": 50.43
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-chebyshev-0.1",
+              "title": "CS-model Chebyshev, α = 0.1",
+              "accuracy": {
+                "mean": 76.05,
+                "sd": null,
+                "min": 76.05,
+                "max": 76.05
+              },
+              "balanced_accuracy": {
+                "mean": 50.95,
+                "sd": null,
+                "min": 50.95,
+                "max": 50.95
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-chebyshev-0.2",
+              "title": "CS-model Chebyshev, α = 0.2",
+              "accuracy": {
+                "mean": 76.05,
+                "sd": null,
+                "min": 76.05,
+                "max": 76.05
+              },
+              "balanced_accuracy": {
+                "mean": 50.95,
+                "sd": null,
+                "min": 50.95,
+                "max": 50.95
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-canberra-0.1",
+              "title": "CS-model Canberra, α = 0.1",
+              "accuracy": {
+                "mean": 75.9,
+                "sd": null,
+                "min": 75.9,
+                "max": 75.9
+              },
+              "balanced_accuracy": {
+                "mean": 50.64,
+                "sd": null,
+                "min": 50.64,
+                "max": 50.64
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-canberra-0.2",
+              "title": "CS-model Canberra, α = 0.2",
+              "accuracy": {
+                "mean": 75.9,
+                "sd": null,
+                "min": 75.9,
+                "max": 75.9
+              },
+              "balanced_accuracy": {
+                "mean": 50.64,
+                "sd": null,
+                "min": 50.64,
+                "max": 50.64
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-zhuravlyov-0.1",
+              "title": "CS-model Zhuravlyov, α = 0.1",
+              "accuracy": {
+                "mean": 77.56,
+                "sd": null,
+                "min": 77.56,
+                "max": 77.56
+              },
+              "balanced_accuracy": {
+                "mean": 55.57,
+                "sd": null,
+                "min": 55.57,
+                "max": 55.57
+              },
+              "refusals": [
+                6
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-zhuravlyov-0.2",
+              "title": "CS-model Zhuravlyov, α = 0.2",
+              "accuracy": {
+                "mean": 78.01,
+                "sd": null,
+                "min": 78.01,
+                "max": 78.01
+              },
+              "balanced_accuracy": {
+                "mean": 56.29,
+                "sd": null,
+                "min": 56.29,
+                "max": 56.29
+              },
+              "refusals": [
+                3
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            }
+          ],
+          "notes": []
+        }
+      ],
+      "extras": {}
+    },
+    {
+      "key": "German-341",
+      "label": "German · Euclidean split · training 341 (173, 168)",
+      "file": "German/German (1000, 7, 2) — training 341 (euclidean).dat",
+      "file_sha256": "2a11746d5b41579140337ee6bc1b53879d06f80c65d3fe32eff00bd857db3052",
+      "cases": [
+        {
+          "key": "as-given",
+          "title": "",
+          "rounds": 1,
+          "training": [
+            659
+          ],
+          "classified": [
+            659
+          ],
+          "majority_rate": 80.0,
+          "methods": [
+            {
+              "key": "svm",
+              "title": "SVM",
+              "accuracy": {
+                "mean": 81.03,
+                "sd": null,
+                "min": 81.03,
+                "max": 81.03
+              },
+              "balanced_accuracy": {
+                "mean": 52.94,
+                "sd": null,
+                "min": 52.94,
+                "max": 52.94
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "random-forest",
+              "title": "Random Forest",
+              "accuracy": {
+                "mean": 100.0,
+                "sd": null,
+                "min": 100.0,
+                "max": 100.0
+              },
+              "balanced_accuracy": {
+                "mean": 100.0,
+                "sd": null,
+                "min": 100.0,
+                "max": 100.0
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-euclidean-3",
+              "title": "k-NN Euclidean, k = 3",
+              "accuracy": {
+                "mean": 77.69,
+                "sd": null,
+                "min": 77.69,
+                "max": 77.69
+              },
+              "balanced_accuracy": {
+                "mean": 56.53,
+                "sd": null,
+                "min": 56.53,
+                "max": 56.53
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-euclidean-5",
+              "title": "k-NN Euclidean, k = 5",
+              "accuracy": {
+                "mean": 77.24,
+                "sd": null,
+                "min": 77.24,
+                "max": 77.24
+              },
+              "balanced_accuracy": {
+                "mean": 52.83,
+                "sd": null,
+                "min": 52.83,
+                "max": 52.83
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-chebyshev-3",
+              "title": "k-NN Chebyshev, k = 3",
+              "accuracy": {
+                "mean": 76.93,
+                "sd": null,
+                "min": 76.93,
+                "max": 76.93
+              },
+              "balanced_accuracy": {
+                "mean": 54.63,
+                "sd": null,
+                "min": 54.63,
+                "max": 54.63
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-chebyshev-5",
+              "title": "k-NN Chebyshev, k = 5",
+              "accuracy": {
+                "mean": 77.09,
+                "sd": null,
+                "min": 77.09,
+                "max": 77.09
+              },
+              "balanced_accuracy": {
+                "mean": 52.46,
+                "sd": null,
+                "min": 52.46,
+                "max": 52.46
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-canberra-3",
+              "title": "k-NN Canberra, k = 3",
+              "accuracy": {
+                "mean": 77.54,
+                "sd": null,
+                "min": 77.54,
+                "max": 77.54
+              },
+              "balanced_accuracy": {
+                "mean": 56.72,
+                "sd": null,
+                "min": 56.72,
+                "max": 56.72
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-canberra-5",
+              "title": "k-NN Canberra, k = 5",
+              "accuracy": {
+                "mean": 78.0,
+                "sd": null,
+                "min": 78.0,
+                "max": 78.0
+              },
+              "balanced_accuracy": {
+                "mean": 54.16,
+                "sd": null,
+                "min": 54.16,
+                "max": 54.16
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-euclidean-0.1",
+              "title": "CS-model Euclidean, α = 0.1",
+              "accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "balanced_accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "refusals": [
+                659
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-euclidean-0.2",
+              "title": "CS-model Euclidean, α = 0.2",
+              "accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "balanced_accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "refusals": [
+                659
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-chebyshev-0.1",
+              "title": "CS-model Chebyshev, α = 0.1",
+              "accuracy": {
+                "mean": 20.18,
+                "sd": null,
+                "min": 20.18,
+                "max": 20.18
+              },
+              "balanced_accuracy": {
+                "mean": 50.09,
+                "sd": null,
+                "min": 50.09,
+                "max": 50.09
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-chebyshev-0.2",
+              "title": "CS-model Chebyshev, α = 0.2",
+              "accuracy": {
+                "mean": 20.18,
+                "sd": null,
+                "min": 20.18,
+                "max": 20.18
+              },
+              "balanced_accuracy": {
+                "mean": 50.09,
+                "sd": null,
+                "min": 50.09,
+                "max": 50.09
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-canberra-0.1",
+              "title": "CS-model Canberra, α = 0.1",
+              "accuracy": {
+                "mean": 80.12,
+                "sd": null,
+                "min": 80.12,
+                "max": 80.12
+              },
+              "balanced_accuracy": {
+                "mean": 50.38,
+                "sd": null,
+                "min": 50.38,
+                "max": 50.38
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-canberra-0.2",
+              "title": "CS-model Canberra, α = 0.2",
+              "accuracy": {
+                "mean": 80.12,
+                "sd": null,
+                "min": 80.12,
+                "max": 80.12
+              },
+              "balanced_accuracy": {
+                "mean": 50.38,
+                "sd": null,
+                "min": 50.38,
+                "max": 50.38
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            }
+          ],
+          "notes": []
+        }
+      ],
+      "extras": {}
+    },
+    {
+      "key": "German-367",
+      "label": "German · Chebyshev split · training 367 (190, 177)",
+      "file": "German/German (1000, 7, 2) — training 367 (chebyshev).dat",
+      "file_sha256": "1c818e6772cae85394d0134e3e29a0d6116d58acee0bb9964d1327f00948f772",
+      "cases": [
+        {
+          "key": "as-given",
+          "title": "",
+          "rounds": 1,
+          "training": [
+            633
+          ],
+          "classified": [
+            633
+          ],
+          "majority_rate": 80.6,
+          "methods": [
+            {
+              "key": "svm",
+              "title": "SVM",
+              "accuracy": {
+                "mean": 81.83,
+                "sd": null,
+                "min": 81.83,
+                "max": 81.83
+              },
+              "balanced_accuracy": {
+                "mean": 53.56,
+                "sd": null,
+                "min": 53.56,
+                "max": 53.56
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "random-forest",
+              "title": "Random Forest",
+              "accuracy": {
+                "mean": 100.0,
+                "sd": null,
+                "min": 100.0,
+                "max": 100.0
+              },
+              "balanced_accuracy": {
+                "mean": 100.0,
+                "sd": null,
+                "min": 100.0,
+                "max": 100.0
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-euclidean-3",
+              "title": "k-NN Euclidean, k = 3",
+              "accuracy": {
+                "mean": 77.09,
+                "sd": null,
+                "min": 77.09,
+                "max": 77.09
+              },
+              "balanced_accuracy": {
+                "mean": 54.32,
+                "sd": null,
+                "min": 54.32,
+                "max": 54.32
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-euclidean-5",
+              "title": "k-NN Euclidean, k = 5",
+              "accuracy": {
+                "mean": 78.2,
+                "sd": null,
+                "min": 78.2,
+                "max": 78.2
+              },
+              "balanced_accuracy": {
+                "mean": 52.85,
+                "sd": null,
+                "min": 52.85,
+                "max": 52.85
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-chebyshev-3",
+              "title": "k-NN Chebyshev, k = 3",
+              "accuracy": {
+                "mean": 75.99,
+                "sd": null,
+                "min": 75.99,
+                "max": 75.99
+              },
+              "balanced_accuracy": {
+                "mean": 54.25,
+                "sd": null,
+                "min": 54.25,
+                "max": 54.25
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-chebyshev-5",
+              "title": "k-NN Chebyshev, k = 5",
+              "accuracy": {
+                "mean": 76.94,
+                "sd": null,
+                "min": 76.94,
+                "max": 76.94
+              },
+              "balanced_accuracy": {
+                "mean": 51.45,
+                "sd": null,
+                "min": 51.45,
+                "max": 51.45
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-canberra-3",
+              "title": "k-NN Canberra, k = 3",
+              "accuracy": {
+                "mean": 76.78,
+                "sd": null,
+                "min": 76.78,
+                "max": 76.78
+              },
+              "balanced_accuracy": {
+                "mean": 55.36,
+                "sd": null,
+                "min": 55.36,
+                "max": 55.36
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "knn-canberra-5",
+              "title": "k-NN Canberra, k = 5",
+              "accuracy": {
+                "mean": 79.15,
+                "sd": null,
+                "min": 79.15,
+                "max": 79.15
+              },
+              "balanced_accuracy": {
+                "mean": 55.6,
+                "sd": null,
+                "min": 55.6,
+                "max": 55.6
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-euclidean-0.1",
+              "title": "CS-model Euclidean, α = 0.1",
+              "accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "balanced_accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "refusals": [
+                633
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-euclidean-0.2",
+              "title": "CS-model Euclidean, α = 0.2",
+              "accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "balanced_accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "refusals": [
+                633
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-chebyshev-0.1",
+              "title": "CS-model Chebyshev, α = 0.1",
+              "accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "balanced_accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "refusals": [
+                633
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-chebyshev-0.2",
+              "title": "CS-model Chebyshev, α = 0.2",
+              "accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "balanced_accuracy": {
+                "mean": 0.0,
+                "sd": null,
+                "min": 0.0,
+                "max": 0.0
+              },
+              "refusals": [
+                633
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-canberra-0.1",
+              "title": "CS-model Canberra, α = 0.1",
+              "accuracy": {
+                "mean": 80.73,
+                "sd": null,
+                "min": 80.73,
+                "max": 80.73
+              },
+              "balanced_accuracy": {
+                "mean": 50.41,
+                "sd": null,
+                "min": 50.41,
+                "max": 50.41
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            },
+            {
+              "key": "cs-model-canberra-0.2",
+              "title": "CS-model Canberra, α = 0.2",
+              "accuracy": {
+                "mean": 80.73,
+                "sd": null,
+                "min": 80.73,
+                "max": 80.73
+              },
+              "balanced_accuracy": {
+                "mean": 50.41,
+                "sd": null,
+                "min": 50.41,
+                "max": 50.41
+              },
+              "refusals": [
+                0
+              ],
+              "undefined_rounds": 0,
+              "note": ""
+            }
+          ],
+          "notes": []
+        }
+      ],
+      "extras": {}
+    }
+  ]
+}

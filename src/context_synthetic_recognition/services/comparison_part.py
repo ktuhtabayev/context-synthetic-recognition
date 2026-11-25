@@ -85,6 +85,7 @@ from context_synthetic_recognition.services.comparison import (
     splits_folder,
     write_comparison,
 )
+from context_synthetic_recognition.services.designs import DesignSplit
 from context_synthetic_recognition.services.split_discovery import (
     SplitFile,
     discover_splits,
@@ -241,6 +242,20 @@ class ComparisonPart:
                 test.append(file.split.test_objects(name))
                 answers.append(file.split.test_answers(name))
         return SampleSet(option, tuple(training), tuple(test), tuple(answers))
+
+    def design_splits(self, option: SampleOption, folder: Path | None) -> tuple[DesignSplit, ...]:
+        """The ticked splits whole — every object, both samples — for the designs (ADR-095)."""
+        files = read_splits(_folder(folder), option.splits)
+        found = []
+        for file in files:
+            if file.split is None or file.name is None:
+                raise DatasetError(file.reason or f"{file.file}: the file was not read")
+            found.append(
+                DesignSplit(
+                    file.key, file.label, file.split, file.name.metric, file.file, file.sha256
+                )
+            )
+        return tuple(found)
 
     def _spec(self, key: str) -> SplitSpec:
         """The split of a key, from the names of the files read so far or of the default folder."""
@@ -437,22 +452,43 @@ def _evaluation_tables(
 
 
 def blind_predictions(
-    key: str, folder: Path | None = None, progress: Progress | None = None
+    key: str,
+    folder: Path | None = None,
+    progress: Progress | None = None,
+    *,
+    design: str = "direct",
 ) -> Predictions:
     """Train on one split's training sample and classify its test objects without their class.
 
     The loader reads the whole file and checks the convention (ADR-082); only the training
     sample and the test objects' feature values are kept — no answer key is built (ADR-086).
+    ``design="reversed"`` trains on the test sample and classifies the training objects (ADR-096).
 
     Raises:
-        DatasetError: Unknown split, or the split file is missing or breaks the convention.
+        DatasetError: Unknown split or design, or the split file is missing or breaks the
+            convention.
     """
+    if design not in ("direct", "reversed"):
+        raise DatasetError(f"unknown design {design!r} for predictions: direct or reversed")
     part = COMPARISON_PART
     root = _folder(folder)
     (file,) = read_splits(root, (key,))
     option = SampleOption(file.key, file.short_label, (file.key,))
     training, test = [training_sample(file)], []
-    if file.split is not None:
+    if file.split is not None and design == "reversed":
+        whole = file.split
+        training = [TrainingSample(file.key, file.label, whole.test_part, file.file, file.sha256)]
+        objects = whole.training
+        test.append(
+            UnlabelledSample(
+                objects,
+                whole.dataset.X[objects],
+                whole.dataset.feature_types,
+                whole.dataset.feature_names,
+                f"{file.label}: training sample",
+            )
+        )
+    elif file.split is not None:
         test.append(file.split.test_objects(f"{file.label}: test sample"))
     trained = part.train(option, tuple(training), staged(STAGES[0], progress))
     return part.classify(trained, tuple(test), staged(STAGES[1], progress))

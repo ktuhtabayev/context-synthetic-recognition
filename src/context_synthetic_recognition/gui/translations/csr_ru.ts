@@ -1328,6 +1328,42 @@ The default preset follows the article. Settings that deviate from it are switch
         <translation>Все результаты</translation>
     </message>
     <message>
+        <source>Design</source>
+        <translation>Схема оценки</translation>
+    </message>
+    <message>
+        <source>Design plan</source>
+        <translation>План схемы</translation>
+    </message>
+    <message>
+        <source>Figure</source>
+        <translation>Рисунок</translation>
+    </message>
+    <message>
+        <source>Every round</source>
+        <translation>Все раунды</translation>
+    </message>
+    <message>
+        <source>All designs</source>
+        <translation>Все схемы</translation>
+    </message>
+    <message>
+        <source>Swapping the subsets</source>
+        <translation>Перестановка выборок</translation>
+    </message>
+    <message>
+        <source>Comparison points</source>
+        <translation>Точки сравнения</translation>
+    </message>
+    <message>
+        <source>Honest estimate</source>
+        <translation>Честная оценка</translation>
+    </message>
+    <message>
+        <source>Optional extras</source>
+        <translation>Дополнительно</translation>
+    </message>
+    <message>
         <source>not run</source>
         <translation>не выполнен</translation>
     </message>
@@ -1348,6 +1384,78 @@ The default preset follows the article. Settings that deviate from it are switch
         <translation>недоступен</translation>
     </message>
     <message>
+        <source>Training → Test (as given)</source>
+        <translation>Обучение → Контроль (как задано)</translation>
+    </message>
+    <message>
+        <source>Fit on the training sample, classify the test sample: the article's evaluation.</source>
+        <translation>Обучение на обучающей выборке, распознавание контрольной: оценка статьи.</translation>
+    </message>
+    <message>
+        <source>Test → Training (reversed)</source>
+        <translation>Контроль → Обучение (наоборот)</translation>
+    </message>
+    <message>
+        <source>Fit on the test sample, classify the training sample: the two samples swapped.</source>
+        <translation>Обучение на контрольной выборке, распознавание обучающей: выборки поменяны местами.</translation>
+    </message>
+    <message>
+        <source>Training → Training (self-check)</source>
+        <translation>Обучение → Обучение (самопроверка)</translation>
+    </message>
+    <message>
+        <source>The training sample on itself: each object left out of its own classification where the method allows it (Definition 2).</source>
+        <translation>Обучающая выборка на самой себе: каждый объект исключается из собственного распознавания, где метод это допускает (определение 2).</translation>
+    </message>
+    <message>
+        <source>Test → Test (self-check)</source>
+        <translation>Контроль → Контроль (самопроверка)</translation>
+    </message>
+    <message>
+        <source>The test sample on itself, the same way: how well the test objects explain each other.</source>
+        <translation>Контрольная выборка на самой себе, так же: насколько контрольные объекты объясняют друг друга.</translation>
+    </message>
+    <message>
+        <source>Random training samples (control)</source>
+        <translation>Случайные обучающие выборки (контроль)</translation>
+    </message>
+    <message>
+        <source>Random training samples of the same size and classes: is the given one better than chance?</source>
+        <translation>Случайные обучающие выборки того же объёма и классов: лучше ли заданная, чем случай?</translation>
+    </message>
+    <message>
+        <source>Whole dataset, cross-validation</source>
+        <translation>Весь набор данных, скользящий контроль</translation>
+    </message>
+    <message>
+        <source>Stratified 10-fold cross-validation on all objects; the split markers are ignored.</source>
+        <translation>Стратифицированный 10-кратный скользящий контроль на всех объектах; метки разбиения не учитываются.</translation>
+    </message>
+    <message>
+        <source>Selection inside folds</source>
+        <translation>Отбор внутри блоков</translation>
+    </message>
+    <message>
+        <source>R-IPS picks the training sample from each fold's training objects only: an honest estimate of selection and fit together.</source>
+        <translation>R-IPS выбирает обучающую выборку только из обучающих объектов каждого блока: честная оценка отбора и обучения вместе.</translation>
+    </message>
+    <message>
+        <source>Training-size curve</source>
+        <translation>Кривая объёма обучения</translation>
+    </message>
+    <message>
+        <source>Smaller stratified parts of the training sample: how the accuracy grows with its size.</source>
+        <translation>Меньшие стратифицированные части обучающей выборки: как точность растёт с её объёмом.</translation>
+    </message>
+    <message>
+        <source>Split to split</source>
+        <translation>Разбиение к разбиению</translation>
+    </message>
+    <message>
+        <source>Fit on one split's training sample, classify another split's test objects of the same dataset.</source>
+        <translation>Обучение на обучающей выборке одного разбиения, распознавание контрольных объектов другого разбиения того же набора данных.</translation>
+    </message>
+    <message>
         <source>The split whose table is shown</source>
         <translation>Разбиение, таблица которого показана</translation>
     </message>
@@ -1358,6 +1466,10 @@ The default preset follows the article. Settings that deviate from it are switch
     <message>
         <source>Tick the samples to run on: a split, a dataset, or several of them</source>
         <translation>Отметьте выборки для запуска: разбиение, набор данных или несколько из них</translation>
+    </message>
+    <message>
+        <source>How the split's objects are used for training and for classification</source>
+        <translation>Как объекты разбиения используются для обучения и для распознавания</translation>
     </message>
     <message>
         <source>The folder the samples are read from</source>
@@ -1374,6 +1486,10 @@ The default preset follows the article. Settings that deviate from it are switch
     <message>
         <source>Training, test and evaluation in a row</source>
         <translation>Обучение, тест и оценка подряд</translation>
+    </message>
+    <message>
+        <source>Stop the running step after its current round</source>
+        <translation>Остановить выполняемый шаг после текущего раунда</translation>
     </message>
     <message>
         <source>Fit every method on the training sample, with its fixed settings</source>
@@ -1418,6 +1534,10 @@ The default preset follows the article. Settings that deviate from it are switch
     <message>
         <source>Reading the samples…</source>
         <translation>Чтение выборок…</translation>
+    </message>
+    <message>
+        <source>The design changed.</source>
+        <translation>Схема оценки изменилась.</translation>
     </message>
     <message>
         <source>The samples changed.</source>
@@ -1538,6 +1658,10 @@ The default preset follows the article. Settings that deviate from it are switch
     <message>
         <source>{n} test object(s) classified without their class.</source>
         <translation>Тестовых объектов, классифицированных без их класса: {n}.</translation>
+    </message>
+    <message>
+        <source>Fixed settings</source>
+        <translation>Фиксированные настройки</translation>
     </message>
     <message>
         <source>Check passed: {folder}</source>
