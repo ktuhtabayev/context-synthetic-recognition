@@ -43,6 +43,7 @@ from context_synthetic_recognition.services.classifier_parts import (
     Predictions,
     SampleOption,
     SampleSet,
+    SampleTree,
     StageTable,
     TrainedPart,
     WritablePart,
@@ -230,29 +231,29 @@ class CheckOutcome:
     tab: StageTable
 
 
-def part_options_job(
+def part_samples_job(
     part: ClassifierPart,
     folder: Path | None,
     *,
     progress: Progress | None = None,
     cancelled: Cancelled | None = None,
-) -> tuple[tuple[SampleOption, StageTable], ...]:
-    """What a part can run on, each option with its *Methods* tab."""
+) -> SampleTree:
+    """What a part can run on: its tree of samples, read from ``folder`` (ADR-091)."""
     del cancelled
-    options = part.sample_options(folder)
-    found = tuple((option, parts.methods_table(part.method_groups(option))) for option in options)
+    tree = part.samples(folder)
     if progress is not None:
         progress("done", 1, 1)
-    return found
+    return tree
 
 
 def _training_step(part: ClassifierPart, samples: SampleSet, trained: TrainedPart) -> TrainingStep:
     keys = [s.key for s in samples.training]
+    labels = [s.title for s in samples.training]
     return TrainingStep(
         samples,
         trained,
         parts.training_view(part, trained.option, trained),
-        (parts.unlabelled_table(samples.test, keys),),
+        (parts.unlabelled_table(samples.test, keys, labels),),
     )
 
 

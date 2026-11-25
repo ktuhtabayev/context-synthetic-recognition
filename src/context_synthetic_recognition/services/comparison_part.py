@@ -4,8 +4,9 @@ The comparison of ADR-079 and ADR-080 in three stages (:mod:`~context_synthetic_
 comparison.stages`): SVM, Random Forest, the k-NN vote and the CS-model are fitted on the
 article's training samples, classify the test objects without their class, and are compared
 with the true classes. Every setting is fixed; the page shows them and never lets anyone tune
-them. On the three article splits the stages give exactly what ``csr compare run`` writes, and
-the part writes and checks the same files.
+them. On German's three splits the stages give exactly what ``csr compare run`` writes, and
+the part writes and checks the same files. Its samples are every split file of the folder, by
+dataset (ADR-090, ADR-091).
 
 Registered as ``classifier-comparison`` in :data:`~.classifier_parts.CLASSIFIER_PARTS` on import.
 """
@@ -59,8 +60,11 @@ from context_synthetic_recognition.services.classifier_parts import (
     PartCheck,
     Predictions,
     Progress,
+    SampleChoice,
+    SampleGroup,
     SampleOption,
     SampleSet,
+    SampleTree,
     ShownTable,
     StageTable,
     TrainedPart,
@@ -89,15 +93,14 @@ from context_synthetic_recognition.services.split_discovery import (
 )
 
 KEY = "classifier-comparison"
-ARTICLE = "article"
-"""Key of the option with the three splits of the comparison tables."""
-NEEDS_ARTICLE = (
-    "The Standard classifiers, k-NN by metric and CS-model tables need German's three splits "
-    "(Zhuravlyov, Euclidean, Chebyshev): choose “All article splits” and run the steps again."
+NEEDS_COMPARISON_SET = (
+    "The Standard classifiers, k-NN by metric and CS-model tables need German's three splits — "
+    "the Zhuravlyov, Euclidean and Chebyshev splits, training 336, 341 and 367 — and no other: "
+    "tick exactly those and run the steps again."
 )
-WRITES_ARTICLE = (
-    "Only German's three splits are written, the files of csr compare run: choose “All article "
-    "splits”."
+WRITES_COMPARISON_SET = (
+    "Only German's three splits — and no other — are written, the files of csr compare run; "
+    "csr compare run --split KEY --out DIR writes one split."
 )
 
 
@@ -113,6 +116,33 @@ class ComparisonResult:
 
 def _folder(folder: Path | None) -> Path:
     return folder if folder is not None else splits_folder()
+
+
+def _dataset_title(name: str, files: tuple[SplitFile, ...]) -> str:
+    """``German (1000 objects)``; the sizes of all its files when they differ."""
+    sizes = sorted({f.name.m for f in files if f.name is not None})
+    if not sizes:
+        return name
+    return f"{name} ({' / '.join(map(str, sizes))} objects)"
+
+
+def _choice(file: SplitFile) -> SampleChoice:
+    """A split file as a sample of the tree; the comparison needs two classes."""
+    reason = file.reason
+    if not reason and file.name is not None and file.name.c != 2:
+        reason = (
+            f"{Path(file.file).name}: the comparison needs two classes, the file has {file.name.c}"
+        )
+    title = f"{file.title} · {file.details}" if file.details else file.title
+    detail = f"{file.file}{f', row {file.row}' if file.row else ''}"
+    return SampleChoice(
+        file.key,
+        title,
+        file.label,
+        available=file.available and not reason,
+        reason=reason,
+        detail=detail,
+    )
 
 
 def spec_of(sample: TrainingSample) -> SplitSpec:
@@ -165,68 +195,39 @@ class ComparisonPart:
 
     # ------------------------------------------------------------------ samples
 
-    def option(self, key: str) -> SampleOption:
-        """An option by key, without reading the files (no sizes): the comparison set, or a split.
+    def samples(self, folder: Path | None) -> SampleTree:
+        """Every split file of the folder, by dataset (ADR-090, ADR-091).
 
-        A split's key or training size is resolved from the names of the default folder's files.
-
-        Raises:
-            DatasetError: No such split.
+        German's three splits are ticked by default; they are the set the comparison tables
+        need. A file that fails a check, or has other than two classes, is unavailable with the
+        reason.
         """
-        if key == ARTICLE:
-            return SampleOption(ARTICLE, "All article splits", COMPARISON_SPLITS, complete=True)
-        (resolved,) = resolve_keys(self.default_folder(), (key,))
-        return SampleOption(resolved, resolved, (resolved,))
-
-    def sample_options(self, folder: Path | None) -> tuple[SampleOption, ...]:
-        """German's three splits together, then every split file of the folder (ADR-090)."""
         try:
             root = _folder(folder)
         except CSRError as error:
-            reason = str(error)
-            return (
-                SampleOption(
-                    ARTICLE,
-                    "All article splits",
-                    COMPARISON_SPLITS,
-                    available=False,
-                    reason=reason,
-                    complete=True,
-                ),
-            )
+            return SampleTree((), problem=str(error), complete=COMPARISON_SPLITS)
         catalog = discover_splits(root)
         self._specs.update({f.key: f.spec for f in catalog.files if f.name is not None})
-        found = {f.key: f for f in catalog.files}
-        article = [found.get(key) for key in COMPARISON_SPLITS]
-        problems = [
-            f.reason if f is not None else f"no split file {key} in {root}"
-            for key, f in zip(COMPARISON_SPLITS, article, strict=True)
-            if f is None or not f.available
-        ]
-        tests = [f.split.test_sizes[0] for f in article if f is not None and f.split is not None]
-        options = [
-            SampleOption(
-                ARTICLE,
-                "All article splits",
-                COMPARISON_SPLITS,
-                "test " + " / ".join(map(str, tests)) if not problems else "",
-                available=not problems,
-                reason=problems[0] if problems else (catalog.problem or ""),
-                complete=True,
-            )
-        ]
-        for file in catalog.files:
-            options.append(
-                SampleOption(
-                    file.key,
-                    file.short_label,
-                    (file.key,),
-                    file.details if file.available else "",
-                    available=file.available,
-                    reason=file.reason,
-                )
-            )
-        return tuple(options)
+        groups = tuple(
+            SampleGroup(_dataset_title(name, files), tuple(_choice(f) for f in files))
+            for name, files in catalog.datasets()
+        )
+        available = {c.key for g in groups for c in g.choices if c.available}
+        return SampleTree(
+            groups,
+            default=tuple(key for key in COMPARISON_SPLITS if key in available),
+            complete=COMPARISON_SPLITS,
+            problem=catalog.problem,
+            complete_note=NEEDS_COMPARISON_SET,
+        )
+
+    def option(self, keys: tuple[str, ...], folder: Path | None = None) -> SampleOption:
+        """The option of a set of splits, by key or training size, read from ``folder``.
+
+        Raises:
+            DatasetError: A split is unknown or ambiguous.
+        """
+        return self.samples(folder).option(resolve_keys(_folder(folder), keys))
 
     def load(self, option: SampleOption, folder: Path | None) -> SampleSet:
         """Read the split files of ``option``: training samples, test objects, answer keys."""
@@ -366,7 +367,7 @@ class ComparisonPart:
         complete = evaluation.option.complete and (
             tuple(s.key for s in evaluation.predictions.trained.samples) == COMPARISON_SPLITS
         )
-        return "" if complete else WRITES_ARTICLE
+        return "" if complete else WRITES_COMPARISON_SET
 
     def outcome(self, evaluation: Evaluation) -> ComparisonOutcome:
         """The files of the evaluation, as ``csr compare run`` renders them.
@@ -424,9 +425,9 @@ def _evaluation_tables(
             _shown("all-results", "All results", everything),
         )
     return (
-        StageTable(STANDARD_KEY, TABLE_STANDARD, missing=NEEDS_ARTICLE),
-        StageTable(KNN_KEY, TABLE_KNN, missing=NEEDS_ARTICLE),
-        StageTable("cs-model", "CS-model", missing=NEEDS_ARTICLE),
+        StageTable(STANDARD_KEY, TABLE_STANDARD, missing=NEEDS_COMPARISON_SET),
+        StageTable(KNN_KEY, TABLE_KNN, missing=NEEDS_COMPARISON_SET),
+        StageTable("cs-model", "CS-model", missing=NEEDS_COMPARISON_SET),
         _shown("all-results", "All results", results_table(results)),
     )
 

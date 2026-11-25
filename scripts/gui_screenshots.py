@@ -71,7 +71,7 @@ def classifiers(
     view.output.setText(str(Path("experiments") / "comparison"))
     ended: list[bool] = []
     view.finished.connect(lambda: ended.append(True))
-    for start in (view.read_options, view.run_all):
+    for start in (view.read_samples, view.run_all):
         ended.clear()
         start()
         while not ended:

@@ -1356,12 +1356,16 @@ The default preset follows the article. Settings that deviate from it are switch
         <translation>Разбиение</translation>
     </message>
     <message>
-        <source>What the part runs on, with the sizes of the samples</source>
-        <translation>На чём выполняется часть, с объёмами выборок</translation>
+        <source>Tick the samples to run on: a split, a dataset, or several of them</source>
+        <translation>Отметьте выборки для запуска: разбиение, набор данных или несколько из них</translation>
     </message>
     <message>
         <source>The folder the samples are read from</source>
         <translation>Папка, из которой читаются выборки</translation>
+    </message>
+    <message>
+        <source>Read the split folder again</source>
+        <translation>Прочитать папку разбиений заново</translation>
     </message>
     <message>
         <source>Run all</source>
@@ -1406,10 +1410,6 @@ The default preset follows the article. Settings that deviate from it are switch
     <message>
         <source>The samples have not been read yet.</source>
         <translation>Выборки ещё не прочитаны.</translation>
-    </message>
-    <message>
-        <source>Choose the samples.</source>
-        <translation>Выберите выборки.</translation>
     </message>
     <message>
         <source>Compare with the true classes first.</source>
@@ -1498,6 +1498,10 @@ The default preset follows the article. Settings that deviate from it are switch
     <message>
         <source>True classes revealed: the decisions are compared with the test objects' classes.</source>
         <translation>Истинные классы открыты: решения сравниваются с классами тестовых объектов.</translation>
+    </message>
+    <message>
+        <source>Tick a sample.</source>
+        <translation>Отметьте выборку.</translation>
     </message>
     <message>
         <source>The tables as CSV, Markdown and LaTeX, the results and their checksums</source>

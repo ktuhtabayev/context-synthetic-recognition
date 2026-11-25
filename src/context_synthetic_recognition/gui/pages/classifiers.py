@@ -54,7 +54,7 @@ class ClassifiersPage(Page):
             parent,
         )
         self.parts = parts()
-        self.views = [PartView(part) for part in self.parts]
+        self.views = [PartView(part, settings) for part in self.parts]
         self.list = QListWidget()
         self.list.setObjectName("parts")
         for part in self.parts:
@@ -85,7 +85,13 @@ class ClassifiersPage(Page):
         row.addWidget(self.side)
         row.addWidget(self.stack, 1)
         self.body.addLayout(row, 1)
-        self.list.setCurrentRow(0)
+        # the part shown last time; a part that is no longer registered gives the first one
+        saved = (
+            [p.key for p in self.parts].index(settings.classifier_part)
+            if (settings.classifier_part in [p.key for p in self.parts])
+            else 0
+        )
+        self.list.setCurrentRow(saved)
         # with one part the list starts collapsed: a narrow strip that opens it
         self.set_parts_open(len(self.parts) > 1)
         self.apply_palette(self.colours)
@@ -108,6 +114,7 @@ class ClassifiersPage(Page):
     def _part_chosen(self, row: int) -> None:
         if 0 <= row < len(self.views):
             self.stack.setCurrentIndex(row)
+            self.settings.classifier_part = self.parts[row].key
 
     def choose(self, key: str) -> bool:
         """Show the part registered as ``key``."""
