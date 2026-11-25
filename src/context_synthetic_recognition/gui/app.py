@@ -116,7 +116,8 @@ def _check_comparison(check: Callable[[str, bool], None]) -> None:
     """The comparison with standard classifiers on the split files (ADR-081).
 
     The Windows build carries the split files and scikit-learn, so there the comparison must
-    run; an installation from source finds the split files only in the project.
+    run; an installation from source finds the split files only in the project. The samples of
+    the parts are listed by dataset, with the number of their splits.
     """
     frozen = bool(getattr(sys, "frozen", False))
     try:
@@ -124,6 +125,14 @@ def _check_comparison(check: Callable[[str, bool], None]) -> None:
     except CSRError as error:
         check(f"comparison: not checked here — {error}", not frozen)
         return
+    # the samples of every part that reads this folder: every split file, by dataset (ADR-091)
+    for part in parts():
+        if part.default_folder() is None:
+            continue
+        tree = part.samples(folder)
+        shown = "; ".join(f"{g.title} {len(g.choices)}" for g in tree.groups) or tree.problem
+        usable = bool(tree.groups) and all(c.available for c in tree.choices)
+        check(f"samples of {part.key}: {shown}", usable)
     try:
         outcome = comparison_job(folder)
     except CSRError as error:
