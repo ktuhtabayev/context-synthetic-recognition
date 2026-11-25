@@ -289,6 +289,15 @@ def test_the_training_and_test_tabs(article: StageRun) -> None:
         "Not printed",
         "CS-model",
     }
+    by_title = {row[1]: row[4] for row in methods.rows}
+    assert by_title["SVM"] == "SVC, RBF kernel, C = 1.0, gamma = scale"
+    assert by_title["Random Forest"] == "200 trees, random_state = 42"  # its own, not SVM's
+    assert by_title["k-NN Canberra, k = 3"].startswith(
+        "Canberra metric, k = 3, on the quantitative"
+    )
+    assert "α = 0.1, odd k = 3 … 41" in str(by_title["CS-model Euclidean, α = 0.1"])
+    assert len(set(by_title.values())) == len(by_title)
+    assert methods.note.count("Both use every feature of the file") == 1
     assert methods.rows[8][:4] == (
         "Not printed",
         "k-NN Zhuravlyov, k = 3",

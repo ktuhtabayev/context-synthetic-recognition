@@ -30,6 +30,7 @@ from context_synthetic_recognition.comparison.cs_model import (
     CSModelResult,
     cs_model_config,
     cs_model_metrics,
+    cs_model_settings,
 )
 from context_synthetic_recognition.comparison.methods import (
     MethodResult,
@@ -46,7 +47,10 @@ from context_synthetic_recognition.comparison.settings import (
     TABLE_KNN,
     TABLE_STANDARD,
     SplitSpec,
+    knn_settings,
     metric_title,
+    random_forest_settings,
+    svm_settings,
 )
 from context_synthetic_recognition.config import ExperimentConfig
 from context_synthetic_recognition.core.arrays import IntArray, readonly
@@ -97,6 +101,17 @@ class MethodSpec:
     alpha: float | None = None
     unavailable: str = ""
     """Why the split cannot support the method (empty if it can, ADR-090)."""
+
+    @property
+    def settings(self) -> str:
+        """The method's own settings (ADR-094), never another method's."""
+        if self.method == "svm":
+            return svm_settings()
+        if self.method == "random-forest":
+            return random_forest_settings()
+        if self.method == "knn":
+            return knn_settings(str(self.metric), int(self.k or 0), self.features)
+        return cs_model_settings(str(self.metric), float(self.alpha or 0.0), self.features)
 
     @property
     def table(self) -> str | None:

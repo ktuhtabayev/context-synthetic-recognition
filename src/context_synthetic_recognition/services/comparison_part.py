@@ -33,10 +33,10 @@ from context_synthetic_recognition.comparison.stages import (
 )
 from context_synthetic_recognition.comparison.tables import (
     DECIMALS,
+    FEATURES_STANDARD,
     KNN_KEY,
     SETTINGS_CS_MODEL,
     SETTINGS_KNN,
-    SETTINGS_SKLEARN,
     STANDARD_KEY,
     comparison_tables,
     results_table,
@@ -252,9 +252,12 @@ class ComparisonPart:
     # ------------------------------------------------------------------ methods
 
     def method_groups(self, option: SampleOption) -> tuple[MethodGroup, ...]:
-        """Standard classifiers, k-NN by metric, the k-NN rows not printed, the CS-model."""
-        settings = {
-            TABLE_STANDARD: SETTINGS_SKLEARN,
+        """Standard classifiers, k-NN by metric, the k-NN rows not printed, the CS-model.
+
+        Every method carries its own settings; a group's note says what its methods share.
+        """
+        notes = {
+            TABLE_STANDARD: FEATURES_STANDARD,
             TABLE_KNN: SETTINGS_KNN,
             "Not printed": (
                 "The k-NN vote with the split's own metric on all features (German's Zhuravlyov "
@@ -263,23 +266,24 @@ class ComparisonPart:
             ),
             "CS-model": SETTINGS_CS_MODEL,
         }
-        found: dict[str, dict[str, tuple[MethodInfo, list[str]]]] = {g: {} for g in settings}
+        found: dict[str, dict[str, tuple[MethodInfo, list[str]]]] = {g: {} for g in notes}
         for key in option.splits:
             for spec in method_specs(self._spec(key)):
                 entry = found[spec.group].setdefault(
-                    spec.key, (MethodInfo(spec.key, spec.title, spec.features, ()), [])
+                    spec.key,
+                    (MethodInfo(spec.key, spec.title, spec.features, (), spec.settings), []),
                 )
                 entry[1].append(self._spec(key).name)
         return tuple(
             MethodGroup(
                 group,
-                settings[group],
+                notes[group],
                 tuple(
-                    MethodInfo(info.key, info.title, info.features, tuple(splits))
+                    MethodInfo(info.key, info.title, info.features, tuple(splits), info.settings)
                     for info, splits in found[group].values()
                 ),
             )
-            for group in settings
+            for group in notes
             if found[group]
         )
 

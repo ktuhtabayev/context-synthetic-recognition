@@ -23,13 +23,14 @@ from context_synthetic_recognition.comparison.settings import (
     KNN_KS,
     KNN_METRICS,
     METHOD_TITLES,
-    SEED,
     SKLEARN_OPTIONS,
     TABLE_CS_MODEL,
     TABLE_KNN,
     TABLE_STANDARD,
     metric_title,
     percent,
+    random_forest_settings,
+    svm_settings,
 )
 from context_synthetic_recognition.evaluation.metrics import ClassificationMetrics
 from context_synthetic_recognition.export.tables import Cell, Table
@@ -43,17 +44,22 @@ RESULTS_KEY = "results"
 DECIMALS = 2
 """Decimals of the percentages in Markdown and LaTeX."""
 
-SETTINGS_SKLEARN = (
-    "SVM: SVC with the RBF kernel, C = 1.0, gamma = scale; Random Forest: 200 trees, "
-    f"random_state = {SEED}. Every feature of the file: the quantitative ones min–max scaled on "
-    "the training sample, the nominal ones one-hot encoded with the categories of the training "
-    "sample (an unseen category encodes as all zeros)."
+FEATURES_STANDARD = (
+    "Both use every feature of the file: the quantitative ones min–max scaled on the training "
+    "sample, the nominal ones one-hot encoded with the categories of the training sample (an "
+    "unseen category encodes as all zeros)."
 )
+"""What SVM and Random Forest share (said once, ADR-094)."""
+SETTINGS_SKLEARN = (
+    f"SVM: {svm_settings()}. Random Forest: {random_forest_settings()}. {FEATURES_STANDARD}"
+)
+"""The note of the Standard classifiers table: each method's settings, then what they share."""
 SETTINGS_KNN = (
     "Majority vote of the k nearest training objects on the quantitative features, min–max "
     f"scaled on the training sample; distances rounded to {DISTANCE_DECIMALS} decimals, equal "
     "distances to the smaller training index."
 )
+"""What the k-NN rows share; each row is its metric, each cell its k."""
 TRAINING_ACCURACY = (
     "resubstitution (Definition 2): a k-NN training object is not its own neighbour, a CS-model "
     "training object is left out of its own context; SVM and Random Forest classify the training "
@@ -67,6 +73,7 @@ SETTINGS_CS_MODEL = (
     "training object left out; final class means, one majorizing pass. Refusals count as errors "
     "(Definition 3)."
 )
+"""What the CS-models share; each row is its metric, each cell its α."""
 
 
 def _majority(results: Sequence[SplitResult]) -> str:
@@ -275,10 +282,16 @@ def _scores(metrics: ClassificationMetrics) -> dict[str, Any]:
 
 def _cs_model_data(model: CSModelResult) -> dict[str, Any]:
     if model.test is None or model.training is None:
-        return {"key": model.key, "title": model.title, "undefined": model.undefined}
+        return {
+            "key": model.key,
+            "title": model.title,
+            "settings": model.settings,
+            "undefined": model.undefined,
+        }
     return {
         "key": model.key,
         "title": model.title,
+        "settings": model.settings,
         "metric": model.metric,
         "alpha": model.alpha,
         "features": model.features,
@@ -295,6 +308,7 @@ def _method_data(method: MethodResult) -> dict[str, Any]:
     data: dict[str, Any] = {
         "key": method.key,
         "title": method.title,
+        "settings": method.settings,
         "table": method.table,
         "features": method.features,
         "n_features": method.n_features,
@@ -331,7 +345,7 @@ def summary_data(
         "settings": {
             "svm": dict(SKLEARN_OPTIONS["svm"]),
             "random-forest": dict(SKLEARN_OPTIONS["random-forest"]),
-            "svm_and_random_forest_features": SETTINGS_SKLEARN,
+            "standard_classifiers_features": FEATURES_STANDARD,
             "knn": {
                 "ks": list(KNN_KS),
                 "metrics": list(KNN_METRICS),

@@ -42,6 +42,15 @@ NORMALIZER = "minmax"
 """Scaling of every operator, fitted on the training sample."""
 
 
+def cs_model_settings(metric: str, alpha: float, features: str) -> str:
+    """A CS-model's own settings: its metric, α, the k range and the synthetic-feature values."""
+    return (
+        f"{metric_title(metric)} metric on the {features} features, α = {alpha}, odd k = "
+        f"{K_START} … {K_STOP}, synthetic features 0, 1, 2 (those that take 0 on a training "
+        "object left out)"
+    )
+
+
 @dataclass(frozen=True, eq=False)
 class CSModelResult:
     """The CS-model with one metric and one α on one split."""
@@ -76,6 +85,11 @@ class CSModelResult:
     def key(self) -> str:
         """``cs-model-euclidean-0.1``."""
         return f"cs-model-{self.metric}-{self.alpha}"
+
+    @property
+    def settings(self) -> str:
+        """Its own settings (:func:`cs_model_settings`)."""
+        return cs_model_settings(self.metric, self.alpha, self.features)
 
     @property
     def title(self) -> str:

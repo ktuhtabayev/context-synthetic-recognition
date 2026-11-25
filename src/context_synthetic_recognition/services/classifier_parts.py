@@ -225,15 +225,17 @@ class MethodInfo:
     features: str
     """E.g. ``quantitative (7)``."""
     splits: tuple[str, ...]
-    """The splits it runs on."""
+    """The splits it runs on, by name."""
+    settings: str = ""
+    """Its own fixed settings (ADR-094), never another method's."""
 
 
 @dataclass(frozen=True)
 class MethodGroup:
-    """Methods grouped as in the article, with their fixed settings."""
+    """Methods grouped as in the article; the note says what they share (said once)."""
 
     title: str
-    settings: str
+    note: str
     methods: tuple[MethodInfo, ...]
 
 
@@ -565,17 +567,27 @@ def _value(x: float) -> Cell:
 def methods_table(groups: Sequence[MethodGroup]) -> StageTable:
     """*Methods*: every method with its group, features, splits and fixed settings."""
     rows = tuple(
-        (group.title, method.title, method.features, ", ".join(method.splits), group.settings)
+        (
+            group.title,
+            method.title,
+            method.features,
+            ", ".join(method.splits),
+            method.settings or None,
+        )
         for group in groups
         for method in group.methods
     )
+    shared = " ".join(f"{g.title}: {g.note}" for g in groups if g.note and g.methods)
     table = Table(
         key="methods",
         title="Methods and their fixed settings",
         columns=("Group", "Method", "Features", "Splits", "Settings"),
         rows=rows,
         group=GROUP,
-        note="The settings were fixed before any run; nothing is tuned on the test samples.",
+        note=(
+            "The settings were fixed before any run; nothing is tuned on the test samples. "
+            f"{shared}"
+        ).strip(),
         labels=2,
     )
     return StageTable("methods", "Methods", (ShownTable(table, (CellMeaning.PLAIN,) * 5),))

@@ -50,6 +50,29 @@ def metric_title(metric: str) -> str:
     return METRIC_TITLES.get(metric, metric.replace("-", " ").capitalize())
 
 
+def svm_settings() -> str:
+    """SVM's own settings: ``SVC, RBF kernel, C = 1.0, gamma = scale`` (ADR-094)."""
+    options = SKLEARN_OPTIONS["svm"]
+    return (
+        f"SVC, {str(options['kernel']).upper()} kernel, C = {options['C']}, "
+        f"gamma = {options['gamma']}"
+    )
+
+
+def random_forest_settings() -> str:
+    """Random Forest's own settings: ``200 trees, random_state = 42`` (ADR-094)."""
+    options = SKLEARN_OPTIONS["random-forest"]
+    return f"{options['n_estimators']} trees, random_state = {options['random_state']}"
+
+
+def knn_settings(metric: str, k: int, features: str) -> str:
+    """A k-NN row's own settings: its metric, k, the features it uses and the tie rule."""
+    return (
+        f"{metric_title(metric)} metric, k = {k}, on the {features} features; equal distances "
+        "go to the smaller training index"
+    )
+
+
 def own_metrics(key: str, metric: str) -> tuple[str, ...]:
     """Further metrics of a split's k-NN vote and CS-model, on every feature (ADR-090).
 

@@ -129,6 +129,13 @@ def test_the_page_lists_the_parts(window: MainWindow, qtbot: QtBot) -> None:
     methods = view.training_view.tabs_by_key["methods"].panel.table()
     assert methods is not None
     assert methods.rows[0][:2] == ("Standard classifiers", "SVM")
+    assert methods.rows[1][1:5:3] == ("Random Forest", "200 trees, random_state = 42")
+    # a long settings text is never cut off without a way to read it: its tooltip holds it all
+    model = view.training_view.tabs_by_key["methods"].panel.model()
+    assert model is not None
+    knn = model.index(2, 4)
+    assert model.data(knn, Qt.ItemDataRole.ToolTipRole) == methods.rows[2][4]
+    assert model.data(model.index(0, 0), Qt.ItemDataRole.ToolTipRole) is None  # short: no need
     assert not view.stepper.buttons[1].isEnabled()
     assert not view.go_to_step(2)
     assert view.stack.currentIndex() == 0

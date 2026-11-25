@@ -57,7 +57,9 @@ class DummyPart:
         return SampleSet(option, (TrainingSample("toy", "Toy", training),), (test,), (answers,))
 
     def method_groups(self, option: SampleOption) -> tuple[MethodGroup, ...]:
-        method = MethodInfo("nearest", "Nearest object", "all (1)", ("toy",))
+        method = MethodInfo(
+            "nearest", "Nearest object", "all (1)", ("toy",), "the nearest training object on x₁"
+        )
         return (MethodGroup("Trivial", "The class of the nearest training object.", (method,)),)
 
     def train(

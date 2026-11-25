@@ -33,7 +33,10 @@ from context_synthetic_recognition.comparison.settings import (
     METHOD_TITLES,
     SEED,
     SplitSpec,
+    knn_settings,
     metric_title,
+    random_forest_settings,
+    svm_settings,
 )
 from context_synthetic_recognition.config import (
     ExperimentConfig,
@@ -79,6 +82,15 @@ class MethodResult:
         for decisions in (self.test_decisions, self.training_decisions):
             if decisions is not None:
                 readonly(decisions)
+
+    @property
+    def settings(self) -> str:
+        """Its own settings (ADR-094): SVM's, Random Forest's, or the k-NN row's."""
+        if self.method == "svm":
+            return svm_settings()
+        if self.method == "random-forest":
+            return random_forest_settings()
+        return knn_settings(str(self.metric), int(self.k or 0), self.features)
 
     @property
     def title(self) -> str:

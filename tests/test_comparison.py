@@ -407,7 +407,27 @@ def test_the_summary(outcome: ComparisonOutcome) -> None:
     assert summary["settings"]["svm"] == {"kernel": "rbf", "C": 1.0, "gamma": "scale"}
     assert summary["settings"]["random-forest"] == {"n_estimators": 200, "random_state": 42}
     assert summary["settings"]["knn"]["ks"] == [3, 5]
+    assert summary["settings"]["standard_classifiers_features"].startswith(
+        "Both use every feature of the file"
+    )
     split = summary["splits"][0]
+    # every method has its own settings (ADR-094): Random Forest's are not SVM's
+    settings = {m["key"]: m["settings"] for m in split["methods"]}
+    assert settings["svm"] == "SVC, RBF kernel, C = 1.0, gamma = scale"
+    assert settings["random-forest"] == "200 trees, random_state = 42"
+    assert settings["knn-chebyshev-5"] == (
+        "Chebyshev metric, k = 5, on the quantitative features; equal distances go to the "
+        "smaller training index"
+    )
+    assert settings["knn-zhuravlyov-3"].startswith("Zhuravlyov metric, k = 3, on the all features")
+    assert split["cs_model"][7]["settings"] == (
+        "Zhuravlyov metric on the all features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, "
+        "2 (those that take 0 on a training object left out)"
+    )
+    assert len(set(settings.values())) == len(settings)
+    note = outcome.tables[0].note
+    assert note.count("SVC, RBF kernel") == note.count("200 trees") == 1
+    assert note.count("Both use every feature of the file") == 1  # the shared facts, once
     assert split["file_sha256"] == FILES[split["file"]]
     assert split["training"] == {"n": 336, "K1": 196, "K2": 140}
     assert split["majority_rate"] == 75.9
@@ -750,5 +770,7 @@ def test_an_undefined_cs_model_is_reported(
     assert data["splits"][0]["cs_model"][0] == {
         "key": "cs-model-euclidean-0.1",
         "title": "CS-model Euclidean, α = 0.1",
+        "settings": models[0].settings,
         "undefined": "no admissible k",
     }
+    assert models[0].settings.startswith("Euclidean metric on the quantitative features, α = 0.1")

@@ -10,7 +10,7 @@
       "n_estimators": 200,
       "random_state": 42
     },
-    "svm_and_random_forest_features": "SVM: SVC with the RBF kernel, C = 1.0, gamma = scale; Random Forest: 200 trees, random_state = 42. Every feature of the file: the quantitative ones min–max scaled on the training sample, the nominal ones one-hot encoded with the categories of the training sample (an unseen category encodes as all zeros).",
+    "standard_classifiers_features": "Both use every feature of the file: the quantitative ones min–max scaled on the training sample, the nominal ones one-hot encoded with the categories of the training sample (an unseen category encodes as all zeros).",
     "knn": {
       "ks": [
         3,
@@ -66,6 +66,7 @@
         {
           "key": "svm",
           "title": "SVM",
+          "settings": "SVC, RBF kernel, C = 1.0, gamma = scale",
           "table": "Standard classifiers",
           "features": "all",
           "n_features": 20,
@@ -87,6 +88,7 @@
         {
           "key": "random-forest",
           "title": "Random Forest",
+          "settings": "200 trees, random_state = 42",
           "table": "Standard classifiers",
           "features": "all",
           "n_features": 20,
@@ -108,6 +110,7 @@
         {
           "key": "knn-euclidean-3",
           "title": "k-NN Euclidean, k = 3",
+          "settings": "Euclidean metric, k = 3, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -129,6 +132,7 @@
         {
           "key": "knn-euclidean-5",
           "title": "k-NN Euclidean, k = 5",
+          "settings": "Euclidean metric, k = 5, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -150,6 +154,7 @@
         {
           "key": "knn-chebyshev-3",
           "title": "k-NN Chebyshev, k = 3",
+          "settings": "Chebyshev metric, k = 3, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -171,6 +176,7 @@
         {
           "key": "knn-chebyshev-5",
           "title": "k-NN Chebyshev, k = 5",
+          "settings": "Chebyshev metric, k = 5, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -192,6 +198,7 @@
         {
           "key": "knn-canberra-3",
           "title": "k-NN Canberra, k = 3",
+          "settings": "Canberra metric, k = 3, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -213,6 +220,7 @@
         {
           "key": "knn-canberra-5",
           "title": "k-NN Canberra, k = 5",
+          "settings": "Canberra metric, k = 5, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -234,6 +242,7 @@
         {
           "key": "knn-zhuravlyov-3",
           "title": "k-NN Zhuravlyov, k = 3",
+          "settings": "Zhuravlyov metric, k = 3, on the all features; equal distances go to the smaller training index",
           "table": null,
           "features": "all",
           "n_features": 20,
@@ -255,6 +264,7 @@
         {
           "key": "knn-zhuravlyov-5",
           "title": "k-NN Zhuravlyov, k = 5",
+          "settings": "Zhuravlyov metric, k = 5, on the all features; equal distances go to the smaller training index",
           "table": null,
           "features": "all",
           "n_features": 20,
@@ -278,6 +288,7 @@
         {
           "key": "cs-model-euclidean-0.1",
           "title": "CS-model Euclidean, α = 0.1",
+          "settings": "Euclidean metric on the quantitative features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "euclidean",
           "alpha": 0.1,
           "features": "quantitative",
@@ -310,6 +321,7 @@
         {
           "key": "cs-model-euclidean-0.2",
           "title": "CS-model Euclidean, α = 0.2",
+          "settings": "Euclidean metric on the quantitative features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "euclidean",
           "alpha": 0.2,
           "features": "quantitative",
@@ -340,6 +352,7 @@
         {
           "key": "cs-model-chebyshev-0.1",
           "title": "CS-model Chebyshev, α = 0.1",
+          "settings": "Chebyshev metric on the quantitative features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "chebyshev",
           "alpha": 0.1,
           "features": "quantitative",
@@ -370,6 +383,7 @@
         {
           "key": "cs-model-chebyshev-0.2",
           "title": "CS-model Chebyshev, α = 0.2",
+          "settings": "Chebyshev metric on the quantitative features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "chebyshev",
           "alpha": 0.2,
           "features": "quantitative",
@@ -400,6 +414,7 @@
         {
           "key": "cs-model-canberra-0.1",
           "title": "CS-model Canberra, α = 0.1",
+          "settings": "Canberra metric on the quantitative features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "canberra",
           "alpha": 0.1,
           "features": "quantitative",
@@ -433,6 +448,7 @@
         {
           "key": "cs-model-canberra-0.2",
           "title": "CS-model Canberra, α = 0.2",
+          "settings": "Canberra metric on the quantitative features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "canberra",
           "alpha": 0.2,
           "features": "quantitative",
@@ -466,6 +482,7 @@
         {
           "key": "cs-model-zhuravlyov-0.1",
           "title": "CS-model Zhuravlyov, α = 0.1",
+          "settings": "Zhuravlyov metric on the all features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "zhuravlyov",
           "alpha": 0.1,
           "features": "all",
@@ -499,6 +516,7 @@
         {
           "key": "cs-model-zhuravlyov-0.2",
           "title": "CS-model Zhuravlyov, α = 0.2",
+          "settings": "Zhuravlyov metric on the all features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "zhuravlyov",
           "alpha": 0.2,
           "features": "all",
@@ -553,6 +571,7 @@
         {
           "key": "svm",
           "title": "SVM",
+          "settings": "SVC, RBF kernel, C = 1.0, gamma = scale",
           "table": "Standard classifiers",
           "features": "all",
           "n_features": 7,
@@ -574,6 +593,7 @@
         {
           "key": "random-forest",
           "title": "Random Forest",
+          "settings": "200 trees, random_state = 42",
           "table": "Standard classifiers",
           "features": "all",
           "n_features": 7,
@@ -595,6 +615,7 @@
         {
           "key": "knn-euclidean-3",
           "title": "k-NN Euclidean, k = 3",
+          "settings": "Euclidean metric, k = 3, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -616,6 +637,7 @@
         {
           "key": "knn-euclidean-5",
           "title": "k-NN Euclidean, k = 5",
+          "settings": "Euclidean metric, k = 5, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -637,6 +659,7 @@
         {
           "key": "knn-chebyshev-3",
           "title": "k-NN Chebyshev, k = 3",
+          "settings": "Chebyshev metric, k = 3, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -658,6 +681,7 @@
         {
           "key": "knn-chebyshev-5",
           "title": "k-NN Chebyshev, k = 5",
+          "settings": "Chebyshev metric, k = 5, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -679,6 +703,7 @@
         {
           "key": "knn-canberra-3",
           "title": "k-NN Canberra, k = 3",
+          "settings": "Canberra metric, k = 3, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -700,6 +725,7 @@
         {
           "key": "knn-canberra-5",
           "title": "k-NN Canberra, k = 5",
+          "settings": "Canberra metric, k = 5, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -723,6 +749,7 @@
         {
           "key": "cs-model-euclidean-0.1",
           "title": "CS-model Euclidean, α = 0.1",
+          "settings": "Euclidean metric on the quantitative features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "euclidean",
           "alpha": 0.1,
           "features": "quantitative",
@@ -754,6 +781,7 @@
         {
           "key": "cs-model-euclidean-0.2",
           "title": "CS-model Euclidean, α = 0.2",
+          "settings": "Euclidean metric on the quantitative features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "euclidean",
           "alpha": 0.2,
           "features": "quantitative",
@@ -784,6 +812,7 @@
         {
           "key": "cs-model-chebyshev-0.1",
           "title": "CS-model Chebyshev, α = 0.1",
+          "settings": "Chebyshev metric on the quantitative features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "chebyshev",
           "alpha": 0.1,
           "features": "quantitative",
@@ -815,6 +844,7 @@
         {
           "key": "cs-model-chebyshev-0.2",
           "title": "CS-model Chebyshev, α = 0.2",
+          "settings": "Chebyshev metric on the quantitative features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "chebyshev",
           "alpha": 0.2,
           "features": "quantitative",
@@ -845,6 +875,7 @@
         {
           "key": "cs-model-canberra-0.1",
           "title": "CS-model Canberra, α = 0.1",
+          "settings": "Canberra metric on the quantitative features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "canberra",
           "alpha": 0.1,
           "features": "quantitative",
@@ -875,6 +906,7 @@
         {
           "key": "cs-model-canberra-0.2",
           "title": "CS-model Canberra, α = 0.2",
+          "settings": "Canberra metric on the quantitative features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "canberra",
           "alpha": 0.2,
           "features": "quantitative",
@@ -928,6 +960,7 @@
         {
           "key": "svm",
           "title": "SVM",
+          "settings": "SVC, RBF kernel, C = 1.0, gamma = scale",
           "table": "Standard classifiers",
           "features": "all",
           "n_features": 7,
@@ -949,6 +982,7 @@
         {
           "key": "random-forest",
           "title": "Random Forest",
+          "settings": "200 trees, random_state = 42",
           "table": "Standard classifiers",
           "features": "all",
           "n_features": 7,
@@ -970,6 +1004,7 @@
         {
           "key": "knn-euclidean-3",
           "title": "k-NN Euclidean, k = 3",
+          "settings": "Euclidean metric, k = 3, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -991,6 +1026,7 @@
         {
           "key": "knn-euclidean-5",
           "title": "k-NN Euclidean, k = 5",
+          "settings": "Euclidean metric, k = 5, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -1012,6 +1048,7 @@
         {
           "key": "knn-chebyshev-3",
           "title": "k-NN Chebyshev, k = 3",
+          "settings": "Chebyshev metric, k = 3, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -1033,6 +1070,7 @@
         {
           "key": "knn-chebyshev-5",
           "title": "k-NN Chebyshev, k = 5",
+          "settings": "Chebyshev metric, k = 5, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -1054,6 +1092,7 @@
         {
           "key": "knn-canberra-3",
           "title": "k-NN Canberra, k = 3",
+          "settings": "Canberra metric, k = 3, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -1075,6 +1114,7 @@
         {
           "key": "knn-canberra-5",
           "title": "k-NN Canberra, k = 5",
+          "settings": "Canberra metric, k = 5, on the quantitative features; equal distances go to the smaller training index",
           "table": "k-NN by metric",
           "features": "quantitative",
           "n_features": 7,
@@ -1098,6 +1138,7 @@
         {
           "key": "cs-model-euclidean-0.1",
           "title": "CS-model Euclidean, α = 0.1",
+          "settings": "Euclidean metric on the quantitative features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "euclidean",
           "alpha": 0.1,
           "features": "quantitative",
@@ -1128,6 +1169,7 @@
         {
           "key": "cs-model-euclidean-0.2",
           "title": "CS-model Euclidean, α = 0.2",
+          "settings": "Euclidean metric on the quantitative features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "euclidean",
           "alpha": 0.2,
           "features": "quantitative",
@@ -1158,6 +1200,7 @@
         {
           "key": "cs-model-chebyshev-0.1",
           "title": "CS-model Chebyshev, α = 0.1",
+          "settings": "Chebyshev metric on the quantitative features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "chebyshev",
           "alpha": 0.1,
           "features": "quantitative",
@@ -1189,6 +1232,7 @@
         {
           "key": "cs-model-chebyshev-0.2",
           "title": "CS-model Chebyshev, α = 0.2",
+          "settings": "Chebyshev metric on the quantitative features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "chebyshev",
           "alpha": 0.2,
           "features": "quantitative",
@@ -1219,6 +1263,7 @@
         {
           "key": "cs-model-canberra-0.1",
           "title": "CS-model Canberra, α = 0.1",
+          "settings": "Canberra metric on the quantitative features, α = 0.1, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "canberra",
           "alpha": 0.1,
           "features": "quantitative",
@@ -1249,6 +1294,7 @@
         {
           "key": "cs-model-canberra-0.2",
           "title": "CS-model Canberra, α = 0.2",
+          "settings": "Canberra metric on the quantitative features, α = 0.2, odd k = 3 … 41, synthetic features 0, 1, 2 (those that take 0 on a training object left out)",
           "metric": "canberra",
           "alpha": 0.2,
           "features": "quantitative",
