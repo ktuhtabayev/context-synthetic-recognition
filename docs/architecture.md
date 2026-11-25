@@ -39,7 +39,7 @@ flowchart TB
 | `data` | Dataset schema, loaders (experiment workbook, extended layout, CSV/XLSX/Parquet), the dataset folder, built-in datasets, split files with a training/test flag, hashing |
 | `evaluation` | Protocols (resubstitution, the R-IPS split, nested cross-validation, leave-one-out, k-fold, hold-out), metrics, AUC/ROC, margins, baselines |
 | `comparison` | The comparison with standard classifiers: SVM, Random Forest and k-NN on the article's training and test samples, through the baselines; apart from the CS-model's pipeline (ADR-079). `comparison.stages`: training, test (the objects without their class) and evaluation (ADR-084, ADR-085) |
-| `services` | Experiment runner, run folders that can be repeated, validation against the workbooks, switch sensitivity, dataset summaries, configuration checks, the comparison's files and their check, the discovery of the split files (`split_discovery`, ADR-090), the classifier parts of the *Classifiers* page (`CLASSIFIER_PARTS`, ADR-084) |
+| `services` | Experiment runner, run folders that can be repeated, validation against the workbooks, switch sensitivity, dataset summaries, configuration checks, the comparison's files and their check, the discovery of the split files (`split_discovery`, ADR-090), the evaluation designs (`designs`, `design_runs`, ADR-095), the classifier parts of the *Classifiers* page (`CLASSIFIER_PARTS`, ADR-084) |
 | `export` | Excel workbook in the layout of the Excel experiment, CSV/JSON, LaTeX/Markdown, figures, report |
 | `cli` | The `csr` command: `fit`, `classify`, `run`, `export`, `validate`, `gui`, `config`, `data`, `compare` |
 | `gui` | Desktop application (PySide6, optional extra `[gui]`) |

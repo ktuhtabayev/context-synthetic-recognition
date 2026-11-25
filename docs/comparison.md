@@ -244,6 +244,122 @@ This repeats `experiments/comparison/cs-model.md`.
   the training accuracy (Definition 2), TUPLAM and the refusals of every model are in `results.csv`
   and `summary.json`.
 
+## Evaluation designs
+
+A split file holds three sets: the training sample T, the test sample Q and all its m objects.
+The comparison above fits on T and classifies Q, as the article does. An **evaluation design**
+uses the same file another way (ADR-095), so that the numbers can be read against other points
+of view: are they a property of these two samples, of the dataset, or of chance? Every design runs
+the same methods with the same fixed settings, and every design keeps the blind rule: the objects
+being classified reach the methods without their class, and normalization, encoding, R-IPS and
+every fit use only that design's training objects.
+
+| Design | What it does | What it shows |
+| :--- | :--- | :--- |
+| **Swapping the subsets** | | |
+| Training → Test (as given) | fit on T, classify Q | the article's evaluation; the default |
+| Test → Training (reversed) | fit on Q, classify T | whether the result holds with the roles of the two samples swapped |
+| Training → Training (self-check) | T on itself, by resubstitution (Definition 2): a k-NN object is not its own neighbour, a CS-model object is left out of its own context, SVM and Random Forest classify the objects they were fitted on | how well each method explains its own training sample; equals the comparison's training accuracy |
+| Test → Test (self-check) | Q on itself, the same way | how well the test objects explain each other |
+| **Comparison points** | | |
+| Random training samples (control) | 100 samples drawn from the m objects with T's size and class counts (seeds 42 … 141); each fitted, the other objects classified | the spread of chance samples, and where T's result ranks among them (percentile) |
+| Whole dataset, cross-validation | stratified 10-fold on the m objects (seed 42); the split markers ignored | the usual estimate on the whole dataset: mean and SD over the folds |
+| **Honest estimate** | | |
+| Selection inside folds | stratified 10-fold (seed 42); in each fold R-IPS (the article's defaults, the split's metric) chooses the training sample from the fold's training objects only; fitted on it, the held-out fold classified | selection and fit together, without the held-out objects ever touching the selection; with the sizes R-IPS chose |
+| **Optional extras** | | |
+| Training-size curve | stratified random subsamples of T of 25, 50 and 75 % (20 repetitions each, seeds 42 … 61), and T itself; Q classified | how the accuracy grows with the size of the training sample |
+| Split to split | fit on split A's T, classify split B's Q without the objects of A's T, for every ordered pair of compatible splits of one dataset | whether a training sample chosen with one metric serves another split |
+
+**Settings.** They are fixed in `services.designs` and shown read-only on the page: the seeds,
+100 random samples, 10 folds, the shares 25 / 50 / 75 % (rounded half up per class, at least one
+object) and 20 repetitions each. Split to split needs the same objects with identical values and
+types, matched one to one by their rows; otherwise the pair is shown as unavailable with the
+reason. German's Zhuravlyov split (20 features) and its Euclidean split (7 features) are not
+compatible; Spambase's two splits are not either, because the 722 file holds scaled values.
+
+**What is reported.** For every design, split and method: the accuracy and the balanced
+accuracy, the refusals, the majority-class rate of the classified objects and the sizes; a
+repeated design (random control, cross-validation, selection inside folds, curve) adds the
+standard deviation (n − 1) and the minimum and maximum over its rounds. A method or a case a
+split cannot support — an undefined CS-model on a small training sample, an incompatible pair —
+is shown with the reason; it never stops the rest.
+
+**Two checks.** The design as given on German's three splits gives exactly the numbers of the
+tables above, and the training self-check exactly the training accuracies of `results.csv`; the
+tests pin both. The selection inside folds also reports — without using it — whether the
+project's R-IPS on all m objects of a split file reproduces that file's training sample.
+
+**Where.** On the *Classifiers* page, the *Design* chooser beside the samples ([Desktop
+application](gui.md#8-classifiers)). In the CLI:
+
+```powershell
+.\.venv\Scripts\csr.exe compare run --design all                 # experiments\designs\<design>\
+.\.venv\Scripts\csr.exe compare run --design reversed --split Heart-Disease-76 -o C:\temp\heart
+.\.venv\Scripts\csr.exe compare check --design all               # every design folder, byte for byte
+.\.venv\Scripts\csr.exe compare predict --design reversed --split German-341
+```
+
+`experiments/designs/<design>/` holds `<design>.csv | md | tex` (every split, case and method),
+`rounds.csv` for a repeated design (every round), `summary.json` (the settings, the versions, every
+number) and `checksums.sha256`.
+
+### Results on German's three splits
+
+From `experiments/designs/` (`csr compare run --design all`, 9.9 minutes here; tests pin the
+numbers). Four of the methods, the mean of a repeated design; every method, case and round is in
+the folders, and `experiments/designs/all-designs/` puts all of them side by side.
+
+**German · Zhuravlyov split · training 336 (196, 140)** — accuracy / balanced accuracy, %
+
+| Method | as given | reversed | T self | Q self | random (mean) | 10-fold CV | R-IPS in folds | 50 % of T |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| SVM | 74.85 / 70.63 | 61.61 / 55.77 | 83.63 / 81.89 | 90.51 / 82.66 | 73.47 / 69.02 | 76.20 / 65.86 | 73.40 / 62.43 | 73.73 / 63.75 |
+| Random Forest | 74.25 / 69.81 | 63.10 / 56.94 | 100.00 / 100.00 | 100.00 / 100.00 | 74.62 / 69.03 | 76.10 / 65.88 | 73.30 / 63.50 | 73.43 / 66.28 |
+| k-NN Euclidean, k = 5 | 60.09 / 51.74 | 58.04 / 51.07 | 55.95 / 53.67 | 73.04 / 53.66 | 62.51 / 54.22 | 64.70 / 51.17 | 65.90 / 52.88 | 60.59 / 52.32 |
+| CS-model Euclidean, α = 0.1 | 62.95 / 51.92 | 58.33 / 50.10 | 58.93 / 55.51 | 75.90 / 50.43 | 64.21 / 50.74 | 63.20 / 46.19 | 24.00 / 40.00 | 53.76 / 47.68 |
+
+**German · Euclidean split · training 341 (173, 168)** — accuracy / balanced accuracy, %
+
+| Method | as given | reversed | T self | Q self | random (mean) | 10-fold CV | R-IPS in folds | 50 % of T |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| SVM | 50.68 / 52.41 | 49.56 / 48.85 | 59.53 / 59.65 | 81.03 / 52.94 | 62.39 / 58.90 | 69.90 / 50.50 | 70.00 / 51.62 | 53.42 / 53.01 |
+| Random Forest | 56.45 / 52.61 | 51.91 / 51.31 | 100.00 / 100.00 | 100.00 / 100.00 | 60.72 / 59.31 | 69.60 / 57.43 | 66.10 / 57.21 | 55.58 / 52.71 |
+| k-NN Euclidean, k = 5 | 54.78 / 49.58 | 49.27 / 48.67 | 53.08 / 53.02 | 77.24 / 52.83 | 57.62 / 54.68 | 64.80 / 51.90 | 61.70 / 52.55 | 54.44 / 51.38 |
+| CS-model Euclidean, α = 0.1 | 56.90 / 48.07 | 0.00 / 0.00 | 53.08 / 52.97 | 0.00 / 0.00 | 58.02 / 53.05 | 65.60 / 50.38 | 57.40 / 49.67 | 50.27 / 47.97 |
+
+**German · Chebyshev split · training 367 (190, 177)** — accuracy / balanced accuracy, %
+
+| Method | as given | reversed | T self | Q self | random (mean) | 10-fold CV | R-IPS in folds | 50 % of T |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| SVM | 61.14 / 57.99 | 52.04 / 50.36 | 62.67 / 62.48 | 81.83 / 53.56 | 64.36 / 59.17 | 69.60 / 50.10 | 70.30 / 53.45 | 61.39 / 56.58 |
+| Random Forest | 59.87 / 55.97 | 53.68 / 52.21 | 100.00 / 100.00 | 100.00 / 100.00 | 62.05 / 60.11 | 70.90 / 59.02 | 68.10 / 59.40 | 60.01 / 54.70 |
+| k-NN Euclidean, k = 5 | 59.87 / 56.59 | 51.50 / 50.07 | 50.68 / 50.49 | 78.20 / 52.85 | 58.52 / 54.78 | 65.00 / 51.86 | 61.80 / 53.57 | 57.35 / 53.36 |
+| CS-model Euclidean, α = 0.1 | 77.41 / 48.66 | 0.00 / 0.00 | 53.95 / 52.34 | 0.00 / 0.00 | 60.74 / 54.01 | 57.50 / 49.55 | 58.10 / 51.31 | 45.79 / 49.64 |
+
+How to read them:
+
+- **As given = the comparison** above, and the training self-check = its training accuracy;
+  Random Forest is at 100 % on its own training objects.
+- **The self-checks of the test samples** look high for SVM (81–91 %), but their balanced accuracy
+  is 53–83 %: the test samples are dominated by K1.
+- **Reversed**, fitted on the larger, unbalanced test sample, the standard classifiers lose 10–15
+  points on German's Zhuravlyov split and stay near 50 % on the others; the Euclidean CS-model
+  refuses every training object of the Euclidean and Chebyshev splits (0.00: refusals count as
+  errors).
+- **Random control**: German's Zhuravlyov training sample ranks at the 76.5th percentile of 100
+  random samples for SVM and the 38.5th for Random Forest; the Euclidean split's sample ranks at
+  the 1st and 0.5th — almost every random sample of its size and classes does better — and the
+  Chebyshev split's at the 14.5th and 15th.
+- **Cross-validation and selection inside folds** on all 1000 objects give 69.6–76.2 % for SVM
+  (balanced 50–66 %); R-IPS chooses 438–492 of a fold's 900 training objects. R-IPS on all 1000
+  objects with the article's defaults chooses 524, 506 and 523 objects; the files hold 336, 341 and
+  367, so it does not reproduce them.
+- **Training-size curve**: on German's Zhuravlyov split SVM grows from 73.14 % (25 %) to 74.85 %
+  (100 %); on the two others more training objects do not help.
+- **Split to split**: only the Euclidean and the Chebyshev split hold the same objects; fitted on
+  one and classifying the other's test objects outside its training sample, SVM reaches 50.26 % and
+  61.78 %.
+
 ## Running it
 
 ```powershell

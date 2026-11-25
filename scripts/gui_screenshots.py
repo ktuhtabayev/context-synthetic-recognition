@@ -11,6 +11,8 @@ The application runs the experiment on Heart-Disease (10, 13, 2) for real — th
 window is then rebuilt in Russian and in Uzbek for the two language images. The *Classifiers*
 page is grabbed with its whole tree of samples (a taller image), at each of its three steps
 after *Run all*, and once in the dark theme; ``--only classifiers`` makes just those five images.
+Then the design chooser and the figures of two designs on Heart-Disease's split (``--only
+designs`` makes those three as well).
 Nothing appears on screen: the window is laid out by the native Windows platform (for the system
 fonts) but never mapped.
 """
@@ -27,7 +29,8 @@ from pathlib import Path
 
 os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"  # the same pixels on every screen
 
-from PySide6.QtCore import QSettings, Qt
+from PySide6.QtCore import QPoint, QSettings, Qt
+from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import QApplication
 
 from context_synthetic_recognition.gui.app import (
@@ -43,6 +46,8 @@ SIZE = (1360, 860)
 NEW_OBJECT = "58 1 3 125 250 0 2 150 0 1 2 1 7"
 TALLER = 220
 """The image of the tree of samples is this much taller, so that the whole tree shows."""
+FIGURE_TALLER = 340
+"""The images of the designs' figures are this much taller, so that the figures can be read."""
 
 
 def pump(app: QApplication, seconds: float = 0.25) -> None:
@@ -108,11 +113,61 @@ def classifiers(
     window.set_theme("light")
 
 
+def designs(
+    app: QApplication, window: MainWindow, shot: Callable[[str], None], target: Path
+) -> None:
+    """The evaluation designs: the chooser, and the two figures (on Heart-Disease's split)."""
+    view = window.classifiers_page.view
+    window.go_to(window.classifiers_page)
+    view.samples.set_ticked(["Heart-Disease-76"])
+    view.samples.expandAll()
+    view.designs.choose("random-control")
+    pump(app)
+    view.go_to_step(0)
+    view.training_view.open("methods")
+    # the chooser open: its list is a window of its own, laid over the window's image
+    popup = view.designs.view().window()
+    popup.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
+    view.designs.showPopup()
+    pump(app)
+    image = window.grab()
+    painter = QPainter(image)
+    corner = view.designs.mapTo(window, QPoint(0, view.designs.height()))
+    painter.drawPixmap(corner, popup.grab())
+    painter.end()
+    image.save(str(target / "classifiers-designs.png"))
+    print("saved", "classifiers-designs")  # noqa: T201 - a script
+    view.designs.hidePopup()
+    pump(app)
+    ended: list[bool] = []
+    view.finished.connect(lambda: ended.append(True))
+    for key in ("random-control", "size-curve"):
+        view.designs.choose(key)
+        ended.clear()
+        view.run_all()
+        while not ended:
+            pump(app, 0.05)
+        view.go_to_step(2)
+        view.evaluation_view.open("design-figure")
+        window.resize(SIZE[0], SIZE[1] + FIGURE_TALLER)  # room for the figure
+        pump(app)
+        sizes = view.splitter.sizes()
+        view.splitter.setSizes([0, sum(sizes)])  # the samples as small as they go
+        pump(app)
+        shot(f"classifiers-{key}")
+        view.splitter.setSizes(sizes)
+        window.resize(*SIZE)
+    view.finished.disconnect()
+    view.designs.choose("direct")
+
+
 def main() -> None:
     """Drive the application through the workflow and save one image per page."""
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--target", type=Path, default=TARGET, help="folder for the images")
-    parser.add_argument("--only", choices=("classifiers",), help="make the images of one page only")
+    parser.add_argument(
+        "--only", choices=("classifiers", "designs"), help="make the images of one page only"
+    )
     arguments = parser.parse_args()
     target = arguments.target.resolve()
     target.mkdir(parents=True, exist_ok=True)
@@ -133,8 +188,10 @@ def main() -> None:
             window.grab().save(str(target / f"{name}.png"))
             print("saved", name)  # noqa: T201 - a script
 
-        if arguments.only == "classifiers":
+        if arguments.only in ("classifiers", "designs"):
             classifiers(app, window, work, shot)
+            if arguments.only == "designs":
+                designs(app, window, shot, target)
             window.close()
             pump(app)
             os.chdir(ROOT)
@@ -176,6 +233,7 @@ def main() -> None:
         shot("export")
         # the comparison with standard classifiers, apart from the workflow
         classifiers(app, window, work, shot)
+        designs(app, window, shot, target)
         window.set_theme("dark")
         window.go_to(results)
         results.open("table", "agglomerative-candidates")

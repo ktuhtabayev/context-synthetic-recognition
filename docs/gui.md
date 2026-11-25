@@ -218,6 +218,30 @@ shows them and offers none to change.
   **Refresh**; the ticks are kept for the splits still there.
 
   ![Classifiers page: the samples](images/gui/classifiers-samples.png)
+
+- **Design** — beside the samples, how the splits' objects are used for training and for
+  classification ([Evaluation designs](comparison.md#evaluation-designs), ADR-095). The nine
+  designs are grouped under *Swapping the subsets*, *Comparison points*, *Honest estimate* and
+  *Optional extras*; each has a one-line explanation below the chooser and its fixed settings in
+  the tooltip. *Training → Test (as given)* — the article's evaluation — is the default, and the
+  choice is remembered.
+
+  ![Classifiers page: the design chooser](images/gui/classifiers-designs.png)
+
+  With another design the steps stay the same: ① *Training* fits on the design's first round
+  (for a repeated design, its first repetition) and adds a *Design plan* tab with every case, its
+  rounds and their sizes; ② *Test* shows the objects being classified without their class (a
+  self-check classifies the training objects by resubstitution); ③ *Evaluation* runs every round
+  and shows the design's table — accuracy, balanced accuracy, refusals, the majority-class rate
+  and the sizes, with the SD and the minimum and maximum for a repeated design — its figure,
+  every round, and the first round's *Per object* and *Confusion*. *All designs* puts every
+  design run so far on the ticked samples side by side: method × design, accuracy and balanced
+  accuracy. A long design names the split, the case and the round in the progress bar; **Cancel**
+  stops it after its current round, and closing the window cancels it first.
+
+  ![Random training samples: the given sample among 100 random ones](images/gui/classifiers-random-control.png)
+
+  ![Training-size curve](images/gui/classifiers-size-curve.png)
 - **The steps** — ① *Training*, ② *Test* and ③ *Evaluation*, each with its state as a symbol
   and a word: ○ not run, ◔ running, ✓ done, ⟳ out of date (an earlier step was run again, or the
   samples changed), ⊘ unavailable (the tooltip says why). A step opens when the step before it is

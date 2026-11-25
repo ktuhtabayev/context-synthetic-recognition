@@ -17,6 +17,7 @@ a function with the signature of its kind; it may declare a parameter type, whic
 | baseline | `evaluation.baselines.BASELINES` | `(BaselineInput, params) → [BaselineOutput]` | `knn-vote` |
 | dataset format | `data.loaders.LOADERS` | `(path, LoadOptions) → Dataset` | detected |
 | export format | `export.run.EXPORTERS` | `(ExportContext) → [Path]` | `all` ([Exporting](exporting.md)) |
+| evaluation design | `services.designs.DESIGNS` | a `BaseDesign` with its `cases(split, others)`: the rounds of training and classified objects ([below](#adding-an-evaluation-design)) | `direct` |
 | classifier part | `services.classifier_parts.CLASSIFIER_PARTS` | the protocol `ClassifierPart`: train, classify without the class, evaluate ([below](#adding-a-part-to-the-classifiers-page)) | `classifier-comparison` |
 
 ## Built-in metrics and normalizers
@@ -296,3 +297,34 @@ Rules a part keeps:
 - **Registration**: a module of the package adds itself to `BUILTIN_PARTS`; a part of another
   package registers through the entry-point group `context_synthetic_recognition.classifier-parts`
   (see [Plug-ins from other packages](#plug-ins-from-other-packages)).
+
+## Adding an evaluation design
+
+An evaluation design (ADR-095) says which objects of a split train the methods and which are
+classified, round by round. Register a `services.designs.BaseDesign` whose `cases(split, others)`
+returns its `Case`s, each with the number of its rounds and a `plan(index)` that gives a `Round`:
+the indices of the training objects and of the classified objects in the split's file. The design
+appears in the *Design* chooser of the *Classifiers* page, in `csr compare run --design` and in the
+*All designs* table without a change; every round runs the part's own stages, so the classified
+objects still reach `classify` without their class. The tests register such a design
+(`tests/test_designs.py`):
+
+```python
+import numpy as np
+
+from context_synthetic_recognition.services.designs import DESIGNS, BaseDesign, Case, Round
+
+
+class EveryOtherPair(BaseDesign):
+    def cases(self, split, others):
+        everyone = np.arange(split.dataset.m)
+        planned = Round("", everyone[everyone % 4 < 2], everyone[everyone % 4 >= 2])
+        return (Case("as-given", "", 1, lambda _: planned),)
+
+
+design = EveryOtherPair("every-other", "Every other pair", "Optional extras", "For the tests.")
+DESIGNS.add(design.key, design)
+```
+
+Fix every setting of a design in its code, use only the round's training objects to fit, and
+draw random choices from seeds, so that a run gives the same files again.
